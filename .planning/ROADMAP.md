@@ -245,7 +245,7 @@ Plans:
 
 #### Phase 105: Documentation and outside face
 
-**Goal**: Everything a reader sees from outside the code — README, docs, the skill's own project memory, the figshare record and the infographic deck — presents the project as AILSA, with the old name acknowledged once and LSD credited up front.
+**Goal**: Everything a reader sees from outside the code — README, docs, the skill's own project memory, the figshare record and the infographic deck — presents the project as AILSA, with LSD credited up front and the old name not mentioned (amended 2026-10-06, 105-CONTEXT.md D-01).
 **Depends on**: Phase 104 (docs describe the actually-renamed package and CLI, not a still-pending rename)
 **Requirements**: DOC-01, DOC-02, DOC-03, DOC-04
 **Success Criteria** (what must be TRUE):
@@ -255,7 +255,23 @@ Plans:
   3. The figshare record of the reference database carries the new project name in title and description; the DOI and the uploaded file are unchanged.
   4. The infographic deck (`docs/infographics/build.py`) is rebuilt under the new name with the current headline numbers, clearing the outstanding "stale deck" backlog item.
 
-**Plans**: TBD
+**Plans**: 9 plans in 2 waves
+
+Plans:
+**Wave 1**
+
+- [ ] 105-01-PLAN.md — README rewritten as AILSA: LSD/Nuzillard up front, no Lucy lineage, hub-and-spoke agent section, CLI examples that run, PyPI-safe absolute links
+- [ ] 105-02-PLAN.md — USER_GUIDE: rename, drop MCP, fix dead/drifted CLI examples, verify Python imports
+- [ ] 105-03-PLAN.md — ARCHITECTURE (MCP removed, real module tree, hub-and-spoke agent layer) + BENCHMARK (rename, run-execution method section, figures untouched)
+- [ ] 105-04-PLAN.md — INSTALLATION (MCP removed), SERVER_BOOTSTRAP (final names, neutral DB discovery), NUS-PORTABILITY renamed
+- [ ] 105-05-PLAN.md — CLAUDE.md developer memory + .gitignore comments + rdmo description + faulon-bridge spike renamed
+- [ ] 105-06-PLAN.md — Infographic deck: 8 slides incl. new blind-benchmark slide, examples slide, refreshed numbers, Get-it box; deck.html + ailsa-infographics.pdf rebuilt
+- [ ] 105-07-PLAN.md — figshare record: paste-ready text + click-path, user edits in browser (checkpoint), public-API check; upload scripts renamed
+- [ ] 105-08-PLAN.md — Removal of old-name ballast documents after user approval (checkpoint), then git rm
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 105-09-PLAN.md — Phase gate: positive-controlled old-name grep, residue allow-list, link check, CLI-example audit, deck/figshare/bookkeeping checks
 
 #### Phase 106: Skill system
 

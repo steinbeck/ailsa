@@ -438,7 +438,7 @@ Not applicable in the usual "library version" sense. The one relevant "what chan
 | A2 | Recommended slide position for the new D-06 benchmark slide (between data-source and CASE-examples slides) is a sensible narrative order | Code Examples (deck slide inventory) | Low — purely cosmetic; D-06 only requires the slide to exist, not where |
 | A3 | Stripping the MCP-server content from `INSTALLATION.md`/`ARCHITECTURE.md` now (rather than deferring) is the right call given the "fresh start" framing | Common Pitfalls / Open Questions | Medium — if the planner defers instead, the rewritten AILSA docs ship with a reference to a non-existent `ailsa[mcp]` extra and `lucy-mcp`/`ailsa-mcp` command; low technical risk (nobody will successfully follow a broken instruction) but undercuts the stated goal of a credible fresh start |
 
-## Open Questions
+## Open Questions (RESOLVED — see 105-CONTEXT.md D-14, D-15, D-16)
 
 1. **How far should the accuracy fix go on `docs/INSTALLATION.md` and `docs/ARCHITECTURE.md`?**
    - What we know: both files describe an MCP server that was removed in v2.0; this is
