@@ -105,6 +105,22 @@ lucy-ng; the name lucy-ng should **disappear as far as possible** from everythin
   `.planning/quick/261006-iob-open-weight-model-qwen-harness-options-f/261006-iob-RESEARCH-OPENCODE.md`
   (summary section).
 
+### Resolved after research (2026-10-06)
+- **D-14:** **Docs must be correct against the current CLI, not only renamed.** Remove the MCP-server
+  content from `docs/INSTALLATION.md` and `docs/ARCHITECTURE.md` (removed in v2.0; no `mcp` extra,
+  no `mcp` module). Fix or drop every example that fails against `ailsa --help`, e.g. the
+  non-existent `ailsa lsd generate` and the removed `--dept135` flag of `ailsa pick hsqc/hmbc`.
+  Where no CLI equivalent exists (per-run LSD constraint files are built by the agents), describe
+  that in one sentence instead of inventing a command.
+- **D-15:** Add `background/wenk-thesis.txt` and the third-party dissertation PDF in `background/`
+  to the D-11 removal candidates (third-party copyright in a public repo). They stay subject to
+  the D-11 approval checkpoint like every other removal.
+- **D-16:** figshare facts from research: the file is `lucy-ng-derep.db.zip`; a published item has
+  no in-place file rename, so the file name **stays** (D-10 resolved). Republishing the edited
+  title/description creates a new record version (versioned DOI suffix increments); the base DOI
+  10.6084/m9.figshare.31073554 and file ID 61078393 stay. The click-path note for the user must
+  say this.
+
 ### Claude's Discretion
 - Replace the deck's Lineage box with a "Get it" box (repo github.com/steinbeck/ailsa, PyPI
   `ailsa`, database DOI).
