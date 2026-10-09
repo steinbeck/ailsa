@@ -217,7 +217,7 @@ molecular formula, never the compound's name or structure, and dereplication is
 forbidden. Grading is done afterwards by an independent script that re-derives every
 candidate's InChIKey with RDKit — a run's own claim about its result is never used.
 
-On all **256 runnable datasets from [nmrXiv](https://nmrxiv.org)** (2–39 heavy atoms,
+On all **256 runnable datasets from [nmrXiv](https://nmrxiv.org)** (8–39 heavy atoms,
 median 24), every one run on the current model:
 
 | | |
@@ -225,7 +225,7 @@ median 24), every one run on the current model:
 | Correct structure ranked **first** | **177 / 256 — 69.1 %** |
 | Correct structure **within the top 10** | **189 / 256 — 73.8 %** |
 
-Runs that hit the three-hour limit without a report (25) count as failures here; of the
+Runs that hit the time limit of about three hours without a report (25) count as failures here; of the
 231 runs that did report, 76.6 % have the correct structure first and 81.8 % in the top
 10. Molecules up to 15 heavy atoms were all solved; above 25 heavy atoms it is about half.
 

@@ -39,9 +39,10 @@ skeleton and connectivity match. Read every figure below with that in mind.
 
 Four mechanisms, because a prompt instruction alone is not evidence of anything:
 
-1. **The datasets are sanitised.** Compound names are stripped from Bruker metadata —
-   `pdata/*/title`, the free-text `$TI` parameter, experiment directory names and
-   embedded sample codes.
+1. **The datasets are sanitised.** Compound names are stripped from the Bruker metadata
+   files: `pdata/*/title`, the free-text `$TI` parameter and embedded sample codes.
+   Directory names are **not** renamed; the sanitiser only warns about them. Three
+   datasets leaked their name that way and are counted as not blind (below).
 2. **A fence in the system prompt** forbids reading any ground-truth, answer-key or
    benchmark-results location, and forbids dereplication and lookup by name.
 3. **A physical lockout.** Every file that maps a dataset to its answer is *moved* out
@@ -58,8 +59,8 @@ taken from the orchestrator's own rules, looking for short cuts to the answer. I
 analyst swept the reference database for a replacement structure, which the coordinator
 caught, demoted, and re-ran. A separate mechanical scan of all 258 datasets found **6
 that still leaked a compound name** (3 through experiment directory names, 3 through
-title text), worth about 0.3 points on the headline; three of those were re-sanitised
-before the current re-run.
+title text). The three title-text leaks were re-sanitised before the re-run, but their
+identities had been public in this repository by then, so all six count as not blind.
 
 ---
 
@@ -68,20 +69,29 @@ before the current re-run.
 ### The whole benchmark on the current model
 
 256 datasets were run on Opus 5 (all 258 minus the two excluded below). Median size 24
-heavy atoms, range 2–39.
+heavy atoms, range 8–39.
 
 | | Of all 256 datasets | Of the 231 runs that produced a report |
 |---|---:|---:|
 | Correct structure ranked **first** | **177 — 69.1 %** | **76.6 %** |
 | Correct structure **within the top 10** | **189 — 73.8 %** | **81.8 %** |
 
-The 25 runs without a report all ended at the three-hour wall-clock limit per dataset;
-none failed for an infrastructure reason. The left column counts them as failures,
+The 25 runs without a report all ended at the time limit: each `claude -p` call is capped
+at 3,600 s and no new call starts after 9,000 s, so these runs stopped at 10,800 s, three
+timed-out calls. None failed for an infrastructure reason. The left column counts them as failures,
 which is the strict reading and the one to cite.
 
-Four datasets are **not blind** any more: their identities were in this public
-repository before they were run (CASE86, CASE87, CASE93, CASE265). Without them the
-figures are 175 / 253 = 69.2 % at rank 1 — they do not move the result.
+Seven of the 256 datasets are **not blind**:
+
+- CASE119, CASE120 and CASE121 carried the compound name in their experiment directory
+  names, and the run protocols noticed it.
+- The identities of CASE86, CASE87 and CASE93 were in this public repository before they
+  were run.
+- The answer of CASE133 is the worked example in the agents' own instructions.
+
+Without them the figures are 172 / 249 = 69.1 % at rank 1 and 184 / 249 = 73.9 % in the
+top 10 (76.1 % of the 226 runs with a report). They do not move the result. One more
+dataset whose identity leaked, CASE265, has not been run.
 
 ### By molecule size
 
