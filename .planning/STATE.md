@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v11.0
 milestone_name: AILSA Rename
-status: Revise plans, then execute
-last_updated: "2026-10-12T12:41:58.087Z"
-last_activity: 2026-10-12 -- v11.0 extended with the skill rebuild (phases 106–111, commit c8bc477)
+status: executing
+last_updated: "2026-10-12T15:35:42.962Z"
+last_activity: 2026-10-12 -- Phase 105 planning complete
 progress:
   total_phases: 8
   completed_phases: 1
@@ -24,16 +24,20 @@ See: .planning/PROJECT.md (updated 2026-07-21)
 
 ## Current Position
 
-Phase: 105 (planned, 9 plans) — **plans 105-01, 105-03, 105-04, 105-06, 105-09 must be revised before execution** (D-13 superseded by D-13a on 2026-10-12)
+Phase: 105 (planned, 9 plans; revised for D-13a on 2026-10-12, plan check passed)
 Plan: Not started
-Status: Revise plans, then execute
-Last activity: 2026-10-12 -- v11.0 extended with the skill rebuild (phases 106–111, commit c8bc477)
+Status: Ready to execute
+Last activity: 2026-10-12 -- Phase 105 planning complete
 
 **Resume here (2026-10-12):**
 
-1. Run **`/gsd-plan-phase 105 --reviews`**: `105-REVIEWS.md` carries the user's D-13a decision as
-   the review finding and lists the required changes for 105-01/03/04/06/09. The other four plans
-   stay unchanged. Then run `/gsd-execute-phase 105`. Do NOT execute 105 before the revision.
+1. Run **`/gsd-execute-phase 105`**. The D-13a revision is done (2026-10-12): 105-01/03/04/06/09
+   rewritten, 105-05 item 6 and its acceptance check fixed (CLAUDE.md agent wording), plan check
+   passed. Fixed phrases the gate greps: "specialists that coordinate with each other", "direct
+   review loop", "ask the NMR chemist", "restricted configuration", "without the agent team",
+   "without statistical detection", "do not form a team", "current schema".
+   Open point for 105-04: whether the figshare download carries the current DB schema is
+   unverified; the plan records the answer in its SUMMARY instead of promising it.
 
 2. Then Phase 106: freeze the two measured skill states (tags on `f9aa7b3` and `6d2d126`),
    rename, and restructure to Anthropic's best practices (content-preserving), with a skill-lint
@@ -42,7 +46,7 @@ Last activity: 2026-10-12 -- v11.0 extended with the skill rebuild (phases 106�
 3. Four user decisions are open (ROADMAP.md v11.0): paper timing, ablation arms, figshare
    re-upload, fragment DB.
 
-4. Five commits are unpushed. The repo is public, so ask before pushing.
+4. The repo is public: ask before pushing.
 5. Not yet done: tell the ailsa-paper session about the method framing (team = design; the
    benchmark ran restricted). Offered to the user, not answered.
 
