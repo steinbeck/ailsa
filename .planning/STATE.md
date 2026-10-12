@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v11.0
 milestone_name: AILSA Rename
-status: executing
-last_updated: "2026-10-06T15:10:17.765Z"
-last_activity: 2026-10-06 -- Phase 105 planning complete
+status: Revise plans, then execute
+last_updated: "2026-10-12T12:41:58.087Z"
+last_activity: 2026-10-12 -- v11.0 extended with the skill rebuild (phases 106–111, commit c8bc477)
 progress:
-  total_phases: 4
+  total_phases: 8
   completed_phases: 1
   total_plans: 15
   completed_plans: 6
-  percent: 25
+  percent: 13
 ---
 
 # lucy-ng State
@@ -24,10 +24,38 @@ See: .planning/PROJECT.md (updated 2026-07-21)
 
 ## Current Position
 
-Phase: 105
+Phase: 105 (planned, 9 plans) — **plans 105-01, 105-03, 105-04, 105-06, 105-09 must be revised before execution** (D-13 superseded by D-13a on 2026-10-12)
 Plan: Not started
-Status: Ready to execute
-Last activity: 2026-10-06 -- Phase 105 planning complete
+Status: Revise plans, then execute
+Last activity: 2026-10-12 -- v11.0 extended with the skill rebuild (phases 106–111, commit c8bc477)
+
+**Resume here (2026-10-12):**
+
+1. Revise the five Phase 105 plans to D-13a (105-CONTEXT.md): the docs describe the agent team as
+   the design and the 69 % as measured in a restricted configuration (no team, no statistical
+   detection). Use the gsd-planner in revision mode plus the plan-checker. Then `/gsd-execute-phase 105`.
+
+2. Then Phase 106: freeze the two measured skill states (tags on `f9aa7b3` and `6d2d126`),
+   rename, and restructure to Anthropic's best practices (content-preserving), with a skill-lint
+   check. The user insisted this comes first, before any content change.
+
+3. Four user decisions are open (ROADMAP.md v11.0): paper timing, ablation arms, figshare
+   re-upload, fragment DB.
+
+4. Five commits are unpushed. The repo is public, so ask before pushing.
+5. Not yet done: tell the ailsa-paper session about the method framing (team = design; the
+   benchmark ran restricted). Offered to the user, not answered.
+
+Sources: `~/Downloads/AILSA-Skills-Best-Practices-Pruefbericht.pdf` (review) and
+`~/Downloads/AILSA-Skills-Ueberarbeitungsplan.pdf` (plan). Findings behind them:
+
+- headless runs formed no team;
+- the compute host's DB is schema v3, so detection never worked there;
+- the fragment DB was never present;
+- seven datasets are non-blind (CASE119/120/121, 86/87/93, 133);
+- the candidate sets of all 66 unsolved runs are in the ailsa-paper repository.
+
+Counting scripts: `ailsa-paper/scripts/{cost,blindness,toolstatus}/`.
 
 ## Milestone v11.0 Phases (extended 2026-10-12: AILSA Rename and Skill Rebuild)
 
@@ -719,7 +747,7 @@ Key v9.0 constraint (still in force): SYME and DEFF NOT are lucy-ng abstractions
 
 ## Session Continuity
 
-Last session: 2026-10-06T09:57:08.651Z
+Last session: 2026-10-12T12:41:58.072Z
 settled). Previously, 2026-10-01 — the Opus-5 re-run finished (102/102, 2026-09-29), all four
 arms regraded, final figures published in `docs/BENCHMARK.md` and the README (§ 9).
 Milestone v11.0 AILSA Rename is open (Phases 104–107, none started); the gate on Phases 106
@@ -736,6 +764,8 @@ to make launchd retry after `kickstart -k`.*
 (21.8 % → 39.2 %, grader artefact) and removed six compound identities from this public file.*
 
 ## Operator Next Steps
+
+*Superseded 2026-10-12 — see "Resume here" under Current Position. The list below is the 2026-10-01 state.*
 
 *Rewritten 2026-10-01.* The re-run is complete and the benchmark figures are final (§ 9).
 
