@@ -31,9 +31,9 @@ Last activity: 2026-10-12 -- v11.0 extended with the skill rebuild (phases 106â€
 
 **Resume here (2026-10-12):**
 
-1. Revise the five Phase 105 plans to D-13a (105-CONTEXT.md): the docs describe the agent team as
-   the design and the 69 % as measured in a restricted configuration (no team, no statistical
-   detection). Use the gsd-planner in revision mode plus the plan-checker. Then `/gsd-execute-phase 105`.
+1. Run **`/gsd-plan-phase 105 --reviews`**: `105-REVIEWS.md` carries the user's D-13a decision as
+   the review finding and lists the required changes for 105-01/03/04/06/09. The other four plans
+   stay unchanged. Then run `/gsd-execute-phase 105`. Do NOT execute 105 before the revision.
 
 2. Then Phase 106: freeze the two measured skill states (tags on `f9aa7b3` and `6d2d126`),
    rename, and restructure to Anthropic's best practices (content-preserving), with a skill-lint
