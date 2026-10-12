@@ -91,8 +91,8 @@ lucy-ng; the name lucy-ng should **disappear as far as possible** from everythin
   live hosts), `.planning/` (107), `pyproject.toml`/`src/` (done in 104). `data/reference/*`
   and `background/wenk-thesis.txt` match "lucy" as data/third-party text — do not edit content.
 
-### Method description (added 2026-10-06, after the discussion)
-- **D-13:** **Describe the method as it actually produced the benchmark numbers.** The headless
+### Method description (added 2026-10-06, after the discussion) — SUPERSEDED by D-13a
+- **D-13 (superseded 2026-10-12, see D-13a):** **Describe the method as it actually produced the benchmark numbers.** The headless
   benchmark runs (`claude -p`) never formed an agent team: Claude Code spawns no teammates in
   `-p` mode. Evidence: 169 September Opus-5 runs had 0 `TeamCreate`, ~7 specialist spawns per
   run, and 7 specialist `SendMessage` calls in total; a spot-check of 1 460 transcripts found 168
@@ -104,6 +104,26 @@ lucy-ng; the name lucy-ng should **disappear as far as possible** from everythin
   not measure. Do not claim peer collaboration produced the results. Source:
   `.planning/quick/261006-iob-open-weight-model-qwen-harness-options-f/261006-iob-RESEARCH-OPENCODE.md`
   (summary section).
+
+### D-13 superseded (user, 2026-10-12)
+- **D-13a (replaces D-13):** **Describe the designed system — a team of specialists that coordinate
+  with each other — and state honestly what the benchmark measured.** The user's interactive
+  test runs (June/July 2026, `data/nmrdata/active-lucy-ng-testprojects/*/analysis/`) ran the full
+  system: an agent team (every teammate reported its model) and working statistical detection
+  (Mac reference DB, full schema). The benchmark ran a **restricted configuration**: no team,
+  because Claude Code forms no teams in `claude -p`, so specialists ran one at a time under the
+  coordinator; and no statistical detection, because the compute host's reference DB had the
+  outdated schema. Docs therefore:
+  - present the agent team as the design, including the direct channels: LSD engineer ↔ devil's
+    advocate review loop, and requests to the NMR chemist;
+  - say in `docs/BENCHMARK.md`, the README's Evaluation section and the deck's benchmark slide
+    that the 69 % were measured in that restricted configuration, giving both restrictions
+    explicitly. They do not claim the full system performs better; that is measured in Phase 110.
+  - Hub-and-spoke appears only as the description of how benchmark runs executed, not as the
+    system's design.
+
+  Plans 105-01, 105-03, 105-04, 105-06 and 105-09 were written against the old D-13 and **must be
+  revised before execution**. Source: discussion 2026-10-12; plan `AILSA-Skills-Ueberarbeitungsplan.pdf`.
 
 ### Resolved after research (2026-10-06)
 - **D-14:** **Docs must be correct against the current CLI, not only renamed.** Remove the MCP-server

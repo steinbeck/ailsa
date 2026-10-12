@@ -187,22 +187,35 @@ archive: [`milestones/v10.1-ROADMAP.md`](milestones/v10.1-ROADMAP.md).
 
 ---
 
-## v11.0 AILSA Rename
+## v11.0 AILSA Rename and Skill Rebuild
 
 **Goal:** The project is renamed from the working title *lucy-ng* to **AILSA** (*AI + LSD +
 Agents*) everywhere it is visible — package, CLI, documentation, skill system, repository and
-hosts — without breaking the running Opus-5 baseline re-run or rewriting the historical record.
-Package and documentation can move first; the skill system and the repository/hosts phases are
-**gated** on the Opus-5 baseline re-run finishing on the compute host (the blind runner there
-still calls `/lucy-ng:case`, and the watchdog on the Mac runs from the absolute path
-`…/lucy-ng/scripts/`), expected after the 2026-09-29 quota reset.
+hosts — without rewriting the historical record. **Extended 2026-10-12:** the CASE skill is also
+rebuilt to Anthropic's skill-authoring best practices and made *measurable as designed* — as a
+team of specialists that coordinate with each other and use the full toolchain — because the
+2026-08/09 benchmark ran a restricted configuration: no agent team (Claude Code forms no teams
+in non-interactive `claude -p` mode) and no statistical detection (outdated reference DB on the
+compute host). Plan: `AILSA-Skills-Ueberarbeitungsplan.pdf` (2026-10-12), best-practices review
+`AILSA-Skills-Best-Practices-Pruefbericht.pdf` (same day). The original gate (Opus-5 re-run) is
+lifted; the re-run finished 2026-09-29.
+
+**Open decisions (user, pending):** (1) paper timing — submit with the restricted configuration
+now, or wait for the Phase 110 comparison; (2) Phase 110 arms — new vs old only, or with the
+no-team and no-statistics ablations; (3) re-upload the full reference DB to figshare as a new
+version if the public file is the outdated schema (conflicts with Phase 105's "no new upload");
+(4) fragment DB — install and use, or drop fragment search.
 
 ### Phases
 
 - [x] **Phase 104: Package and CLI** — PyPI package `ailsa`, module `ailsa` replacing `lucy_ng`, CLI `ailsa` with `lucy` kept as a deprecated alias for one release; full suite/mypy/ruff green on the renamed tree (completed 2026-10-03; PyPI upload of 0.1.0 deferred by user until after Phase 105 — see 104-HUMAN-UAT.md)
 - [ ] **Phase 105: Documentation and outside face** — README, `docs/`, CLAUDE.md, the figshare record and the infographic deck under the new name; LSD and Nuzillard credited up front
-- [ ] **Phase 106: Skill system** (GATED — not before the Opus-5 baseline re-run finishes) — `/ailsa:*` commands and `ailsa-*` agents replacing `/lucy-ng:*`/`lucy-*`, `~/.claude` symlinks updated, proven by a blind CASE run on the compute host
-- [ ] **Phase 107: Repository and hosts** (GATED — not before the Opus-5 baseline re-run finishes) — GitHub repo renamed with a redirect, local folder/LaunchAgent/remotes/compute-host checkout/auto-memory moved, planning documents speak the new name, a `v11.0` release tag
+- [ ] **Phase 106: Freeze, rename and restructure the skill** — the two measured skill states tagged; `/ailsa:*` commands and `ailsa-*` agents; every skill file restructured to Anthropic's best practices (core under 500 lines, references, TOCs, no dead references, no history, no benchmark compounds, no model IDs, one term per role); an automated skill-lint check
+- [ ] **Phase 107: Evaluation bench and team-mode spike** — fixed ~25-dataset evaluation sample, per-run mechanics report, Mac/compute-host parity check, and a decided route for running the agent team unattended
+- [ ] **Phase 108: Foundation** — full reference DB on the compute host (figshare checked), silent `detect hhb` defect fixed, fragment DB decided, prerequisite checks cover every capability the skill relies on, devil's-advocate checks and sanitiser as scripts
+- [ ] **Phase 109: Rework the CASE workflow** — coordination along the route chosen in Phase 107, use of statistics/fragments per Phase 108, rules kept only with evidence
+- [ ] **Phase 110: Comparison run** — new skill vs the measured old configuration on the evaluation sample (ablations per open decision 2)
+- [ ] **Phase 111: Repository and hosts** — GitHub repo renamed with a redirect, local folder/LaunchAgent/remotes/compute-host checkout/auto-memory moved, planning documents speak the new name, a `v11.0` release tag; then the deferred PyPI upload
 
 ### Phase Details
 
@@ -273,31 +286,89 @@ Plans:
 
 - [ ] 105-09-PLAN.md — Phase gate: positive-controlled old-name grep, residue allow-list, link check, CLI-example audit, deck/figshare/bookkeeping checks
 
-#### Phase 106: Skill system
+#### Phase 106: Freeze, rename and restructure the skill
 
-**Goal**: The autonomous CASE skill and its five-agent team run under the AILSA name end to end — commands, agent files, symlinks and a live blind run all prove the renamed chain works exactly like the old one.
-**Depends on**: Phase 105. **GATED: must not start before the Opus-5 baseline re-run on the compute host has finished** (expected after the 2026-09-29 quota reset) — the blind runner there calls `/lucy-ng:case` and must not be disturbed mid-campaign.
-**Requirements**: SKILL-01, SKILL-02, SKILL-03, SKILL-04
+**Goal**: The CASE skill and its agents carry the AILSA name and follow Anthropic's skill-authoring best practices in form, while the exact skill states that produced the published benchmark figures stay recoverable.
+**Depends on**: Phase 105 (docs already use the final names). Not gated any more.
+**Requirements**: FREEZE-01, SKILL-01, SKILL-02, SKILL-03, SKILL-04, SKILL-05, SKILL-06
+**Note**: content-preserving restructuring only — renaming, splitting into references, removing dead references/history/benchmark compounds/model IDs, consistent terms, rationale instead of capital-letter emphasis. Changes to *how* the agents coordinate or which tools they use wait for Phases 107–109. Restructuring is not guaranteed to be behaviour-neutral for a language model; Phase 110 measures the end result.
 **Success Criteria** (what must be TRUE):
 
-  1. A user runs `/ailsa:case`, `/ailsa:dereplicate`, `/ailsa:predict`, `/ailsa:sanitise` and `/ailsa:status`; the `/lucy-ng:*` commands are gone and the `~/.claude/commands` symlinks point at the new directory.
-  2. The five agents are named `ailsa-nmr-chemist`, `ailsa-lsd-engineer`, `ailsa-solution-analyst`, `ailsa-devils-advocate` and `ailsa-diagnostic`; `case.md`, the supervisor and the SHA-256 byte-unchanged guard reference the new files, and the `~/.claude/agents` symlinks are updated.
-  3. One blind CASE run on the compute host, started through the renamed command with the renamed agents, completes and grades correctly — proof that the chain works under the new name.
-  4. The blind runner script and the watchdog scripts call the new command and paths, and the LaunchAgent (label, program path, log name) is re-registered under the new name.
+  1. Git tags mark the two skill states the benchmark ran on — state 1 = `f9aa7b3` (45 runs, 2026-08-11..14) and state 2 = `6d2d126`, containing `d62d833` (211 runs, from 2026-08-14) — and `docs/BENCHMARK.md` records them together with the compute host's environment (Claude Code 2.1.205, LSD 3.5.3, reference DB schema 3, no fragment DB).
+  2. A user runs `/ailsa:case`, `/ailsa:dereplicate`, `/ailsa:predict`, `/ailsa:sanitise` and `/ailsa:status`; the `/lucy-ng:*` commands are gone and the `~/.claude/commands` symlinks point at the new directory.
+  3. The agents are named `ailsa-nmr-chemist`, `ailsa-lsd-engineer`, `ailsa-solution-analyst`, `ailsa-devils-advocate` and `ailsa-diagnostic`; the unused supervisor agent is gone; the SHA-256 guard references the new files; the `~/.claude/agents` symlinks are updated.
+  4. Every skill file body is under 500 lines with details in one-level reference files (one shared LSD reference instead of two copies), files over 100 lines have a table of contents, and the skill contains no dead references, no project history or defect numbers, no dataset numbers, no fixed model IDs, and one term per role.
+  5. An automated skill-lint check enforces criterion 4 on every commit; a local check (answer key never in the repository) finds no benchmark compound by name or structure in any skill file.
+  6. One blind CASE run on the compute host through the renamed command completes and grades, and the blind runner, watchdog scripts and LaunchAgent use the new command and paths.
 
 **Plans**: TBD
 
-#### Phase 107: Repository and hosts
+#### Phase 107: Evaluation bench and team-mode spike
+
+**Goal**: Every later change to the skill can be measured against the old configuration, every run reports how it actually executed, and there is a decided, working way to run the agent team unattended.
+**Depends on**: Phase 106
+**Requirements**: EVAL-01, EVAL-02, EVAL-03, TEAM-01
+**Success Criteria** (what must be TRUE):
+
+  1. A fixed evaluation sample of about 25 blind datasets, stratified by heavy-atom count and mixing solved and unsolved cases, is recorded privately together with the old configuration's results for each.
+  2. Every evaluation run produces a mechanics report: team formed or not, messages between specialists, tool outputs usable or not, runtime, tokens.
+  3. A parity check compares the Mac and the compute host (reference DB schema, fragment DB, LSD version, Claude Code version) and fails loudly on any difference.
+  4. A spike on two or three small datasets decides the route for unattended team runs — named subagents messaging each other in `claude -p`, or a remotely driven interactive session — and its mechanics report shows real messages between specialists in an unattended run.
+
+**Plans**: TBD
+
+#### Phase 108: Foundation
+
+**Goal**: Every tool the skill relies on works on every host it runs on, and failures are loud.
+**Depends on**: Phase 106 (can run in parallel with Phase 107)
+**Requirements**: FOUND-01, FOUND-02, FOUND-03, FOUND-04, FOUND-05, FOUND-06
+**Success Criteria** (what must be TRUE):
+
+  1. The compute host has the full reference DB (current schema; `detect hybridisation`/`neighbours`/`hhb` return data), and it is known whether the public figshare file is the outdated schema; a re-upload follows open decision 3.
+  2. `detect hhb` reports no data when its table is missing instead of `has_data: true` with empty lists.
+  3. The fragment DB is installed on the compute host and used, or fragment search is removed from the workflow (open decision 4).
+  4. The prerequisite check (`/ailsa:status` and the coordinator's first step) verifies every capability the skill relies on and stops with a clear message if one is missing.
+  5. The devil's-advocate structural checks run as a CLI command instead of shell snippets in the prompt.
+  6. Sanitisation runs as a script whose final check fails loudly if a known compound name remains anywhere in the dataset, directory names included.
+
+**Plans**: TBD
+
+#### Phase 109: Rework the CASE workflow
+
+**Goal**: The skill describes and runs the designed team workflow on the route chosen in Phase 107, using the toolchain as repaired in Phase 108.
+**Depends on**: Phases 107 and 108
+**Requirements**: FLOW-01, FLOW-02, FLOW-03
+**Success Criteria** (what must be TRUE):
+
+  1. The coordinator and the specialists coordinate along the Phase 107 route, with the direct channels (LSD engineer ↔ devil's advocate review loop, requests to the NMR chemist) as a described, logged part of the workflow, and gates that can be enforced technically are enforced by hooks or scripts.
+  2. The skill's use of statistical detection and fragment search matches what Phase 108 delivered.
+  3. Every rule kept from the old skill states the failure it prevents in one sentence; rules without evidence are removed or marked for measurement.
+
+**Plans**: TBD
+
+#### Phase 110: Comparison run
+
+**Goal**: It is known, with data, whether the reworked skill is at least as good as the measured configuration — and, if the ablation arms run, what the agent team and the statistics each contribute.
+**Depends on**: Phase 109
+**Requirements**: MEAS-01, MEAS-02
+**Success Criteria** (what must be TRUE):
+
+  1. The new skill, full system, has run on the evaluation sample and is compared at rank 1 and top 10 with the old configuration's results, with run-to-run variation stated.
+  2. If open decision 2 includes them: the no-team and no-statistics arms have run on the same sample and their contributions are reported.
+
+**Plans**: TBD
+
+#### Phase 111: Repository and hosts
 
 **Goal**: Every place the project physically lives — GitHub, the local Mac folder, the compute host's checkout, the LaunchAgent and the planning documents — carries the new name, with the historical record left untouched.
-**Depends on**: Phase 106 (skill renamed and proven on a live run before the paths its assets live under are moved). **GATED: must not start before the Opus-5 baseline re-run on the compute host has finished** (same gate as Phase 106) — the compute host's checkout and remotes must not move while the re-run is reading from them.
+**Depends on**: Phase 110 (host paths must not move while comparison runs read from them).
 **Requirements**: REPO-01, REPO-02, REPO-03, REPO-04
 **Success Criteria** (what must be TRUE):
 
   1. The GitHub repository is `steinbeck/ailsa`; the old `steinbeck/lucy-ng` URL redirects; the remotes of the local clone and of the compute host's checkout point at the new name.
   2. The local working copy lives at `~/Dropbox/develop/ailsa`; the auto-memory directory is moved with it so the next session starts with its memory; every absolute path on the Mac (LaunchAgent, symlinks, scripts) is updated.
   3. `.planning/PROJECT.md`, `STATE.md`, `ROADMAP.md`, `MEMORY.md` and the CASE identity/UAT files speak the new name; `.planning/phases/` history, `milestones/`, git history and the compute host's result directories are untouched.
-  4. A release tag `v11.0` marks the first release under the new name, with a changelog entry explaining the rename.
+  4. A release tag `v11.0` marks the first release under the new name, with a changelog entry; the deferred PyPI upload of 0.1.0 follows.
 
 **Plans**: TBD
 
@@ -306,7 +377,10 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|-----------------|--------|-----------|
 | 104. Package and CLI | 6/6 | Complete    | 2026-10-03 |
-| 105. Documentation and outside face | 0/? | Not started | - |
-| 106. Skill system (GATED) | 0/? | Not started | - |
-| 107. Repository and hosts (GATED) | 0/? | Not started | - |
-</content>
+| 105. Documentation and outside face | 0/9 | Planned | - |
+| 106. Freeze, rename and restructure the skill | 0/? | Not started | - |
+| 107. Evaluation bench and team-mode spike | 0/? | Not started | - |
+| 108. Foundation | 0/? | Not started | - |
+| 109. Rework the CASE workflow | 0/? | Not started | - |
+| 110. Comparison run | 0/? | Not started | - |
+| 111. Repository and hosts | 0/? | Not started | - |

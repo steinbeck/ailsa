@@ -29,24 +29,26 @@ Plan: Not started
 Status: Ready to execute
 Last activity: 2026-10-06 -- Phase 105 planning complete
 
-## Milestone v11.0 Phases
+## Milestone v11.0 Phases (extended 2026-10-12: AILSA Rename and Skill Rebuild)
 
 | Phase | Goal | Requirements | Depends on |
 |-------|------|--------------|------------|
-| 104. Package and CLI | PyPI package `ailsa`, module `ailsa` replacing `lucy_ng`, CLI `ailsa` with deprecated `lucy` alias for one release, full suite/mypy/ruff green | PKG-01..05 | — |
-| 105. Documentation and outside face | README/docs/CLAUDE.md/figshare record/infographic deck under the new name, LSD + Nuzillard credited up front | DOC-01..04 | 104 |
-| 106. Skill system (GATED) | `/ailsa:*` commands + `ailsa-*` agents replacing `/lucy-ng:*`/`lucy-*`, `~/.claude` symlinks updated, proven by a blind CASE run on the compute host | SKILL-01..04 | 105 + Opus-5 baseline re-run finished |
-| 107. Repository and hosts (GATED) | GitHub repo renamed with redirect, local folder/LaunchAgent/remotes/compute-host checkout/auto-memory moved, planning docs speak the new name, `v11.0` tag | REPO-01..04 | 106 + Opus-5 baseline re-run finished |
+| 104. Package and CLI | PyPI package `ailsa`, module `ailsa`, CLI `ailsa` with deprecated `lucy` alias | PKG-01..05 | — |
+| 105. Documentation and outside face | README/docs/CLAUDE.md/figshare/deck under the new name; method per D-13a (designed team, benchmark = restricted configuration) | DOC-01..04 | 104 |
+| 106. Freeze, rename and restructure the skill | tag the two measured skill states; `/ailsa:*` + `ailsa-*`; best-practices form; skill-lint | FREEZE-01, SKILL-01..06 | 105 |
+| 107. Evaluation bench and team-mode spike | ~25-dataset sample, mechanics report, Mac/host parity, route for unattended team runs | EVAL-01..03, TEAM-01 | 106 |
+| 108. Foundation | full DB on host, `hhb` defect, fragment DB, prerequisite checks, DA checks + sanitiser as scripts | FOUND-01..06 | 106 (parallel to 107) |
+| 109. Rework the CASE workflow | team coordination per 107, tools per 108, evidence-backed rules | FLOW-01..03 | 107, 108 |
+| 110. Comparison run | new vs old on the sample (+ ablations if decided) | MEAS-01..02 | 109 |
+| 111. Repository and hosts | GitHub/local/host moves, `v11.0` tag, then PyPI upload | REPO-01..04 | 110 |
 
-**Sequencing:** Phase 104 (package/CLI) ships first since nothing else can honestly describe a
-renamed thing that isn't renamed yet. Phase 105 (docs) follows immediately — neither phase
-touches the skill system or any host path, so both can proceed while the Opus-5 baseline
-re-run is still running on the compute host. Phases 106 (skill) and 107 (repository/hosts) are
-explicitly **gated**: the blind runner on the compute host still calls `/lucy-ng:case` and the
-Mac watchdog runs from the absolute path `…/lucy-ng/scripts/`, so renaming either before the
-re-run finishes would break a live, multi-day unattended run. Expected unblock: after the
-2026-09-29 quota reset (see § 9 below). Phase 107 follows 106 rather than running in parallel
-because the repository move relocates the very paths the renamed skill's symlinks point at.
+**Sequencing (2026-10-12):** the benchmark ran a restricted configuration — no agent team
+(`claude -p` forms none) and no statistical detection (outdated reference DB on the compute
+host) — while the user's interactive test runs used the full system. The user decided to keep
+the team as the core design and make it measurable. Content-preserving restructuring of the skill
+(rename + best-practices form) comes first (106); changes to coordination and tool use wait for
+the spike (107) and the foundation (108). Four decisions are still open: paper timing, ablation
+arms, figshare re-upload, fragment DB — see ROADMAP.md v11.0.
 
 ## Milestone v10.1 Phases
 

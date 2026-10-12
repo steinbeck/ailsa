@@ -1,14 +1,14 @@
-# Requirements — Milestone v11.0 AILSA Rename
+# Requirements — Milestone v11.0 AILSA Rename and Skill Rebuild
 
 **Goal:** rename the project from the working title *lucy-ng* to **AILSA** (*AI + LSD + Agents*) everywhere it is visible, without breaking the running benchmark or rewriting the historical record.
 
-**Ordering constraint:** the skill system and the repository (SKILL-*, REPO-*) may only change after the Opus-5 baseline re-run on the compute host has finished — the blind runner there calls `/lucy-ng:case`, and the watchdog on the Mac runs from the absolute path `…/lucy-ng/scripts/`. Package and documentation (PKG-*, DOC-*) can go first.
+**Ordering constraint:** the original gate (skill and repository only after the Opus-5 re-run) is lifted — the re-run finished 2026-09-29. **Extended 2026-10-12:** the skill is also rebuilt to Anthropic's skill-authoring best practices and made measurable as designed (agent team + full toolchain); see ROADMAP.md v11.0 and the plan `AILSA-Skills-Ueberarbeitungsplan.pdf`.
 
 ## v11.0 Requirements
 
 ### Package and CLI (PKG)
 
-- [ ] **PKG-01**: A user can `pip install ailsa` from PyPI and get the real package (replacing the 0.0.1 name-reservation placeholder), with `pyproject.toml` naming the project `ailsa`. *(pyproject half done in 104-02/05; PyPI upload deferred by user decision 2026-10-03 until after the documentation phase so the PyPI page shows the rewritten README; moved 2026-10-06 to after Phase 107 so every command and link in the frozen README works (105-CONTEXT.md D-05) — artifacts built and twine-verified in 104-06)*
+- [ ] **PKG-01**: A user can `pip install ailsa` from PyPI and get the real package (replacing the 0.0.1 name-reservation placeholder), with `pyproject.toml` naming the project `ailsa`. *(pyproject half done in 104-02/05; PyPI upload deferred by user decision 2026-10-03 until after the documentation phase so the PyPI page shows the rewritten README; moved 2026-10-06 to after the repository rename (now Phase 111) so every command and link in the frozen README works (105-CONTEXT.md D-05) — artifacts built and twine-verified in 104-06)*
 - [x] **PKG-02**: A developer imports everything from the Python module `ailsa`; no `lucy_ng` module or import remains in `src/`, `tests/` or `scripts/`.
 - [x] **PKG-03**: A user runs every subcommand as `ailsa …`; `lucy …` still works for one release and prints a one-line deprecation hint pointing to `ailsa`.
 - [x] **PKG-04**: The full test suite passes on the renamed tree with the same pass count as before (1345 passed / 74 environment failures), and `mypy --strict` and `ruff` report no new findings.
@@ -21,12 +21,45 @@
 - [ ] **DOC-03**: The figshare record of the reference database carries the new project name in title and description; the DOI and the uploaded file are unchanged.
 - [ ] **DOC-04**: The infographic deck (`docs/infographics/build.py`) is rebuilt under the new name with the current headline numbers (this also clears the "stale deck" backlog item).
 
+### Freeze the measured state (FREEZE)
+
+- [ ] **FREEZE-01**: Git tags mark the two skill states the benchmark ran on (state 1 `f9aa7b3`, 45 runs 2026-08-11..14; state 2 `6d2d126` incl. `d62d833`, 211 runs), and `docs/BENCHMARK.md` records them with the compute host's environment (Claude Code 2.1.205, LSD 3.5.3, reference DB schema 3, no fragment DB).
+
 ### Skill system (SKILL)
 
 - [ ] **SKILL-01**: A user runs `/ailsa:case`, `/ailsa:dereplicate`, `/ailsa:predict`, `/ailsa:sanitise` and `/ailsa:status`; the `/lucy-ng:*` commands are gone and the symlinks under `~/.claude/commands` point at the new directory.
-- [ ] **SKILL-02**: The five agents are `ailsa-nmr-chemist`, `ailsa-lsd-engineer`, `ailsa-solution-analyst`, `ailsa-devils-advocate` and `ailsa-diagnostic`; `case.md`, the supervisor and the SHA-256 byte-unchanged guard reference the new files, and the `~/.claude/agents` symlinks are updated.
-- [ ] **SKILL-03**: One blind CASE run on the compute host, started through the renamed command with the renamed agents, completes and grades correctly — the proof that the chain works under the new name.
+- [ ] **SKILL-02**: The agents are `ailsa-nmr-chemist`, `ailsa-lsd-engineer`, `ailsa-solution-analyst`, `ailsa-devils-advocate` and `ailsa-diagnostic`; the unused supervisor agent is removed; the SHA-256 guard references the new files, and the `~/.claude/agents` symlinks are updated.
+- [ ] **SKILL-03**: One blind CASE run on the compute host, started through the renamed command with the renamed agents, completes and grades — the proof that the restructured chain still works.
 - [ ] **SKILL-04**: The blind runner script and the watchdog scripts call the new command and paths, and the LaunchAgent (label, program path, log name) is re-registered under the new name.
+- [ ] **SKILL-05**: Every skill file follows Anthropic's skill-authoring best practices in form: body under 500 lines with details in one-level reference files (one shared LSD reference), a table of contents in files over 100 lines, no dead references, no project history or defect numbers, no dataset numbers, no fixed model IDs, one term per role, rationale instead of capital-letter emphasis.
+- [ ] **SKILL-06**: An automated skill-lint check enforces SKILL-05 on every commit, and a local check (answer key never in the repository) finds no benchmark compound by name or structure in any skill file.
+
+### Evaluation bench and team-mode spike (EVAL, TEAM)
+
+- [ ] **EVAL-01**: A fixed evaluation sample of about 25 blind datasets, stratified by heavy-atom count and mixing solved and unsolved cases, is recorded privately with the old configuration's result for each.
+- [ ] **EVAL-02**: Every evaluation run produces a mechanics report — team formed or not, messages between specialists, tool outputs usable or not, runtime, tokens.
+- [ ] **EVAL-03**: A parity check compares Mac and compute host (reference DB schema, fragment DB, LSD version, Claude Code version) and fails loudly on any difference.
+- [ ] **TEAM-01**: A spike decides the route for unattended team runs (named subagents messaging each other in `claude -p`, or a remotely driven interactive session); its mechanics report shows real messages between specialists in an unattended run.
+
+### Foundation (FOUND)
+
+- [ ] **FOUND-01**: The compute host has the full reference DB (current schema; the detection commands return data), and it is known whether the public figshare file is the outdated schema; a re-upload follows the user's decision.
+- [ ] **FOUND-02**: `detect hhb` reports no data when its table is missing instead of `has_data: true` with empty lists.
+- [ ] **FOUND-03**: The fragment DB is installed on the compute host and used, or fragment search is removed from the workflow (user's decision).
+- [ ] **FOUND-04**: The prerequisite check (`/ailsa:status` and the coordinator's first step) verifies every capability the skill relies on and stops with a clear message if one is missing.
+- [ ] **FOUND-05**: The devil's-advocate structural checks run as a CLI command instead of shell snippets in the prompt.
+- [ ] **FOUND-06**: Sanitisation runs as a script whose final check fails loudly if a known compound name remains anywhere in the dataset, directory names included.
+
+### CASE workflow (FLOW)
+
+- [ ] **FLOW-01**: Coordinator and specialists coordinate along the route chosen in TEAM-01, with the direct channels (LSD engineer ↔ devil's advocate review loop, requests to the NMR chemist) described and logged; gates that can be enforced technically are enforced by hooks or scripts.
+- [ ] **FLOW-02**: The skill's use of statistical detection and fragment search matches what FOUND-01/FOUND-03 delivered.
+- [ ] **FLOW-03**: Every rule kept from the old skill states the failure it prevents; rules without evidence are removed or marked for measurement.
+
+### Comparison run (MEAS)
+
+- [ ] **MEAS-01**: The reworked skill (full system) has run on the evaluation sample and is compared at rank 1 and top 10 with the old configuration, with run-to-run variation stated.
+- [ ] **MEAS-02**: If the user decides so: no-team and no-statistics ablation arms on the same sample, with their contributions reported.
 
 ### Repository and hosts (REPO)
 
@@ -45,7 +78,7 @@
 - **Rewriting `.planning/phases/` and `milestones/`** — 344 files and 6,646 mentions of the old name are the record of how the project was built; they stay.
 - **Renaming result directories on the compute host** (`case-uat-results*`) — historical arms, read-only.
 - **The manuscript** — lives in the private repository `steinbeck/ailsa-paper`.
-- **A new figshare upload** — the 830 MB database file and its DOI stay; only the record's text changes.
+- **A new figshare upload** — the 830 MB database file and its DOI stay; only the record's text changes. *(Reopened 2026-10-12: if the public file turns out to be the outdated schema, a re-upload as a new version is open decision 3 — see FOUND-01.)*
 
 ## Traceability
 
@@ -60,11 +93,29 @@
 | DOC-02 | 105 |
 | DOC-03 | 105 |
 | DOC-04 | 105 |
+| FREEZE-01 | 106 |
 | SKILL-01 | 106 |
 | SKILL-02 | 106 |
 | SKILL-03 | 106 |
 | SKILL-04 | 106 |
-| REPO-01 | 107 |
-| REPO-02 | 107 |
-| REPO-03 | 107 |
-| REPO-04 | 107 |
+| SKILL-05 | 106 |
+| SKILL-06 | 106 |
+| EVAL-01 | 107 |
+| EVAL-02 | 107 |
+| EVAL-03 | 107 |
+| TEAM-01 | 107 |
+| FOUND-01 | 108 |
+| FOUND-02 | 108 |
+| FOUND-03 | 108 |
+| FOUND-04 | 108 |
+| FOUND-05 | 108 |
+| FOUND-06 | 108 |
+| FLOW-01 | 109 |
+| FLOW-02 | 109 |
+| FLOW-03 | 109 |
+| MEAS-01 | 110 |
+| MEAS-02 | 110 |
+| REPO-01 | 111 |
+| REPO-02 | 111 |
+| REPO-03 | 111 |
+| REPO-04 | 111 |
