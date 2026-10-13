@@ -273,14 +273,14 @@ Plans:
 Plans:
 **Wave 1**
 
-- [ ] 105-01-PLAN.md — README rewritten as AILSA: LSD/Nuzillard up front, no Lucy lineage, hub-and-spoke agent section, CLI examples that run, PyPI-safe absolute links
-- [ ] 105-02-PLAN.md — USER_GUIDE: rename, drop MCP, fix dead/drifted CLI examples, verify Python imports
-- [ ] 105-03-PLAN.md — ARCHITECTURE (MCP removed, real module tree, hub-and-spoke agent layer) + BENCHMARK (rename, run-execution method section, figures untouched)
-- [ ] 105-04-PLAN.md — INSTALLATION (MCP removed), SERVER_BOOTSTRAP (final names, neutral DB discovery), NUS-PORTABILITY renamed
-- [ ] 105-05-PLAN.md — CLAUDE.md developer memory + .gitignore comments + rdmo description + faulon-bridge spike renamed
-- [ ] 105-06-PLAN.md — Infographic deck: 8 slides incl. new blind-benchmark slide, examples slide, refreshed numbers, Get-it box; deck.html + ailsa-infographics.pdf rebuilt
+- [x] 105-01-PLAN.md — README rewritten as AILSA: LSD/Nuzillard up front, no Lucy lineage, hub-and-spoke agent section, CLI examples that run, PyPI-safe absolute links
+- [x] 105-02-PLAN.md — USER_GUIDE: rename, drop MCP, fix dead/drifted CLI examples, verify Python imports
+- [x] 105-03-PLAN.md — ARCHITECTURE (MCP removed, real module tree, hub-and-spoke agent layer) + BENCHMARK (rename, run-execution method section, figures untouched)
+- [x] 105-04-PLAN.md — INSTALLATION (MCP removed), SERVER_BOOTSTRAP (final names, neutral DB discovery), NUS-PORTABILITY renamed
+- [x] 105-05-PLAN.md — CLAUDE.md developer memory + .gitignore comments + rdmo description + faulon-bridge spike renamed
+- [x] 105-06-PLAN.md — Infographic deck: 8 slides incl. new blind-benchmark slide, examples slide, refreshed numbers, Get-it box; deck.html + ailsa-infographics.pdf rebuilt
 - [ ] 105-07-PLAN.md — figshare record: paste-ready text + click-path, user edits in browser (checkpoint), public-API check; upload scripts renamed
-- [ ] 105-08-PLAN.md — Removal of old-name ballast documents after user approval (checkpoint), then git rm
+- [x] 105-08-PLAN.md — Removal of old-name ballast documents after user approval (checkpoint), then git rm
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -377,7 +377,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|-----------------|--------|-----------|
 | 104. Package and CLI | 6/6 | Complete    | 2026-10-03 |
-| 105. Documentation and outside face | 0/9 | Planned | - |
+| 105. Documentation and outside face | 7/9 | In Progress|  |
 | 106. Freeze, rename and restructure the skill | 0/? | Not started | - |
 | 107. Evaluation bench and team-mode spike | 0/? | Not started | - |
 | 108. Foundation | 0/? | Not started | - |
