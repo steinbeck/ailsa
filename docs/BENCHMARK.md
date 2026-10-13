@@ -1,6 +1,6 @@
 # Benchmark: blind evaluation on 258 NMR datasets
 
-lucy-ng is evaluated **blind**. The agent team is handed nothing but a directory of
+AILSA is evaluated **blind**. The system is handed nothing but a directory of
 Bruker spectra and a molecular formula; it never sees the compound's name, structure or
 database entry, and dereplication is forbidden. Everything below is measured that way.
 
@@ -35,6 +35,28 @@ skeleton and connectivity match. Read every figure below with that in mind.
 
 ---
 
+## How a benchmark run executes
+
+**Execution.** Each dataset is run unattended (`claude -p`) through the case command on its
+sanitised data directory, with a three-hour wall-clock limit. Claude Code forms no agent team
+in this mode, so the coordinator ran the specialists one at a time — NMR chemist, LSD engineer,
+devil's advocate, solution analyst, with the diagnostic specialist only on escalation — checked
+what each one returned, and wrote the progress log itself; the devil's advocate still validated
+every LSD file before the solver ran. Evidence: 173 headless benchmark run folders show no team
+creation, a median of six specialist spawns per run, and seven specialist-to-specialist messages
+in total. The term "hub-and-spoke" is used here, and only here, as the name for this execution
+pattern.
+
+**Detection.** The reference database on the compute host had an outdated schema without the
+current statistics tables, so the statistical detection commands returned no usable data in the
+September runs; prediction, ranking and identity derivation worked normally.
+
+Every figure below was therefore measured in a restricted configuration: without the agent team
+and without statistical detection. The designed system — a coordinator with specialists that
+coordinate with each other — is described in [The CASE agent layer](ARCHITECTURE.md#the-case-agent-layer).
+
+---
+
 ## How blindness is enforced
 
 Four mechanisms, because a prompt instruction alone is not evidence of anything:
@@ -65,6 +87,9 @@ identities had been public in this repository by then, so all six count as not b
 ---
 
 ## Results
+
+All figures in this section were measured in the restricted configuration described in
+[How a benchmark run executes](#how-a-benchmark-run-executes).
 
 ### The whole benchmark on the current model
 
@@ -148,7 +173,7 @@ here to a measure of run-to-run variation, and it is confounded with the skill c
 
 The arms differ in **two** ways, not one: the model changed from Opus 4.8 to Opus 5,
 **and** the orchestrator skill was revised in between. Nothing here separates the two.
-The honest claim is "lucy-ng as it was then versus lucy-ng as it is now", and that is how
+The honest claim is "AILSA as it was then versus AILSA as it is now", and that is how
 it should be cited.
 
 The main campaign set is significantly *larger* and *more flexible* than the 4.8 set

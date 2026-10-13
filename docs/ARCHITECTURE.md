@@ -1,26 +1,30 @@
 # Architecture
 
-This document describes the technical architecture and design decisions behind lucy-ng.
+This document describes the technical architecture and design decisions behind AILSA.
 
 ## Table of Contents
 
 - [Overview](#overview)
 - [Module Structure](#module-structure)
 - [Data Flow](#data-flow)
+- [The CASE agent layer](#the-case-agent-layer)
 - [Design Decisions](#design-decisions)
 - [Key Classes](#key-classes)
 - [Extension Points](#extension-points)
 
 ## Overview
 
-Lucy-ng is architected as a layered Python library with three main interfaces:
+AILSA is a layered Python library with two interfaces — the `ailsa` CLI (Click; every
+subcommand supports `--format json`) and the Python API — and a CASE agent layer (a Claude
+Code skill) that drives the CLI.
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                      User Interfaces                        │
-├─────────────────┬─────────────────┬─────────────────────────┤
-│   CLI (click)   │  Python API     │   MCP Server (FastMCP)  │
-├─────────────────┴─────────────────┴─────────────────────────┤
+│                      CASE agent layer                       │
+│         (Claude Code skill: coordinator + specialist team)  │
+├─────────────────────────────────┬───────────────────────────┤
+│           CLI (click)           │        Python API         │
+├───────────────────────────────────────────────────────────── ┤
 │                      Core Library                           │
 ├──────────┬──────────┬───────────┬───────────┬──────────────┤
 │ Readers  │Processing│ Analysis  │Dereplicat.│     LSD      │
@@ -35,54 +39,85 @@ Lucy-ng is architected as a layered Python library with three main interfaces:
 2. **Static Methods for Convenience**: Core operations are static for easy use
 3. **Immutable Data Models**: All models are Pydantic dataclasses
 4. **Explicit Error Handling**: Operations return result objects, not exceptions
-5. **AI-First API**: All operations return structured data suitable for LLM consumption
+5. **Agent-first output**: every CLI command can emit structured JSON for the agents
 
 ## Module Structure
 
 ```
-src/lucy_ng/
+src/ailsa/
 ├── __init__.py           # Public API exports
 ├── models/               # Pydantic data models
-│   ├── __init__.py
 │   ├── spectrum.py       # Spectrum1D, Spectrum2D
-│   └── peaks.py          # Peak1D, Peak2D, PeakList1D, PeakList2D
+│   ├── peaks.py          # Peak1D, Peak2D, PeakList1D, PeakList2D
+│   └── nus.py            # NUS acquisition/schedule models
 ├── readers/              # NMR file readers
-│   ├── __init__.py
-│   └── bruker.py         # BrukerReader
+│   ├── bruker.py          # BrukerReader
+│   ├── jcamp.py           # JCAMP-DX reader (1D + 2D NTUPLES)
+│   └── _jcampdx_decode.py # vendored JCAMP-DX line decoder
 ├── processing/           # Signal processing and peak picking
-│   ├── __init__.py
-│   ├── peak_picker.py    # AdaptivePeakPicker
-│   ├── peak_picker_2d.py # PeakPicker2D
-│   ├── peak_validator.py # PeakValidator
-│   ├── dept_guided_picker.py    # DEPTGuidedPicker
-│   └── hmbc_guided_picker.py    # HMBCGuidedPicker
+│   ├── peak_picker.py        # AdaptivePeakPicker
+│   ├── peak_picker_2d.py     # PeakPicker2D
+│   ├── peak_validator.py     # PeakValidator
+│   ├── dept_guided_picker.py # DEPTGuidedPicker
+│   ├── hmbc_guided_picker.py # HMBCGuidedPicker
+│   ├── edited_sign.py        # HSQC multiplicity-edited sign handling
+│   └── jcamp_1d_bridge.py    # 1D peak-pick bridge for JCAMP-sourced spectra
 ├── analysis/             # Spectroscopic analysis
-│   ├── __init__.py
 │   ├── hydrogen_budget.py    # HydrogenBudgetAnalyzer
-│   ├── intensity_report.py   # IntensityReporter
-│   └── symmetry.py           # SymmetryAnalyzer
-├── dereplication/        # Database matching
-│   ├── __init__.py
+│   ├── intensity_reporter.py # IntensityReporter
+│   └── symmetry_analysis.py  # SymmetryAnalyzer
+├── detection/            # Statistical detection (hybridisation, neighbours, HHB, grouping)
+│   ├── detector.py
+│   ├── grouping.py
+│   └── models.py
+├── dereplication/        # Formula-indexed compound database matching
 │   ├── coconut.py        # CoconutLoader (streaming)
 │   ├── nmrshiftdb.py     # NMRShiftDBLoader
+│   ├── sherlock.py       # SherlockLoader / SherlockEntry
 │   ├── matcher.py        # SpectrumMatcher
 │   └── service.py        # DereplicationService
+├── prediction/           # HOSE-code 13C shift prediction
+│   ├── hose.py / hose_parser.py    # HOSE code generation/parsing
+│   ├── predictor.py, resolver.py, lookup.py, db_lookup.py
+│   ├── bond_pair_generator.py      # bond-pair statistics for detection
+│   └── stats_generator.py          # HOSE statistics table generation
+├── fragments/            # Bundled LSD fragment / ring-exclusion filter library
+│   └── db.py, extractor.py, fingerprint.py, lsd_formatter.py, models.py, schema.py, searcher.py
+├── ranking/              # Candidate solution ranking
+│   ├── models.py
+│   └── ranker.py
 ├── lsd/                  # LSD solver integration
-│   ├── __init__.py
-│   ├── models.py         # LSDProblem, LSDAtom, etc.
-│   ├── generator.py      # LSDInputGenerator
-│   ├── runner.py         # LSDRunner
-│   └── parser.py         # LSDOutputParser
-├── cli/                  # Command-line interface
-│   ├── __init__.py
-│   ├── read.py
-│   ├── pick.py
-│   ├── analyze.py
-│   ├── dereplicate.py
-│   └── lsd.py
-└── mcp/                  # MCP server
-    ├── __init__.py
-    └── server.py         # FastMCP tool definitions
+│   ├── models.py          # LSDProblem, LSDAtom, etc.
+│   ├── generator.py       # LSDInputGenerator
+│   ├── runner.py          # LSDRunner, LSDResult
+│   ├── parser.py          # LSDOutputParser
+│   ├── analyzer.py        # J-coupling path analysis
+│   ├── orchestrator.py    # multi-run (pyLSD) orchestration
+│   └── filters/           # badlist/ring-exclusion filter files
+├── nus/                  # Non-uniform-sampling 2D reconstruction pipeline
+│   ├── params.py, schedule.py, platform_check.py, runner.py, bridge.py, postprocess.py, qc.py
+│   └── backends/
+├── nmrxiv/               # nmrXiv dataset fetching
+│   ├── client.py
+│   └── models.py
+├── database/             # SQLite reference-database layer
+│   └── finder.py, importer.py, manager.py, models.py, query.py, schema.py
+├── identity.py           # Structure → identity derivation (`ailsa identify`)
+├── visualization/        # NMR correlation diagram rendering
+│   └── arrow_router.py, diagram_generator.py, layout_optimizer.py, models.py, svg_builder.py
+├── webview/              # Read-only FastAPI run dashboard (optional [webview] extra)
+│   ├── app.py, depiction.py, server.py, state.py
+│   ├── routers/
+│   └── static/
+├── solvers/              # reserved for future solver integrations
+├── data/                 # packaged schemas/fixtures
+│   └── schemas/
+└── cli/                  # `ailsa` Click CLI (every subcommand supports --format json)
+    ├── main.py, __main__.py
+    ├── read.py, pick.py, analyze.py, detect.py, dereplicate.py
+    ├── predict.py, lsd.py, pylsd.py, fragment.py, identify.py
+    ├── jcamp.py, nus.py, fetch.py, visualize.py, webview.py
+    └── database.py
 ```
 
 ## Data Flow
@@ -140,6 +175,41 @@ HSQC + DEPT-135                    HMBC + 13C + HSQC
              └──────────┘
 ```
 
+In a CASE run the LSD-engineer agent writes the LSD file itself, iteration by iteration; the
+CLI has no command that generates one from spectra (D-14) — `LSDInputGenerator` is a Python-API
+building block the agent's own reasoning drives, not a `lsd generate` subcommand.
+
+## The CASE agent layer
+
+AILSA's CLI is a thin data-access layer; the intelligence that turns peak lists into a
+structure lives one level up, in a Claude Code skill. That skill is **a designed agent team**:
+specialists that coordinate with each other, not a single autonomous agent working alone.
+
+- A **coordinator** (`/ailsa:case`) creates a task per elucidation stage and starts the
+  specialist for it, monitors progress, detects unproductive loops, and sends advisories when
+  one is found. It is the sole writer of `CASE-PROGRESS.md`, and escalates to `ailsa-diagnostic`
+  when a specialist cannot make progress on its own.
+- Four specialists do the elucidation work: `ailsa-nmr-chemist`, `ailsa-lsd-engineer`,
+  `ailsa-solution-analyst` and `ailsa-devils-advocate`. `ailsa-diagnostic` joins only on
+  escalation, for deep LSD-failure analysis.
+- **The direct review loop:** the LSD engineer sends every new LSD file it writes directly to the
+  devil's advocate, who approves it or blocks it with an issue list; the solver runs only after
+  approval. This loop does not go through the coordinator.
+- **Requests to the NMR chemist:** the LSD engineer can directly ask the NMR chemist for
+  additional HMBC correlations or detection results mid-iteration, rather than waiting for the
+  coordinator to relay the request.
+- The NMR chemist's statistical detection (`ailsa detect …`: hybridisation, neighbours, HHB,
+  grouping) draws on statistics tables in the reference database; it is one more source of
+  evidence the chemist combines with direct spectral read-outs.
+- Forming the team needs Claude Code's agent-team feature
+  (`CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`); interactive sessions form it.
+
+The published benchmark ran in a **restricted configuration**: without the agent team, because
+unattended (`claude -p`) runs form none, and without statistical detection, because the compute
+host's reference database lacked the current statistics tables. See
+[How a benchmark run executes](BENCHMARK.md#how-a-benchmark-run-executes) for exactly what that
+configuration measured.
+
 ## Design Decisions
 
 ### 1. Static Methods for Core Operations
@@ -182,25 +252,28 @@ class Peak1D(BaseModel):
     assignment: str | None = None
 ```
 
-### 3. Result Objects Instead of Exceptions
+### 3. Structured JSON Instead of Exceptions
 
-**Decision**: Return structured result objects from operations.
+**Decision**: Every CLI command returns a structured result; with `--format json`, agents get
+that result as parseable JSON instead of formatted text.
 
 **Rationale**:
 - AI agents can handle structured errors
 - No try/catch needed for expected failures
 - Consistent interface across all operations
 
-**Example**:
+**Example** — `ailsa detect hhb C10H14O2 --format json`:
 ```python
-# MCP tool returns structured result
-@mcp.tool()
-def read_spectrum_1d(path: str) -> dict:
-    try:
-        spectrum = BrukerReader.read_1d(path)
-        return {"success": True, "nucleus": spectrum.nucleus, ...}
-    except Exception as e:
-        return {"success": False, "error": str(e)}
+{
+    "formula": "C10H14O2",
+    "threshold": 0.01,
+    "allowed_pairs": [],
+    "forbidden_pairs": [],
+    "total_compounds": 325,
+    "has_data": true,
+    "has_heteroatoms": true,
+    "warning": null
+}
 ```
 
 ### 4. Guided Peak Picking Strategy
@@ -233,6 +306,11 @@ class DEPTGuidedPicker:
         return DEPTGuidedResult(peaks=validated_hsqc, ...)
 ```
 
+The CLI itself only picks raw peaks — `ailsa pick hmbc --help` states it plainly: "Returns raw
+cross-peaks without cross-validation filtering. The AI agent applies HMBC filtering logic using
+skill knowledge." The guided classes above are Python-API building blocks; the CASE agent layer
+is what actually invokes the cross-validation judgement during a run.
+
 ### 5. Streaming for Large Databases
 
 **Decision**: Use streaming mode for COCONUT database.
@@ -257,34 +335,24 @@ class CoconutLoader:
                     yield self._parse_block(block)
 ```
 
-### 6. MCP Tool Design
+### 6. Thin CLI, judgement in the agents
 
-**Decision**: Each MCP tool is self-contained and returns complete results.
+**Decision**: The CLI returns raw data and structured results; filtering, constraint choice and
+plausibility judgement live in the agent skill, not in the Python package.
 
 **Rationale**:
-- AI agents work best with complete responses
-- Reduces back-and-forth for simple queries
-- Error information included in response
+- A thin CLI is testable and scriptable in isolation
+- Domain judgement (which correlation to trust, which constraint to add, when a solution is
+  plausible) changes faster than the data-access code and belongs where it can be revised
+  without touching the package
+- Keeps the package dependency-light; the agent skill carries the strategy
 
-**Example**:
-```python
-@mcp.tool()
-def pick_hsqc_peaks(hsqc_path: str, dept135_path: str) -> dict:
-    """Pick HSQC peaks using DEPT-guided algorithm."""
-    try:
-        hsqc = BrukerReader.read_2d(hsqc_path)
-        dept135 = BrukerReader.read_1d(dept135_path)
-        result = DEPTGuidedPicker.pick_hsqc_peaks(hsqc, dept135)
-        return {
-            "success": True,
-            "dept_peaks_count": len(result.dept_peaks.peaks),
-            "hsqc_peaks_count": len(result.peaks.peaks),
-            "carbon_multiplicities": result.carbon_multiplicities,
-            "peaks": [...],
-        }
-    except Exception as e:
-        return {"success": False, "error": str(e)}
-```
+**Example**: `ailsa pick hmbc` returns every raw cross-peak above the SNR floor; it does not
+decide which are genuine 3J correlations versus artifacts — that filtering is the NMR chemist
+agent's job, using the skill's HMBC-validation knowledge against HSQC/13C evidence. Likewise
+`ailsa lsd run` solves whatever LSD file it is given; deciding what goes into that file — which
+constraints are hard, which fragment to inject, when to escalate — is the LSD engineer's and
+devil's advocate's judgement, not a CLI flag.
 
 ## Key Classes
 
@@ -303,7 +371,7 @@ def pick_hsqc_peaks(hsqc_path: str, dept135_path: str) -> dict:
 
 | Class | Description |
 |-------|-------------|
-| `BrukerReader` | Read Bruker TopSpin format (1D and 2D) |
+| `BrukerReader` | Read Bruker-format NMR data (1D and 2D) |
 
 ### Processing
 
@@ -364,40 +432,15 @@ class VarianReader:
 
 1. Create loader class in `dereplication/`
 2. Implement `get_by_formula()` method
-3. Return `DatabaseEntry` objects
+3. Return entry objects (e.g. `NMRShiftDBEntry`)
 4. Use with `DereplicationService`
 
 ```python
 # dereplication/custom_db.py
 class CustomDBLoader:
-    def get_by_formula(self, formula: str) -> Generator[DatabaseEntry]:
+    def get_by_formula(self, formula: str) -> Generator[NMRShiftDBEntry]:
         # Implementation
-        yield DatabaseEntry(...)
-```
-
-### Adding New MCP Tools
-
-1. Add function in `mcp/server.py`
-2. Decorate with `@mcp.tool()`
-3. Return structured dict with `success` key
-4. Document parameters in docstring
-
-```python
-@mcp.tool()
-def my_new_tool(param: str) -> dict:
-    """Description for AI agents.
-
-    Args:
-        param: Description of parameter
-
-    Returns:
-        Dictionary with results
-    """
-    try:
-        result = do_something(param)
-        return {"success": True, "data": result}
-    except Exception as e:
-        return {"success": False, "error": str(e)}
+        yield NMRShiftDBEntry(...)
 ```
 
 ### Adding CLI Commands
@@ -405,7 +448,7 @@ def my_new_tool(param: str) -> dict:
 1. Create command in appropriate `cli/*.py` module
 2. Use Click decorators
 3. Support `--format json` output
-4. Register in `cli/__init__.py`
+4. Register in `src/ailsa/cli/`
 
 ```python
 # cli/my_command.py
