@@ -1,6 +1,6 @@
 # Installation Guide
 
-This guide covers all installation options for lucy-ng.
+This guide covers all installation options for AILSA.
 
 ## Table of Contents
 
@@ -17,7 +17,7 @@ This guide covers all installation options for lucy-ng.
 
 ### Python Version
 
-Lucy-ng requires **Python 3.10 or higher**.
+AILSA requires **Python 3.10 or higher**.
 
 Check your Python version:
 ```bash
@@ -26,7 +26,7 @@ python3 --version
 
 ### System Dependencies
 
-Lucy-ng's Python dependencies will be installed automatically. The core dependencies are:
+AILSA's Python dependencies will be installed automatically. The core dependencies are:
 
 | Package | Version | Purpose |
 |---------|---------|---------|
@@ -43,30 +43,29 @@ Lucy-ng's Python dependencies will be installed automatically. The core dependen
 | Package | Purpose | Notes |
 |---------|---------|-------|
 | hose-code-generator | 13C shift prediction | See [Python 3.12 note](#13c-prediction-python-312) |
-| mcp[cli] | MCP server for AI agents | Installed with `[mcp]` extra |
 
 ## Quick Installation
 
-### From GitHub (Recommended)
-
-Lucy-ng is currently installed directly from GitHub:
+### From PyPI (Recommended)
 
 ```bash
-# Basic installation
-pip install "lucy-ng @ git+https://github.com/steinbeck/lucy-ng.git"
-
-# With MCP server support (recommended for AI integration)
-pip install "lucy-ng[mcp] @ git+https://github.com/steinbeck/lucy-ng.git"
+pip install ailsa
 ```
 
-This adds the `mcp[cli]>=1.2.0` dependency for AI agent integration.
+### From GitHub (development head)
 
-> **Note for macOS/zsh users**: The quotes are required because zsh interprets square brackets as glob patterns. Without quotes, you'll get "no matches found" error.
+```bash
+pip install "ailsa @ git+https://github.com/steinbeck/ailsa.git"
+```
+
+> **Note for macOS/zsh users**: Quotes are required when a package spec contains
+> brackets (e.g. an extra like `ailsa[dev]`), because zsh interprets square brackets
+> as glob patterns. Without quotes, you'll get a "no matches found" error.
 
 ### Full Installation (All Features)
 
 ```bash
-pip install "lucy-ng[mcp,dev] @ git+https://github.com/steinbeck/lucy-ng.git"
+pip install "ailsa[dev] @ git+https://github.com/steinbeck/ailsa.git"
 ```
 
 ## Installation Options
@@ -76,36 +75,36 @@ pip install "lucy-ng[mcp,dev] @ git+https://github.com/steinbeck/lucy-ng.git"
 Install for the current user only (no root required):
 
 ```bash
-pip install --user "lucy-ng[mcp] @ git+https://github.com/steinbeck/lucy-ng.git"
+pip install --user "ailsa @ git+https://github.com/steinbeck/ailsa.git"
 ```
 
 ### Option 2: Virtual Environment (Recommended)
 
 ```bash
 # Create virtual environment
-python3 -m venv lucy-env
-source lucy-env/bin/activate  # Linux/macOS
-# or: lucy-env\Scripts\activate  # Windows
+python3 -m venv ailsa-env
+source ailsa-env/bin/activate  # Linux/macOS
+# or: ailsa-env\Scripts\activate  # Windows
 
-# Install lucy-ng
-pip install "lucy-ng[mcp] @ git+https://github.com/steinbeck/lucy-ng.git"
+# Install AILSA
+pip install "ailsa @ git+https://github.com/steinbeck/ailsa.git"
 ```
 
 ### Option 3: Development Installation (For Contributors)
 
-For contributing or modifying lucy-ng:
+For contributing or modifying AILSA:
 
 ```bash
 # Clone repository
-git clone https://github.com/steinbeck/lucy-ng.git
-cd lucy-ng
+git clone https://github.com/steinbeck/ailsa.git
+cd ailsa
 
 # Create virtual environment
 python3 -m venv venv
 source venv/bin/activate
 
 # Install in editable mode with dev dependencies
-pip install -e ".[dev,mcp]"
+pip install -e ".[dev]"
 
 # Verify installation
 pytest
@@ -114,12 +113,13 @@ pytest
 ### Option 4: System-Wide Installation
 
 ```bash
-sudo pip install "lucy-ng[mcp] @ git+https://github.com/steinbeck/lucy-ng.git"
+sudo pip install "ailsa @ git+https://github.com/steinbeck/ailsa.git"
 ```
 
 ## 13C Prediction (Python 3.12)
 
-The 13C shift prediction feature (`lucy predict c13`, `predict_c13_shifts` MCP tool, solution ranking) requires the `hose-code-generator` package for HOSE code generation.
+The 13C shift prediction feature (`ailsa predict c13`, `ailsa lsd rank` solution
+ranking) requires the `hose-code-generator` package for HOSE code generation.
 
 ### Python 3.10/3.11
 
@@ -130,7 +130,7 @@ On Python 3.10 or 3.11, hosegen installs automatically with all its dependencies
 On Python 3.12, the `hose-code-generator` package has a broken test dependency (`xmlrunner`) that fails to install. Install it manually without dependencies:
 
 ```bash
-# After installing lucy-ng
+# After installing AILSA
 pip install git+https://github.com/Ratsemaat/HOSE_code_generator.git --no-deps
 ```
 
@@ -141,13 +141,13 @@ The `--no-deps` flag skips the broken `xmlrunner` dependency, which is only need
 You can check if HOSE code prediction is available:
 
 ```python
-from lucy_ng.prediction import HOSEGEN_AVAILABLE
+from ailsa.prediction import HOSEGEN_AVAILABLE
 print(f"HOSE prediction available: {HOSEGEN_AVAILABLE}")
 ```
 
 Or via CLI:
 ```bash
-lucy predict c13 "CCO"  # Will show error if hosegen not installed
+ailsa predict c13 "CCO"  # Will show error if hosegen not installed
 ```
 
 ## External Dependencies
@@ -195,14 +195,13 @@ sudo cp outlsd /usr/local/bin/
 
 Without `outlsd`:
 - LSD will still generate solutions
-- But `lucy lsd rank` cannot rank them (no SMILES available)
-- The `rank_lsd_solutions` MCP tool will skip all solutions
+- But `ailsa lsd rank` cannot rank them (no SMILES available) — the command will skip all solutions
 
 #### Verify LSD Installation
 
 ```bash
 # Using CLI - shows both lsd and outlsd status
-lucy lsd check
+ailsa lsd check
 
 # Or directly
 which lsd
@@ -225,34 +224,42 @@ pip install pylsd
 
 ## Reference Database
 
-Lucy-ng uses **one pre-built SQLite database** for BOTH dereplication and 13C
+AILSA uses **one pre-built SQLite database** for BOTH dereplication and 13C
 prediction (formula-indexed compound lookup + HOSE-based shift prediction). It is
 required for the `dereplicate`, `predict c13`, and CASE-ranking paths. You do **not**
 build it from raw SD files for a normal install — download the pre-built one:
 
 ```bash
 mkdir -p data/reference
-lucy database download -o data/reference/lucy-ng-derep.db   # ~830 MB → ~2.8 GB
-lucy database info data/reference/lucy-ng-derep.db          # verify row counts
+ailsa database download                 # ~830 MB -> ~2.8 GB
+ailsa database info                      # verify row counts and schema version
 ```
 
 | Property | Value |
 |----------|-------|
 | Source | Figshare, DOI [10.6084/m9.figshare.31073554](https://doi.org/10.6084/m9.figshare.31073554) |
-| Default path | `data/reference/lucy-ng-derep.db` |
+| Default path | `data/reference/ailsa-derep.db` |
 | Contents | 928,443 compounds (COCONUT + NMRShiftDB), 7.9M HOSE statistics |
+
+Statistical detection (`ailsa detect …`, used by the NMR-chemist agent) needs the
+full reference database with the **current schema**: with a database file on an
+older schema, the detection commands return no usable data even though prediction
+and ranking still work from the same file. `ailsa database info` prints a "Schema
+version" line — check it after any download.
 
 ### Auto-Discovery
 
-`DatabaseFinder` discovers `data/reference/lucy-ng-derep.db` automatically (including
-from a CASE data directory outside the repo). Override explicitly with `--database`:
+`DatabaseFinder` discovers `data/reference/ailsa-derep.db` automatically, including
+from a CASE data directory outside the repo (it also checks
+`~/ailsa/data/reference/ailsa-derep.db` and `~/.local/share/ailsa/ailsa-derep.db`).
+Override explicitly with `--database`:
 
 ```bash
-lucy dereplicate c13 spectrum_path formula --database /path/to/lucy-ng-derep.db
+ailsa dereplicate c13 spectrum_path formula --database /path/to/ailsa-derep.db
 ```
 
 > The raw COCONUT/NMRShiftDB SD files are only needed to **rebuild** the SQLite DB from
-> source (a maintenance task) — not for running lucy-ng.
+> source (a maintenance task) — not for running AILSA.
 
 ## Verification
 
@@ -262,27 +269,17 @@ After installation, verify everything works:
 
 ```bash
 # Should show help message
-lucy --help
+ailsa --help
 
 # Check version
-lucy --version
-```
-
-### Check MCP Server
-
-```bash
-# Should show help for MCP server
-lucy-mcp --help
-
-# Or run directly
-python -m lucy_ng.mcp --help
+ailsa --version
 ```
 
 ### Run Tests
 
 ```bash
 # Quick test (if dev dependencies installed)
-pytest tests/test_mcp_server.py -v
+pytest -q
 
 # Full test suite
 pytest
@@ -292,26 +289,26 @@ pytest
 
 ```bash
 # Read a spectrum (if test data available)
-lucy read 1d data/Ibuprofen/2
+ailsa read 1d data/Ibuprofen/2
 
 # Pick peaks
-lucy pick 1d data/Ibuprofen/2
+ailsa pick 1d data/Ibuprofen/2
 ```
 
 ## Troubleshooting
 
 ### Import Errors
 
-**Problem**: `ModuleNotFoundError: No module named 'lucy_ng'`
+**Problem**: `ModuleNotFoundError: No module named 'ailsa'`
 
 **Solution**:
 ```bash
 # Ensure you're in the right environment
 which python3
-pip list | grep lucy
+pip list | grep ailsa
 
 # Reinstall if needed
-pip install --force-reinstall lucy-ng
+pip install --force-reinstall ailsa
 ```
 
 ### RDKit Installation Issues
@@ -327,25 +324,9 @@ conda install -c conda-forge rdkit
 mamba install rdkit
 ```
 
-### MCP Server Not Found
-
-**Problem**: `lucy-mcp: command not found`
-
-**Solution**:
-```bash
-# Ensure MCP extras were installed
-pip install lucy-ng[mcp]
-
-# Check if entry point exists
-pip show lucy-ng | grep -A 10 "Entry-points"
-
-# Run directly as module
-python -m lucy_ng.mcp
-```
-
 ### LSD Not Found
 
-**Problem**: `lucy lsd check` says LSD is not available
+**Problem**: `ailsa lsd check` says LSD is not available
 
 **Solution**:
 ```bash
@@ -363,19 +344,19 @@ which lsd
 
 **Problem**: Dereplication takes very long with COCONUT
 
-**Solution**: This is normal for the first query. Lucy-ng uses streaming mode so it doesn't load the entire 4.8 GB file into memory. Typical query time is 1-2 minutes for formula-based filtering.
+**Solution**: This is normal for the first query. AILSA uses streaming mode so it doesn't load the entire 4.8 GB file into memory. Typical query time is 1-2 minutes for formula-based filtering.
 
 ### Memory Issues
 
 **Problem**: Out of memory errors with large databases
 
-**Solution**: Lucy-ng's COCONUT loader uses streaming mode by default. If you're still seeing issues:
+**Solution**: AILSA's COCONUT loader uses streaming mode by default. If you're still seeing issues:
 ```bash
 # Increase available memory
 ulimit -v unlimited
 
 # Or use NMRShiftDB instead
-lucy dereplicate c13 spectrum formula --database data/reference/nmrshiftdb2withsignals.sd
+ailsa dereplicate c13 spectrum formula --database data/reference/nmrshiftdb2withsignals.sd
 ```
 
 ### HOSE Code Generator Issues (Python 3.12)
@@ -398,11 +379,12 @@ pip install git+https://github.com/Ratsemaat/HOSE_code_generator.git --no-deps
 
 ## Claude Code Skill Installation
 
-Lucy-ng's Claude Code integration is the `/lucy-ng:*` **commands** plus the **CASE team
-agents** that `/lucy-ng:case` spawns. Both must be present, and an environment flag must
+AILSA's Claude Code integration is the `/ailsa:*` **commands** plus the **CASE
+agent team** that `/ailsa:case` starts: a coordinator and four specialists that
+coordinate with each other. Both must be present, and an environment flag must
 be set, or CASE fails at its prerequisite gate.
 
-> For a fresh headless server (e.g. provisioning the `sheldon` compute host), follow the
+> For a fresh headless server set up to run CASE unattended, follow the
 > end-to-end **[SERVER_BOOTSTRAP.md](SERVER_BOOTSTRAP.md)** guide (or run
 > `scripts/bootstrap_case_host.sh`) — it does the steps below plus Python/LSD/DB.
 
@@ -412,62 +394,69 @@ Symlink the repo's `.claude/` content into `~/.claude` (edits stay in sync; use 
 for a frozen snapshot):
 
 ```bash
-git clone https://github.com/steinbeck/lucy-ng.git
-cd lucy-ng
+git clone https://github.com/steinbeck/ailsa.git
+cd ailsa
 mkdir -p ~/.claude/agents ~/.claude/commands
 
 # Commands (case, dereplicate, predict, sanitise, status + references/)
-ln -sfn "$PWD/.claude/commands/lucy-ng" ~/.claude/commands/lucy-ng
+ln -sfn "$PWD/.claude/commands/ailsa" ~/.claude/commands/ailsa
 
-# CASE team agents — REQUIRED for /lucy-ng:case to spawn its team
-for a in "$PWD"/.claude/agents/lucy-*.md; do
+# CASE team agents — REQUIRED for /ailsa:case to spawn its team
+for a in "$PWD"/.claude/agents/ailsa-*.md; do
   ln -sfn "$a" ~/.claude/agents/"$(basename "$a")"
 done
 ```
 
 ### Enable agent teams
 
-`/lucy-ng:case` runs a multi-agent team — Claude Code needs this experimental flag:
+The CASE agent team is built on Claude Code's agent-team feature. This is a
+requirement of the team design, not an optional toggle — `/ailsa:case` checks the
+flag before it starts:
 
 ```bash
 echo 'export CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1' >> ~/.bashrc   # or ~/.zshrc
 export CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1
 ```
 
+Unattended runs (`claude -p`) do not form a team even with the flag set — the
+coordinator then runs the specialists one at a time, which is the restricted
+configuration the published benchmark measured (see
+[BENCHMARK.md#how-a-benchmark-run-executes](BENCHMARK.md#how-a-benchmark-run-executes)).
+
 ### Verify
 
 After restarting Claude Code, the commands are available:
 
 ```
-/lucy-ng:case        /lucy-ng:dereplicate        /lucy-ng:predict
-/lucy-ng:sanitise    /lucy-ng:status
+/ailsa:case        /ailsa:dereplicate        /ailsa:predict
+/ailsa:sanitise    /ailsa:status
 ```
 
 ### Available commands
 
 | Command | Purpose |
 |---------|---------|
-| `/lucy-ng:case` | Full de novo structure elucidation (spawns the 4-agent team) |
-| `/lucy-ng:dereplicate` | Database matching only |
-| `/lucy-ng:predict` | Predict 13C shifts for a SMILES |
-| `/lucy-ng:sanitise` | Remove compound identity from datasets for blind CASE |
-| `/lucy-ng:status` | Check environment readiness (lucy/LSD/DB) |
+| `/ailsa:case` | Full de novo structure elucidation (coordinator + four-specialist team) |
+| `/ailsa:dereplicate` | Database matching only |
+| `/ailsa:predict` | Predict 13C shifts for a SMILES |
+| `/ailsa:sanitise` | Remove compound identity from datasets for blind CASE |
+| `/ailsa:status` | Check environment readiness (ailsa/LSD/DB) |
 
 ### CASE team agents (in `~/.claude/agents/`)
 
 | Agent | Role |
 |-------|------|
-| `lucy-nmr-chemist` | Peak picking, statistical detection, spectral QA |
-| `lucy-lsd-engineer` | LSD constraint building + solver runs |
-| `lucy-solution-analyst` | Solution ranking + identity reporting |
-| `lucy-devils-advocate` | Pre-run validation + post-solution G-IDENT/G-MULT gates |
-| `lucy-diagnostic` | Deep LSD-failure diagnosis (escalation only) |
+| `ailsa-nmr-chemist` | Peak picking, statistical detection, spectral QA |
+| `ailsa-lsd-engineer` | LSD constraint building + solver runs |
+| `ailsa-solution-analyst` | Solution ranking + identity reporting |
+| `ailsa-devils-advocate` | Pre-run validation + post-solution G-IDENT/G-MULT gates |
+| `ailsa-diagnostic` | Deep LSD-failure diagnosis (escalation only) |
 
 ## Next Steps
 
 After installation:
 
 1. **Read the User Guide**: See [USER_GUIDE.md](USER_GUIDE.md) for detailed usage
-2. **AI Agent Guide**: See [../CLAUDE.md](../CLAUDE.md) for comprehensive structure elucidation workflow and pitfalls
-3. **Explore the CLI**: Run `lucy --help` to see all commands
+2. **The CASE Agent Team**: See [../README.md#the-case-agent-team](../README.md#the-case-agent-team) for how the coordinator and specialists work together
+3. **Explore the CLI**: Run `ailsa --help` to see all commands
 4. **Try the examples**: See the Quick Start section in the main README
