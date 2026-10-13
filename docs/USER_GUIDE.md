@@ -473,7 +473,7 @@ ailsa predict build-table data/reference/nmrshiftdb2withsignals.sd
 ### Reading Spectra
 
 ```python
-from lucy_ng import BrukerReader
+from ailsa import BrukerReader
 
 # Read 1D spectrum
 spectrum_1d = BrukerReader.read_1d("data/Ibuprofen/2")
@@ -491,7 +491,7 @@ print(f"Shape: {spectrum_2d.data.shape}")
 ### Peak Picking
 
 ```python
-from lucy_ng import BrukerReader, AdaptivePeakPicker
+from ailsa import BrukerReader, AdaptivePeakPicker
 
 # Basic 1D peak picking
 spectrum = BrukerReader.read_1d("data/Ibuprofen/2")
@@ -512,8 +512,8 @@ dept_peaks = AdaptivePeakPicker.pick_peaks(
 ### DEPT-Guided HSQC Picking
 
 ```python
-from lucy_ng import BrukerReader
-from lucy_ng.processing import DEPTGuidedPicker
+from ailsa import BrukerReader
+from ailsa.processing import DEPTGuidedPicker
 
 # Load spectra
 hsqc = BrukerReader.read_2d("data/Ibuprofen/6")
@@ -540,8 +540,8 @@ for ppm, mult in result.carbon_multiplicities.items():
 ### HMBC-Guided Picking
 
 ```python
-from lucy_ng import BrukerReader
-from lucy_ng.processing import HMBCGuidedPicker
+from ailsa import BrukerReader
+from ailsa.processing import HMBCGuidedPicker
 
 hmbc = BrukerReader.read_2d("data/Ibuprofen/7")
 c13 = BrukerReader.read_1d("data/Ibuprofen/2")
@@ -564,9 +564,9 @@ print(f"Rejected: {result.rejected_count}")
 ### Symmetry Analysis
 
 ```python
-from lucy_ng import BrukerReader
-from lucy_ng.processing import DEPTGuidedPicker
-from lucy_ng.analysis import SymmetryAnalyzer
+from ailsa import BrukerReader
+from ailsa.processing import DEPTGuidedPicker
+from ailsa.analysis import SymmetryAnalyzer
 
 # Load spectra and pick peaks
 hsqc = BrukerReader.read_2d("data/Ibuprofen/6")
@@ -588,8 +588,8 @@ print(f"  Missing: {result.hydrogen_budget.missing_h}")
 ### Dereplication
 
 ```python
-from lucy_ng import BrukerReader
-from lucy_ng.dereplication import DereplicationService, CoconutLoader, NMRShiftDBLoader
+from ailsa import BrukerReader
+from ailsa.dereplication import DereplicationService, CoconutLoader, NMRShiftDBLoader
 
 # Load spectrum
 spectrum = BrukerReader.read_1d("data/Ibuprofen/2")
@@ -624,9 +624,9 @@ for match in result.top_matches:
 ### LSD Integration
 
 ```python
-from lucy_ng import BrukerReader
-from lucy_ng.processing import DEPTGuidedPicker, HMBCGuidedPicker
-from lucy_ng.lsd import LSDInputGenerator, LSDRunner
+from ailsa import BrukerReader
+from ailsa.processing import DEPTGuidedPicker, HMBCGuidedPicker
+from ailsa.lsd import LSDInputGenerator, LSDRunner
 
 # Load all spectra
 hsqc = BrukerReader.read_2d("data/Ibuprofen/6")
@@ -667,8 +667,8 @@ if LSDRunner.is_available():
 ### Solution Ranking
 
 ```python
-from lucy_ng import SolutionRanker, BrukerReader, AdaptivePeakPicker
-from lucy_ng.lsd.parser import LSDOutputParser
+from ailsa import SolutionRanker, BrukerReader, AdaptivePeakPicker
+from ailsa.lsd.parser import LSDOutputParser
 from pathlib import Path
 
 # Load experimental 13C shifts
@@ -679,8 +679,8 @@ experimental_shifts = [p.position for p in peaks.peaks]
 # Or provide shifts directly
 experimental_shifts = [180.5, 140.8, 137.0, 129.4, 127.1, 45.1, 40.4, 30.2, 22.4, 18.2]
 
-# Load LSD solutions
-solutions = LSDOutputParser.parse_solutions(Path("output/"))
+# Load LSD solutions (one SMILES per line, the standard outlsd output format)
+solutions = LSDOutputParser.parse_smiles_file(Path("outlsd.out"))
 
 # Create ranker from HOSE lookup table
 ranker = SolutionRanker.from_table_file(
@@ -709,7 +709,7 @@ for i, sol in enumerate(result.solutions):
 ### 13C Shift Prediction
 
 ```python
-from lucy_ng import C13Predictor, HOSELookupTable
+from ailsa import C13Predictor, HOSELookupTable
 from pathlib import Path
 
 # Load predictor from lookup table
@@ -729,22 +729,15 @@ for pred in result.predictions:
           f"(confidence: {pred.confidence:.2f}, radius: {pred.radius_used})")
 
 # Build a lookup table from SD file (one-time setup)
-from lucy_ng.prediction import HOSELookupTable, HOSECodeGenerator
-from lucy_ng.dereplication import NMRShiftDBLoader
+from ailsa.prediction import HOSELookupTable
+from pathlib import Path
 
-loader = NMRShiftDBLoader("data/reference/nmrshiftdb2withsignals.sd")
-loader.load()
-
-table = HOSELookupTable()
-generator = HOSECodeGenerator()
-
-for entry in loader.entries:
-    if entry.smiles:
-        mol = generator.prepare_mol(entry.smiles)
-        if mol:
-            # Add HOSE codes and shifts to table
-            # (simplified - see HOSELookupTable.build_from_loader for full implementation)
-            pass
+table = HOSELookupTable.build_from_nmrshiftdb(
+    Path("data/reference/nmrshiftdb2withsignals.sd"),
+    max_radius=6,
+)
+# Or, for a COCONUT SD file:
+# table = HOSELookupTable.build_from_coconut(Path("data/reference/coconut_predicted.sd"))
 
 # Save table for future use
 table.save("my_hose_table.json.gz")
@@ -758,11 +751,11 @@ table.save("my_hose_table.json.gz")
 
 ```python
 from pathlib import Path
-from lucy_ng import BrukerReader, SolutionRanker, AdaptivePeakPicker
-from lucy_ng.processing import DEPTGuidedPicker, HMBCGuidedPicker
-from lucy_ng.analysis import SymmetryAnalyzer
-from lucy_ng.dereplication import DereplicationService, NMRShiftDBLoader
-from lucy_ng.lsd import LSDInputGenerator, LSDRunner
+from ailsa import BrukerReader, SolutionRanker, AdaptivePeakPicker
+from ailsa.processing import DEPTGuidedPicker, HMBCGuidedPicker
+from ailsa.analysis import SymmetryAnalyzer
+from ailsa.dereplication import DereplicationService, NMRShiftDBLoader
+from ailsa.lsd import LSDInputGenerator, LSDRunner
 
 def elucidation_workflow(data_dir: str, formula: str):
     """Complete structure elucidation workflow."""
@@ -874,7 +867,7 @@ result = elucidation_workflow("data/Ibuprofen", "C13H18O2")
 
 ```python
 from pathlib import Path
-from lucy_ng import BrukerReader, AdaptivePeakPicker
+from ailsa import BrukerReader, AdaptivePeakPicker
 import json
 
 def batch_peak_picking(base_dir: str, output_file: str):
