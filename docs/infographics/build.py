@@ -1,10 +1,10 @@
-"""Assemble the lucy-ng infographic deck (5x 16:9 slides) with inline structures."""
+"""Assemble the AILSA infographic deck (8x 16:9 slides) with inline structures."""
 import json, math
 
 with open("structures.json") as f:
     S = json.load(f)
 
-# ---- CASE test-set metadata (ground truth from .planning/CASE-DATASET-IDENTITIES.md) ----
+# ---- CASE1-9 worked examples (ground truth from .planning/CASE-DATASET-IDENTITIES.md) ----
 CASES = [
     ("CASE1", "P9 / S51",   "solved",   "Benzene ring emerged from constraints — 0 ring-BONDs; Rank 1, exact InChIKey"),
     ("CASE2", "P42 / S1328", "solved",  "Purine alkaloid; two C=O + three N-CH₃ pin the xanthine core"),
@@ -78,7 +78,7 @@ _folder = ('<svg viewBox="0 0 30 22" aria-hidden="true"><path class="fill" '
 FOLDERS = "\n          ".join(
     f'<div class="fold">{_folder}<span>{i}</span></div>' for i in range(1, 8))
 
-HTML = f"""<title>lucy-ng — AI-Agent CASE from NMR</title>
+HTML = f"""<title>AILSA — AI + LSD + Agents · CASE from NMR</title>
 <style>
 :root {{
   --bg:#f5f7f9; --bg2:#eaeef2; --ink:#141b24; --muted:#5a6b7a; --faint:#8496a4;
@@ -146,6 +146,8 @@ h2 {{ font-family:var(--serif); font-weight:700; letter-spacing:-.01em; line-hei
 .s-title h1 {{ font-size:clamp(38px,6vw,74px); }}
 .s-title .kicker {{ font-family:var(--mono); font-size:13px; letter-spacing:.16em;
   text-transform:uppercase; color:var(--accent); margin-bottom:20px; }}
+.s-title .expansion {{ font-family:var(--mono); font-size:14px; letter-spacing:.1em;
+  color:var(--muted); margin:6px 0 0; }}
 .s-title .lede {{ margin-top:20px; font-size:clamp(16px,1.7vw,21px); }}
 .title-hero {{ margin:26px 0 8px; }}
 .chips {{ display:flex; flex-wrap:wrap; gap:8px; margin-top:24px; }}
@@ -201,6 +203,11 @@ h2 {{ font-family:var(--serif); font-weight:700; letter-spacing:-.01em; line-hei
 .coord {{ margin-top:14px; font-size:12.5px; color:var(--muted); background:var(--bg2);
   border:1px solid var(--line); border-radius:8px; padding:10px 14px; }}
 .coord b {{ color:var(--accent); }}
+.channels {{ display:flex; flex-direction:column; gap:8px; margin-top:12px; }}
+.channel-chip {{ font-size:12px; color:var(--muted); background:var(--card);
+  border:1px solid var(--line); border-left:3px solid var(--accent2); border-radius:8px;
+  padding:9px 13px; line-height:1.4; }}
+.channel-chip b {{ color:var(--ink); font-family:var(--mono); font-weight:600; font-size:11.5px; }}
 
 /* ---- test set grid ---- */
 .grid9 {{ display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-top:20px; flex:1; }}
@@ -308,7 +315,8 @@ h2 {{ font-family:var(--serif); font-weight:700; letter-spacing:-.01em; line-hei
   <!-- ============ SLIDE 1 · TITLE ============ -->
   <section class="slide s-title">
     <div class="kicker">Computer-Assisted Structure Elucidation · from NMR</div>
-    <h1>lucy&#8209;ng</h1>
+    <h1>AILSA</h1>
+    <p class="expansion">AI + LSD + Agents</p>
     <p class="lede">An AI agent that aims to autonomously determine the structure of an unknown
       organic compound from its NMR spectra — reasoning about the data, building solver
       constraints, and ranking candidate structures without human intervention.</p>
@@ -321,16 +329,16 @@ h2 {{ font-family:var(--serif); font-weight:700; letter-spacing:-.01em; line-hei
         <span class="bd">nmrglue · LSD · RDKit CLI wrappers for data &amp; solvers</span></div>
       <span class="op">+</span>
       <div class="block cc"><span class="bk">Agent team</span>
-        <span class="bd"><b>Claude Code's multi-agent team feature</b></span></div>
+        <span class="bd"><b>Claude Code's agent-team feature</b> — specialists that coordinate with each other</span></div>
     </div>
     <p class="stack-eq">= one autonomous CASE system, orchestrated entirely inside <b>Claude Code</b>.</p>
     <div class="repo">
       <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.6 7.6 0 0 1 2-.27c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
-      <span><b>github.com/steinbeck/lucy-ng</b></span>
+      <span><b>github.com/steinbeck/ailsa</b></span>
     </div>
     <div class="foot">
-      <span class="brand"><b>lucy-ng</b> · natural-products CASE</span>
-      <span>01 / 07</span>
+      <span class="brand"><b>AILSA</b> · natural-products CASE</span>
+      <span>01 / 08</span>
     </div>
   </section>
 
@@ -341,7 +349,7 @@ h2 {{ font-family:var(--serif); font-weight:700; letter-spacing:-.01em; line-hei
       <div style="display:flex;flex-direction:column;gap:16px;">
         <h2>Spectra in, structure out — reasoned, not guessed</h2>
         <p class="lede">A chemist elucidating a natural product juggles ¹H, ¹³C, HSQC, HMBC
-          and COSY, forms hypotheses, and rejects the ones the data contradicts. lucy-ng
+          and COSY, forms hypotheses, and rejects the ones the data contradicts. AILSA
           puts that reasoning loop under an AI agent.</p>
         <p class="lede">The Python tools stay deliberately thin — wrappers around
           <b>nmrglue</b>, <b>LSD</b> and <b>RDKit</b>. Domain expertise and strategy live in
@@ -359,7 +367,7 @@ h2 {{ font-family:var(--serif); font-weight:700; letter-spacing:-.01em; line-hei
             hand-placed answer. Verified: a benzene ring emerged with zero ring bonds asserted.</p></div>
       </div>
     </div>
-    <div class="foot"><span class="brand"><b>lucy-ng</b> · the idea</span><span>02 / 07</span></div>
+    <div class="foot"><span class="brand"><b>AILSA</b> · the idea</span><span>02 / 08</span></div>
   </section>
 
   <!-- ============ SLIDE 3 · PIPELINE ============ -->
@@ -371,27 +379,27 @@ h2 {{ font-family:var(--serif); font-weight:700; letter-spacing:-.01em; line-hei
         <p>1D ¹H / ¹³C and 2D HSQC · HMBC · COSY read straight from Bruker files.</p>
         <div class="tool">nmrglue</div></div>
       <div class="step"><div class="sn">02 · PICK</div><h4>Peak picking</h4>
-        <p>DEPT- and HMBC-guided picking with SNR floors so weak quaternary carbons survive.</p>
-        <div class="tool">lucy pick</div></div>
+        <p>Raw picking with SNR floors so weak quaternary carbons survive; the chemist agent applies DEPT/HMBC guidance.</p>
+        <div class="tool">ailsa pick</div></div>
       <div class="step"><div class="sn">03 · DETECT</div><h4>Statistical detection</h4>
         <p>Hybridisation, forbidden/mandatory neighbours & hetero-hetero bonds from 7.9M HOSE stats.</p>
-        <div class="tool">lucy detect</div></div>
+        <div class="tool">ailsa detect</div></div>
       <div class="step"><div class="sn">04 · BUILD</div><h4>Constraints + fragments</h4>
-        <p>MULT / HSQC / HMBC / BOND plus DEFF fragment goodlists assembled into an LSD file.</p>
-        <div class="tool">lucy lsd</div></div>
+        <p>MULT / HSQC / HMBC / BOND plus DEFF fragment goodlists, written into the LSD file by the LSD-engineer agent.</p>
+        <div class="tool">lsd-engineer agent</div></div>
       <div class="step"><div class="sn">05 · SOLVE</div><h4>LSD structure generator</h4>
         <p>Nuzillard's deterministic solver enumerates every structure consistent with the constraints.</p>
         <div class="tool">LSD (Reims)</div></div>
       <div class="step"><div class="sn">06 · RANK</div><h4>¹³C prediction</h4>
         <p>HOSE-code shift prediction scores candidates; match-count first, MAE second — no hallucinated fits.</p>
-        <div class="tool">lucy lsd rank</div></div>
+        <div class="tool">ailsa lsd rank</div></div>
       <div class="step"><div class="sn">07 · CHECK</div><h4>Identity gate</h4>
-        <p>Derive identity from the SMILES via <b>lucy identify</b> — never a recalled name; RDKit-verified.</p>
-        <div class="tool">lucy identify</div></div>
+        <p>Derive identity from the SMILES via <b>ailsa identify</b> — never a recalled name; RDKit-verified.</p>
+        <div class="tool">ailsa identify</div></div>
       <div class="step" style="background:transparent;border-style:dashed;">
         <div class="sn">DEREPLICATE</div><h4>Known compound?</h4>
         <p>Optional formula-indexed lookup against 928K compounds runs as a separate path — never inside CASE.</p>
-        <div class="tool">lucy dereplicate</div></div>
+        <div class="tool">ailsa dereplicate</div></div>
     </div>
     <div class="inputbar">
       <div class="input-label"><span class="tag">Input</span> — one data directory per unknown compound</div>
@@ -407,38 +415,39 @@ h2 {{ font-family:var(--serif); font-weight:700; letter-spacing:-.01em; line-hei
       </div>
       <div class="input-note">Numbered <b>Bruker experiment folders</b> (¹H · ¹³C · HSQC · HMBC · COSY) &nbsp;·&nbsp; plus the known molecular formula</div>
     </div>
-    <div class="foot"><span class="brand"><b>lucy-ng</b> · pipeline</span><span>03 / 07</span></div>
+    <div class="foot"><span class="brand"><b>AILSA</b> · pipeline</span><span>03 / 08</span></div>
   </section>
 
   <!-- ============ SLIDE 4 · AGENT TEAM ============ -->
   <section class="slide">
     <div class="eyebrow"><span class="bar"></span><span>The agent team</span><span class="n">Roles &amp; guardrails</span></div>
-    <h2>Four specialists, one orchestrator</h2>
+    <h2>Four specialists, one coordinator</h2>
     <div class="team">
       <div class="orch">
-        <span class="agent-name">case.md · orchestrator</span>
-        <span style="font-size:12.5px;color:var(--muted);">Spawns the team, writes the single source-of-truth
+        <span class="agent-name">case.md · coordinator</span>
+        <span style="font-size:12.5px;color:var(--muted);">Starts the team, writes the single source-of-truth
           <b style="color:var(--accent)">CASE-PROGRESS.md</b>, detects unproductive loops, and intervenes with
-          targeted advisories. Escalates to <b style="color:var(--accent)">lucy-diagnostic</b> for deep LSD failure analysis.</span>
+          targeted advisories. Escalates to <b style="color:var(--accent)">ailsa-diagnostic</b> for deep LSD failure analysis.</span>
       </div>
-      <div class="agent"><div class="role">spectra</div><span class="agent-name">nmr-chemist</span>
+      <div class="agent"><div class="role">spectra</div><span class="agent-name">ailsa-nmr-chemist</span>
         <p>Peak picking, statistical detection, spectral-quality assessment, and the chemistry-first
           evidence hierarchy — NMR always overrides statistics.</p></div>
-      <div class="agent"><div class="role">solver</div><span class="agent-name">lsd-engineer</span>
+      <div class="agent"><div class="role">solver</div><span class="agent-name">ailsa-lsd-engineer</span>
         <p>Builds LSD constraint files, iterates HMBC incrementally, owns the constraint inventory
           (read previous, never reconstruct), runs the solver.</p></div>
-      <div class="agent"><div class="role">ranking</div><span class="agent-name">solution-analyst</span>
+      <div class="agent"><div class="role">ranking</div><span class="agent-name">ailsa-solution-analyst</span>
         <p>Ranks solutions by ¹³C prediction, judges chemical plausibility, scores confidence,
           and writes the final result with a tentative identity.</p></div>
-      <div class="agent"><div class="role">quality gate</div><span class="agent-name">devils-advocate</span>
+      <div class="agent"><div class="role">quality gate</div><span class="agent-name">ailsa-devils-advocate</span>
         <p>Validates every LSD file before it runs, checks constraint persistence across iterations,
           and enforces the G-IDENT / G-MULT gates against wrong-but-clean answers.</p></div>
     </div>
-    <div class="coord"><b>Push-never-pull coordination.</b> The coordinator sends each agent a
-      <span style="font-family:var(--mono)">[BEGIN]</span> after creating its task; agents never poll. In headless
-      runs the coordinator drives every stage inline. The coordinator is the <b>sole writer</b> of the progress log —
-      no corruption from concurrent edits.</div>
-    <div class="foot"><span class="brand"><b>lucy-ng</b> · agent team</span><span>04 / 07</span></div>
+    <div class="channels">
+      <div class="channel-chip"><b>ailsa-lsd-engineer &#8644; ailsa-devils-advocate</b> &middot; direct review loop — every LSD file is reviewed before the solver runs</div>
+      <div class="channel-chip"><b>ailsa-lsd-engineer &#8594; ailsa-nmr-chemist</b> &middot; requests — ask the NMR chemist for more correlations or detection results</div>
+    </div>
+    <div class="coord"><b>Push-never-pull coordination.</b> The coordinator sends each specialist a <span style="font-family:var(--mono)">[BEGIN]</span> after creating its task; agents never poll. From there the specialists that coordinate with each other work through the direct review loop and ask the NMR chemist when they need more data; the coordinator stays the <b>sole writer</b> of the progress log.</div>
+    <div class="foot"><span class="brand"><b>AILSA</b> · agent team</span><span>04 / 08</span></div>
   </section>
 
   <!-- ============ SLIDE 5 · NMRXIV DATA SOURCE ============ -->
@@ -446,13 +455,14 @@ h2 {{ font-family:var(--serif); font-weight:700; letter-spacing:-.01em; line-hei
     <div class="eyebrow"><span class="bar"></span><span>Data source</span><span class="n">nmrxiv.org</span></div>
     <h2>Open, FAIR spectra — fetched by DOI</h2>
     <p class="lede" style="margin-top:12px;">nmrXiv is an open, community repository for raw and
-      processed NMR data. Every CASE test dataset is public, citable, and pulled straight from it —
-      no proprietary files, no vendor lock-in.</p>
+      processed NMR data. Every dataset used here — the worked examples and all 256 benchmark
+      datasets — is public, citable, and pulled straight from it — no proprietary files, no
+      vendor lock-in.</p>
     <div class="nx">
       <div class="nx-col">
         <div>
           <div class="nx-head">Fetch a dataset</div>
-          <div class="cmd"><span class="p">$</span> lucy fetch nmrxiv <span class="c">10.57992/NMRXIV.P9.S51</span><br>
+          <div class="cmd"><span class="p">$</span> ailsa fetch nmrxiv <span class="c">10.57992/NMRXIV.P9.S51</span><br>
             <span class="a">&#8594; downloads the Bruker experiment folders into ./</span></div>
         </div>
         <div>
@@ -467,7 +477,7 @@ h2 {{ font-family:var(--serif); font-weight:700; letter-spacing:-.01em; line-hei
           CASE evaluation on the exact same experimental data.</div>
       </div>
       <div class="nx-col">
-        <div class="nx-head">Where the CASE test set comes from</div>
+        <div class="nx-head">Where the CASE examples come from</div>
         <div class="srclist">
           <div class="src"><span class="pid">P9</span>
             <div><div class="st">Teaching Datasets 1</div><div class="sd">Duisburg-Essen &middot; CASE1, CASE9</div></div></div>
@@ -480,24 +490,25 @@ h2 {{ font-family:var(--serif); font-weight:700; letter-spacing:-.01em; line-hei
           nmrXiv datasets (pulegone, citronellol).</div>
       </div>
     </div>
-    <div class="foot"><span class="brand"><b>lucy-ng</b> · data source</span><span>05 / 07</span></div>
+    <div class="foot"><span class="brand"><b>AILSA</b> · data source</span><span>05 / 08</span></div>
   </section>
 
-  <!-- ============ SLIDE 6 · TEST SET ============ -->
+  <!-- ============ SLIDE 7 · EXAMPLES ============ -->
   <section class="slide">
-    <div class="eyebrow"><span class="bar"></span><span>Blind test set</span><span class="n">CASE1–9</span><span class="n">8 solved · 1 partial</span></div>
+    <div class="eyebrow"><span class="bar"></span><span>Worked examples</span><span class="n">CASE1–9</span><span class="n">8 solved · 1 partial</span></div>
     <div style="display:flex;align-items:baseline;justify-content:space-between;gap:16px;flex-wrap:wrap;">
-      <h2>Nine blind CASE datasets</h2>
-      <p style="margin:0;font-size:13px;color:var(--muted);max-width:44ch;">Sanitised NMR data, ground truth
-        derived independently (nmrxiv + ¹³C verification). Each run is graded by a fresh blind instance, RDKit-verified.</p>
+      <h2>Nine worked examples</h2>
+      <p style="margin:0;font-size:13px;color:var(--muted);max-width:44ch;">Illustrative public datasets, separate
+        from the benchmark. Ground truth derived independently (nmrXiv + ¹³C verification); each run graded by a
+        fresh blind instance, RDKit-verified.</p>
     </div>
     <div class="grid9">
       {STRUCTURE_CARDS}
     </div>
-    <div class="foot"><span class="brand"><b>lucy-ng</b> · test set</span><span>06 / 07</span></div>
+    <div class="foot"><span class="brand"><b>AILSA</b> · examples</span><span>07 / 08</span></div>
   </section>
 
-  <!-- ============ SLIDE 6 · NUMBERS ============ -->
+  <!-- ============ SLIDE 8 · NUMBERS ============ -->
   <section class="slide">
     <div class="eyebrow"><span class="bar"></span><span>By the numbers</span><span class="n">Scale &amp; provenance</span></div>
     <h2>What the agent stands on</h2>
@@ -506,20 +517,19 @@ h2 {{ font-family:var(--serif); font-weight:700; letter-spacing:-.01em; line-hei
       <div class="stat"><div class="v">7.9<span>M</span></div><div class="k">HOSE statistics</div><div class="s">¹³C shift prediction</div></div>
       <div class="stat"><div class="v">2.4<span>M</span></div><div class="k">fragment SSCs</div><div class="s">DEFF goodlist search</div></div>
       <div class="stat"><div class="v">111<span>K</span></div><div class="k">unique formulas</div><div class="s">formula-indexed lookup</div></div>
-      <div class="stat"><div class="v">1174</div><div class="k">automated tests</div><div class="s">mypy-strict · ruff</div></div>
-      <div class="stat"><div class="v">12</div><div class="k">milestones shipped</div><div class="s">v1.0 → v9.2</div></div>
-      <div class="stat"><div class="v">8<span>/9</span></div><div class="k">CASE set solved</div><div class="s">1 partial (regiochemistry)</div></div>
-      <div class="stat"><div class="v">5</div><div class="k">agents in the team</div><div class="s">orchestrator + 4 specialists</div></div>
+      <div class="stat"><div class="v">1372</div><div class="k">passing tests</div><div class="s">pytest · mypy-strict · ruff</div></div>
+      <div class="stat"><div class="v">69.1<span>%</span></div><div class="k">rank 1 in the blind benchmark</div><div class="s">177 / 256 · restricted configuration, see slide 6</div></div>
+      <div class="stat"><div class="v">16</div><div class="k">CLI command groups</div><div class="s">every one --format json</div></div>
+      <div class="stat"><div class="v">5</div><div class="k">agents in the team</div><div class="s">coordinator + 4 specialists</div></div>
     </div>
     <div class="credits">
       <div><h4>Built on</h4><p><b>LSD</b> — the deterministic structure generator by
         Jean-Marc Nuzillard (Université de Reims). <b>HOSE codes</b> — Bremser, 1978.
         Parsing via <b>nmrglue</b>; cheminformatics via <b>RDKit</b>.</p></div>
-      <div><h4>Lineage</h4><p><b>Lucy</b> was the original CASE program by the project author,
-        later acquired by Bruker. <b>lucy-ng</b> is a ground-up reimagining for the AI-agent era —
-        programmatic interfaces first, GUI never.</p></div>
+      <div><h4>Get it</h4><p><b>github.com/steinbeck/ailsa</b> &middot; <b>pip install ailsa</b> &middot; reference
+        database DOI <b>10.6084/m9.figshare.31073554</b></p></div>
     </div>
-    <div class="foot"><span class="brand"><b>lucy-ng</b> · by the numbers</span><span>07 / 07</span></div>
+    <div class="foot"><span class="brand"><b>AILSA</b> · by the numbers</span><span>08 / 08</span></div>
   </section>
 
 </div>
