@@ -1,11 +1,11 @@
 # NUS Reconstruction: Cross-Platform Portability
 
-This document is the PORT-02 portability matrix for the `lucy nus` NUS (Non-Uniform
-Sampling) 2D reconstruction pipeline (`lucy nus check` / `reconstruct` / `pipeline`).
+This document is the PORT-02 portability matrix for the `ailsa nus` NUS (Non-Uniform
+Sampling) 2D reconstruction pipeline (`ailsa nus check` / `reconstruct` / `pipeline`).
 It records every known platform gap for the locked v10.0 backend decision — **NMRPipe +
 SMILE** — so that gaps are investigated and written down, not silently accepted.
 
-`lucy nus check` is the single source of truth for whether your machine is ready to run
+`ailsa nus check` is the single source of truth for whether your machine is ready to run
 the pipeline. It reports both backend-tool availability (`nmrPipe`, `bruk2pipe`,
 `nusExpand.tcl`, the SMILE plugin) and a `platform` section (architecture, Rosetta
 translation status, `csh`/`tcsh` presence). Critical gaps (missing backend binaries, no
@@ -15,7 +15,7 @@ only warn.
 
 ## Platform Matrix
 
-| Platform | Native NMRPipe build | csh/tcsh | `lucy nus check` readiness signal | Status |
+| Platform | Native NMRPipe build | csh/tcsh | `ailsa nus check` readiness signal | Status |
 |----------|----------------------|----------|-------------------------------------|--------|
 | **macOS Apple Silicon (native)** | Yes — `mac_arm64` | Present by default (`/bin/csh`, `/bin/tcsh`) | `status: available`, `platform.rosetta_translated: false`, no critical or soft issues | **Supported, install verified locally** (this dev machine: arm64, macOS 26.5, `sysctl.proc_translated=0`). Reconstruction blocked here only by SMILE's RAM appetite — see *Memory requirement* |
 | **Linux (native)** | Yes — native Linux builds distributed on the same install page | Present on essentially every distro (install via package manager if missing) | `status: available`, `platform.os: Linux`, no critical issues | **Supported** (historical 32-bit-library caveat on some older distros — see Pitfalls below) |
@@ -23,7 +23,7 @@ only warn.
 
 **Applies to every supported row:** the reconstruction additionally requires **XQuartz/X11**
 (`nusExpand.tcl` runs under an X11-linked `nmrWish.exe`) and **≥ 8 GB free RAM** for the
-SMILE step. Neither is covered by `lucy nus check`'s current probes — see the dedicated
+SMILE step. Neither is covered by `ailsa nus check`'s current probes — see the dedicated
 sections below.
 
 The Windows row is not silently accepted: the generic PORT-01 checks (missing backend
@@ -43,7 +43,7 @@ the install page. If you install only the base `install.com`/`NMRPipeX.tZ`/`binv
 tarballs and skip `plugin.smile.tZ`:
 
 - `nmrPipe -fn SMILE -help` reports `"unknown function"`.
-- `lucy nus check` correctly reports `status: "smile_plugin_missing"` — distinct from
+- `ailsa nus check` correctly reports `status: "smile_plugin_missing"` — distinct from
   `"not_installed"` (no NMRPipe at all) and from `"installed_not_sourced"` (NMRPipe
   present but its environment script was never sourced).
 
@@ -93,11 +93,11 @@ NMRPipe tarballs — do not assume it is bundled.
 7. Verify with:
 
    ```bash
-   lucy nus check     # must report backend "available" and the platform
+   ailsa nus check    # must report backend "available" and the platform
                        # section clear of any critical issues
    ```
 
-   If `lucy nus check` reports `smile_plugin_missing`, revisit step 1/2 — the SMILE
+   If `ailsa nus check` reports `smile_plugin_missing`, revisit step 1/2 — the SMILE
    plugin was not installed (see the gotcha above).
 
 `nmrPipe`, `bruk2pipe` and `nusPipe` are native arm64 Mach-O binaries and run with no
@@ -106,7 +106,7 @@ Rosetta or virtualization.
 ## XQuartz (X11) is a HARD dependency of the reconstruction path
 
 > **Correction to the upstream framing.** Upstream docs discuss X11/XQuartz mainly in the
-> context of the `nmrDraw` GUI, which lucy-ng never invokes — so earlier revisions of this
+> context of the `nmrDraw` GUI, which AILSA never invokes — so earlier revisions of this
 > document treated XQuartz as an optional, try-it-if-something-fails mitigation. **That is
 > wrong.** The Phase-100 run showed:
 
@@ -170,14 +170,14 @@ real Windows hardware. Treat this as a starting point, not a verified recipe.
 4. Source the Linux `nmrInit.<platform>.com` environment script and add `bin/` to
    `PATH` inside the WSL2 shell profile (e.g. `~/.bashrc` or `~/.cshrc`, matching
    whichever login shell you use inside WSL2).
-5. Install `lucy-ng` itself inside the WSL2 Linux environment (not on native Windows
+5. Install AILSA (`pip install ailsa`) itself inside the WSL2 Linux environment (not on native Windows
    Python) so that `subprocess.run()` calls to `nmrPipe`/`bruk2pipe`/`nusExpand.tcl`
    resolve against the WSL2 `PATH`, not the Windows one.
-6. Verify with `lucy nus check` **run from inside the WSL2 shell** — this is the same
+6. Verify with `ailsa nus check` **run from inside the WSL2 shell** — this is the same
    Linux-native check path described in the Platform Matrix above, just executing inside
    the WSL2 userspace rather than a standalone Linux machine.
 
-Because this workaround is untested, do not treat a clean `lucy nus check` pass inside
+Because this workaround is untested, do not treat a clean `ailsa nus check` pass inside
 WSL2 as a guarantee that the full `reconstruct`/`pipeline` chain behaves identically to a
 native Linux or macOS run — file/path translation quirks between the Windows host
 filesystem and the WSL2 Linux filesystem (e.g. mounting Bruker experiment directories
@@ -187,7 +187,7 @@ native-Windows backend pivot as the deferred, longer-term alternative).
 
 ## Apple Silicon Rosetta status: soft warning only
 
-If `lucy nus check` reports `platform.rosetta_translated: true` (i.e. the Python
+If `ailsa nus check` reports `platform.rosetta_translated: true` (i.e. the Python
 interpreter itself, and therefore the tools it shells out to, are running under Rosetta 2
 x86_64 emulation rather than natively), this is a **soft warning, not a block**. The
 native `mac11_arm64` build is strongly preferred (faster, no emulation overhead), but an
@@ -197,7 +197,7 @@ otherwise present and working. Only a genuinely missing backend binary or missin
 
 ## Design note: no Windows-specific detection code
 
-`lucy nus check`'s platform preflight (`src/lucy_ng/nus/platform_check.py`) is built from
+`ailsa nus check`'s platform preflight (`src/ailsa/nus/platform_check.py`) is built from
 generic, cross-platform stdlib primitives only: `platform.machine()`,
 `platform.system()`, and `shutil.which("csh")`/`shutil.which("tcsh")`. There is
 deliberately no `if platform.system() == "Windows"` branch anywhere in this code. The
@@ -208,7 +208,7 @@ only duplicate behavior the generic checks already provide correctly.
 ## Pitfalls carried forward from the milestone-level research
 
 - **Linux 32-bit library caveat:** some older Linux distributions historically required
-  32-bit compatibility libraries for certain NMRPipe binaries. If `lucy nus check`
+  32-bit compatibility libraries for certain NMRPipe binaries. If `ailsa nus check`
   reports a binary present on `PATH` but the binary fails to execute, check your distro's
   32-bit compatibility package availability.
 - **X11/XQuartz — SUPERSEDED, see the hard-dependency section above.** This entry
