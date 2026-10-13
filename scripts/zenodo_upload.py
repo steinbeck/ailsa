@@ -13,35 +13,28 @@ FILE_PATH = Path("data/reference/compounds.db.gz")
 
 METADATA = {
     "metadata": {
-        "title": "lucy-ng Compound Database: NMR Chemical Shifts for Natural Products",
+        "title": "AILSA reference database: 13C NMR shifts and HOSE statistics for natural-product dereplication and shift prediction (COCONUT + NMRShiftDB)",
         "upload_type": "dataset",
-        "description": """Pre-built SQLite database for lucy-ng containing 13C NMR chemical shifts for natural product dereplication.
+        "description": """Pre-built SQLite reference database for AILSA (AI + LSD + Agents), an AI-agent system for computer-assisted structure elucidation (CASE) of organic natural products from NMR spectra. AILSA is built on the LSD structure generator by Jean-Marc Nuzillard (Université de Reims Champagne-Ardenne).
 
 **Contents:**
 - **928,443 compounds** total
 - **COCONUT**: 895,099 natural products with predicted 13C shifts
 - **NMRShiftDB**: 33,344 compounds with experimental 13C shifts
-- **111,493 unique molecular formulas** indexed for fast lookup
+- **111,493 unique molecular formulas**
+- **7.9 million HOSE-code statistics**
+
+One file serves both dereplication and 13C prediction.
 
 **Usage:**
 ```bash
-# Decompress
-gunzip -k compounds.db.gz
-
-# Use with lucy-ng
-lucy database info compounds.db
+# Install AILSA
+# https://github.com/steinbeck/ailsa
+ailsa database download
+ailsa database info
 ```
 
-**File format:** SQLite database (gzip compressed)
-- Uncompressed size: ~1.0 GB
-- Compressed size: ~343 MB
-
-**Schema:**
-- `compounds` table: id, name, smiles, formula, carbon_count, source
-- `shifts` table: compound_id, atom_index, shift_ppm, hydrogen_count
-- Indexed by normalized molecular formula for O(1) lookup
-
-**Related software:** https://github.com/steinbeck/lucy-ng
+**Related software:** https://github.com/steinbeck/ailsa
 """,
         "creators": [
             {"name": "Steinbeck, Christoph", "affiliation": "Friedrich Schiller University Jena"}
@@ -59,7 +52,7 @@ lucy database info compounds.db
         "license": "cc-by-4.0",
         "related_identifiers": [
             {
-                "identifier": "https://github.com/steinbeck/lucy-ng",
+                "identifier": "https://github.com/steinbeck/ailsa",
                 "relation": "isSupplementTo",
                 "resource_type": "software"
             }
@@ -87,7 +80,7 @@ def main():
     headers = {"Authorization": f"Bearer {token}"}
 
     print("=" * 60)
-    print("Zenodo Upload: lucy-ng Compound Database")
+    print("Zenodo Upload: AILSA reference database")
     print("=" * 60)
 
     # Step 1: Create deposition
@@ -159,7 +152,7 @@ def main():
     print(f"\n  DOI: {doi}")
     print(f"  URL: {doi_url}")
     print(f"  Record: {record_url}")
-    print(f"\nDownload link for lucy-ng:")
+    print(f"\nDownload link for AILSA:")
     print(f"  {result['files'][0]['links']['download']}")
 
 
