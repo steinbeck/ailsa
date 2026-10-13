@@ -1,6 +1,6 @@
-# lucy-ng infographics
+# AILSA infographics
 
-An editable 7-slide **16:9 infographic deck** about the lucy-ng project, for talking
+An editable **8-slide 16:9 infographic deck** about AILSA (AI + LSD + Agents), for talking
 to scientific colleagues. Light + dark theme, print-to-PDF ready.
 
 The slides are **generated** from a Python build script — that script is the source of
@@ -8,15 +8,22 @@ truth, not the HTML. Edit `build.py`, re-run it, and the HTML/PDF regenerate.
 
 ## The slides
 
-1. **Overview** — the combination thesis (domain skill-set + thin tools + Claude Code's
-   agent-team feature), spectrum motif, GitHub repo
+1. **Overview** — the combination thesis (domain skill-set + thin tools + an agent team),
+   spectrum motif, GitHub repo
 2. **The idea** — why an agent; spectra in, structure out; emergent (not forced) rings
 3. **The pipeline** — Bruker data → pick → detect → build → LSD solve → rank → identity
    gate, plus the input-directory layout
-4. **The agent team** — orchestrator + 4 specialists (+ diagnostic on escalation)
-5. **nmrXiv data source** — `lucy fetch nmrxiv <DOI>`; where the CASE test set comes from
-6. **Test set CASE1–9** — RDKit structures, formula, nmrXiv ID, solved status
-7. **By the numbers** — DB / HOSE / fragments / tests; credits (Nuzillard/LSD, Bremser/HOSE)
+4. **The agent team** — coordinator + 4 specialists that coordinate with each other: the
+   direct review loop between the LSD engineer and the devil's advocate, and requests to
+   the NMR chemist; a diagnostic specialist on escalation
+5. **nmrXiv data source** — `ailsa fetch nmrxiv <DOI>`; where the CASE examples come from
+6. **Blind benchmark** — how the method is measured, the headline (69.1 % rank 1 on 256
+   public datasets), the one-line restricted configuration, the size limit, and the paired
+   comparison against the previous model — figures and configuration from
+   `docs/BENCHMARK.md`
+7. **CASE1–9 worked examples** — RDKit structures, formula, nmrXiv ID, solved status
+8. **By the numbers** — DB / HOSE / fragments / tests / benchmark / CLI command groups;
+   credits (Nuzillard/LSD, Bremser/HOSE); Get it (repo, PyPI, database DOI)
 
 ## Files
 
@@ -26,7 +33,7 @@ truth, not the HTML. Edit `build.py`, re-run it, and the HTML/PDF regenerate.
 | `gen_structures.py` | Regenerates `structures.json` — draws the 9 CASE structures from SMILES via RDKit. Only needed if you change a molecule. |
 | `structures.json` | Cached RDKit SVG depictions (so a plain layout edit needs no RDKit). |
 | `deck.html` | **Generated** — the rendered deck. Don't hand-edit; `build.py` overwrites it. |
-| `lucy-ng-infographics.pdf` | **Generated** — 16:9 PDF, one slide per page. |
+| `ailsa-infographics.pdf` | **Generated** — 16:9 PDF, one slide per page. |
 
 ## Rebuild
 
@@ -42,7 +49,7 @@ python build.py
 # 3. (optional) export the 16:9 PDF, one slide per page
 "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" \
   --headless=new --no-pdf-header-footer \
-  --print-to-pdf="lucy-ng-infographics.pdf" "file://$PWD/deck.html"
+  --print-to-pdf="ailsa-infographics.pdf" "file://$PWD/deck.html"
 ```
 
 ## Editing tips
@@ -54,7 +61,7 @@ python build.py
   then step 2. Structures render on deliberately light "paper" cards so they stay legible
   in dark theme too.
 - **Slide order / count** → slides are `<section class="slide">` blocks in `build.py`;
-  keep the footer counters (`0N / 07`) in sync if you add/remove one.
+  keep the footer counters (`0N / 08`) in sync if you add/remove one.
 - **Ground-truth data** (SMILES, formulas, nmrXiv IDs, solved status) came from
   `.planning/CASE-DATASET-IDENTITIES.md` + `PROJECT.md`/`STATE.md` — update there first,
   then mirror here.
@@ -63,20 +70,17 @@ python build.py
 
 The deck bakes in **project facts** that drift over time. Refresh it when they change —
 most commonly at **milestone close** (`/gsd-complete-milestone`), or when a CASE result
-flips solved↔partial. This is also flagged as a maintenance pointer in the repo `CLAUDE.md`.
+flips solved↔partial, or when the benchmark is re-run. This is also flagged as a
+maintenance pointer in the repo `CLAUDE.md`.
 
 Things that go stale, and where they live in the source:
 
 | Fact | Source of truth | In this deck |
 |------|-----------------|--------------|
 | CASE1–9 identities / structures | `.planning/CASE-DATASET-IDENTITIES.md` | `gen_structures.py` (SMILES) + `build.py` (`CASES`) |
-| solved / partial status | blind-UAT log + `STATE.md` | `build.py` `CASES` status field + slide-7 "8/9" tile |
-| headline numbers (DB, HOSE, fragments, tests, milestones) | `PROJECT.md` / `STATE.md` | `build.py` slide-7 `.stats` |
-| agent-team roster | `.claude/agents/lucy-*.md` | `build.py` slide-4 |
+| solved / partial status | blind-UAT log + `STATE.md` | `build.py` `CASES` status field (slide 7) |
+| benchmark figures and run configuration | `docs/BENCHMARK.md` | `build.py` slide 6 |
+| headline numbers (DB, HOSE, fragments, tests, CLI groups) | `PROJECT.md` / `STATE.md` / `ailsa database info` | `build.py` slide-8 `.stats` |
+| agent roster and channels | `.claude/agents/ailsa-*.md` | `build.py` slide 4 |
 
 Update the source first, then mirror into `build.py`, then rebuild (steps above).
-
-## Live version
-
-Published as a private Claude artifact (viewer can toggle light/dark):
-https://claude.ai/code/artifact/5ea64f67-64ac-407e-a549-7066a66a93e4
