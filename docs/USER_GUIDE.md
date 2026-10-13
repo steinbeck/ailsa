@@ -1,6 +1,7 @@
 # User Guide
 
-This guide provides comprehensive documentation for using lucy-ng through the CLI, Python API, and MCP server.
+This guide documents AILSA's two interfaces: the `ailsa` command line and the Python API. The
+CASE agents (a Claude Code skill, see the README) drive the same CLI.
 
 ## Table of Contents
 
@@ -12,37 +13,45 @@ This guide provides comprehensive documentation for using lucy-ng through the CL
 
 ## Overview
 
-Lucy-ng provides three interfaces:
+AILSA provides two interfaces:
 
-1. **CLI** (`lucy` command): Best for quick analysis and scripting
-2. **Python API**: Best for custom workflows and integration
-3. **MCP Server** (`lucy-mcp`): Best for AI agent integration
+1. **CLI** (`ailsa` command): Best for quick analysis and scripting
+2. **Python API** (`import ailsa`): Best for custom workflows and integration
 
-All three interfaces share the same underlying functionality.
+Both interfaces share the same underlying functionality.
 
 ## Command-Line Interface
 
 ### Global Options
 
 ```bash
-lucy [OPTIONS] COMMAND [ARGS]...
+ailsa [OPTIONS] COMMAND [ARGS]...
 
 Options:
-  --version  Show version and exit
-  --help     Show help message and exit
+  --version  Show the version and exit.
+  --help     Show this message and exit.
 ```
 
 ### Command Groups
 
 | Group | Description |
 |-------|-------------|
-| `lucy read` | Read NMR spectra |
-| `lucy pick` | Pick peaks |
-| `lucy analyze` | Analyze spectra |
-| `lucy dereplicate` | Match against databases |
-| `lucy lsd` | LSD solver integration |
-| `lucy predict` | 13C shift prediction |
-| `lucy fetch` | Fetch data from external sources |
+| `ailsa read` | Read NMR spectra. |
+| `ailsa pick` | Peak picking from spectra. |
+| `ailsa analyze` | Analysis tools for structure elucidation. |
+| `ailsa dereplicate` | Dereplication against reference databases. |
+| `ailsa identify` | Derive a deterministic structural identity and gate a reported name. |
+| `ailsa predict` | Predict NMR chemical shifts from structure. |
+| `ailsa detect` | Statistical detection of structural constraints from shifts. |
+| `ailsa lsd` | LSD structure elucidation. |
+| `ailsa visualize` | Visualization tools for NMR correlation diagrams. |
+| `ailsa fetch` | Fetch NMR data from external repositories. |
+| `ailsa database` | Database management commands. |
+| `ailsa fragment` | Fragment library management and search. |
+| `ailsa webview` | Webview dashboard server commands. |
+| `ailsa nus` | NUS (Non-Uniform Sampling) 2D reconstruction commands. |
+| `ailsa jcamp` | Ingest JCAMP-DX spectra: read -> pick -> QC -> write in one invocation. |
+| `ailsa pylsd` | PyLSD multi-run orchestration for 4J HMBC handling. |
 
 ---
 
@@ -53,7 +62,7 @@ Options:
 Download NMR datasets from NMRXiv repository.
 
 ```bash
-lucy fetch nmrxiv IDENTIFIER [OPTIONS]
+ailsa fetch nmrxiv IDENTIFIER [OPTIONS]
 
 Arguments:
   IDENTIFIER  NMRXiv DOI, project ID, or URL
@@ -74,16 +83,16 @@ Options:
 **Examples:**
 ```bash
 # Download by DOI (specific study)
-lucy fetch nmrxiv 10.57992/NMRXIV.P10.S69 --output ./data/
+ailsa fetch nmrxiv 10.57992/NMRXIV.P10.S69 --output ./data/
 
 # Download entire project
-lucy fetch nmrxiv P10 --output ./data/
+ailsa fetch nmrxiv P10 --output ./data/
 
 # Download specific study from project
-lucy fetch nmrxiv P10 --study S69 --output ./data/
+ailsa fetch nmrxiv P10 --study S69 --output ./data/
 
 # JSON output for scripting
-lucy fetch nmrxiv P10 --format json
+ailsa fetch nmrxiv P10 --format json
 ```
 
 **Output structure:**
@@ -99,7 +108,7 @@ output_dir/
         └── HSQC/
 ```
 
-Downloaded data preserves Bruker folder structure and can be directly used with `lucy read` commands.
+Downloaded data preserves Bruker folder structure and can be directly used with `ailsa read` commands.
 
 ---
 
@@ -108,7 +117,7 @@ Downloaded data preserves Bruker folder structure and can be directly used with 
 #### Read 1D Spectrum
 
 ```bash
-lucy read 1d PATH [OPTIONS]
+ailsa read 1d PATH [OPTIONS]
 
 Arguments:
   PATH  Path to Bruker 1D experiment directory
@@ -120,10 +129,10 @@ Options:
 **Examples:**
 ```bash
 # Basic usage
-lucy read 1d data/Ibuprofen/2
+ailsa read 1d data/Ibuprofen/2
 
 # JSON output for scripting
-lucy read 1d data/Ibuprofen/2 --format json
+ailsa read 1d data/Ibuprofen/2 --format json
 ```
 
 **Output:**
@@ -138,7 +147,7 @@ PPM range: -10.00 to 230.00
 #### Read 2D Spectrum
 
 ```bash
-lucy read 2d PATH [OPTIONS]
+ailsa read 2d PATH [OPTIONS]
 
 Arguments:
   PATH  Path to Bruker 2D experiment directory
@@ -149,8 +158,8 @@ Options:
 
 **Examples:**
 ```bash
-lucy read 2d data/Ibuprofen/6
-lucy read 2d data/Ibuprofen/7 --format json
+ailsa read 2d data/Ibuprofen/6
+ailsa read 2d data/Ibuprofen/7 --format json
 ```
 
 ---
@@ -160,96 +169,93 @@ lucy read 2d data/Ibuprofen/7 --format json
 #### Pick 1D Peaks
 
 ```bash
-lucy pick 1d PATH [OPTIONS]
+ailsa pick 1d PATH [OPTIONS]
 
 Arguments:
-  PATH  Path to Bruker 1D experiment
+  PATH  Path to Bruker 1D experiment directory
 
 Options:
-  --threshold FLOAT     Intensity threshold (0-1, default: 0.05)
-  --format [text|json]  Output format
+  -t, --threshold FLOAT  Peak threshold (auto if not set)
+  -s, --snr-floor FLOAT  SNR floor multiplier k (default: 5.0 signal/noise; use 3.0 for exploratory re-pick)
+  --format [text|json]   Output format
 ```
+
+Automatically detects negative peaks in spectra that contain them (e.g. DEPT-135, where CH2
+peaks are negative).
 
 **Example:**
 ```bash
-lucy pick 1d data/Ibuprofen/2 --threshold 0.03
+ailsa pick 1d data/Ibuprofen/2 --threshold 0.03
 ```
 
 #### Pick 2D Peaks
 
 ```bash
-lucy pick 2d PATH [OPTIONS]
+ailsa pick 2d PATH [OPTIONS]
 
 Arguments:
-  PATH  Path to Bruker 2D experiment
+  PATH  Path to Bruker 2D experiment directory
 
 Options:
-  --threshold FLOAT     Intensity threshold (default: 0.05)
-  --format [text|json]  Output format
+  -t, --threshold FLOAT  Peak threshold (default: 0.05)
+  --format [text|json]   Output format
 ```
 
-#### DEPT-Guided HSQC Picking (Recommended)
+#### HSQC Picking
 
 ```bash
-lucy pick hsqc HSQC_PATH [OPTIONS]
+ailsa pick hsqc PATH [OPTIONS]
 
 Arguments:
-  HSQC_PATH  Path to HSQC experiment
+  PATH  Path to HSQC experiment
 
 Options:
-  --dept135 PATH        Path to DEPT-135 experiment (required)
-  --dept90 PATH         Path to DEPT-90 experiment (optional)
-  --format [text|json]  Output format
+  -t, --threshold FLOAT  Peak threshold (default: 0.05)
+  --format [text|json]   Output format
 ```
 
-**Examples:**
-```bash
-# With DEPT-135 only
-lucy pick hsqc data/Ibuprofen/6 --dept135 data/Ibuprofen/3
+Returns raw cross-peaks above threshold, without DEPT-guided filtering. In a CASE run, the
+NMR-chemist agent applies DEPT-guided filtering using skill knowledge on top of this raw pick.
+From Python, the same filtering is available directly as `DEPTGuidedPicker` (see
+[Python API](#python-api)).
 
-# With DEPT-90 for CH/CH3 disambiguation
-lucy pick hsqc data/Ibuprofen/6 --dept135 data/Ibuprofen/3 --dept90 data/Ibuprofen/4
+**Example:**
+```bash
+ailsa pick hsqc data/Ibuprofen/6 --threshold 0.05
 ```
 
 **Output:**
 ```
-DEPT-Guided HSQC Peak Picking
------------------------------
-DEPT peaks (ground truth): 10
-HSQC peaks found: 10
-Threshold used: 0.0125
-Iterations: 3
-All carbons found: Yes
-
-Carbon Multiplicities:
-  CH3: 3
-  CH2: 1
-  CH: 4
-  CH/CH3: 2
+HSQC Peaks (threshold 0.05)
+----------------------------
+Peaks found: 10
 
 Peaks:
-  45.12 ppm (C) / 1.84 ppm (H) - CH
+  45.12 ppm (C) / 1.84 ppm (H)
   ...
 ```
 
-#### Guided HMBC Picking
+#### HMBC Picking
 
 ```bash
-lucy pick hmbc HMBC_PATH [OPTIONS]
+ailsa pick hmbc PATH [OPTIONS]
 
 Arguments:
-  HMBC_PATH  Path to HMBC experiment
+  PATH  Path to HMBC experiment
 
 Options:
-  --c13 PATH            Path to 13C experiment (required)
-  --hsqc PATH           Path to HSQC experiment (required)
-  --dept135 PATH        Path to DEPT-135 (optional)
-  --format [text|json]  Output format
+  -t, --threshold FLOAT   Fraction-of-max peak threshold (legacy mode; SNR mode if not set)
+  -s, --snr-floor FLOAT   SNR floor multiplier k (default: 5.0)
+  --format [text|json]    Output format
 ```
+
+Returns raw cross-peaks, without cross-validation filtering. In a CASE run, the NMR-chemist
+agent applies HMBC filtering using skill knowledge on top of this raw pick. From Python, the
+same filtering is available directly as `HMBCGuidedPicker` (see [Python API](#python-api)).
 
 **Example:**
 ```bash
-lucy pick hmbc data/Ibuprofen/7 --c13 data/Ibuprofen/2 --hsqc data/Ibuprofen/6 --dept135 data/Ibuprofen/3
+ailsa pick hmbc data/Ibuprofen/7
 ```
 
 ---
@@ -259,19 +265,23 @@ lucy pick hmbc data/Ibuprofen/7 --c13 data/Ibuprofen/2 --hsqc data/Ibuprofen/6 -
 #### Symmetry Analysis
 
 ```bash
-lucy analyze symmetry DATA_DIR FORMULA [OPTIONS]
+ailsa analyze symmetry FORMULA C13_PATH [OPTIONS]
 
 Arguments:
-  DATA_DIR  Directory containing Bruker experiments
   FORMULA   Molecular formula (e.g., C13H18O2)
+  C13_PATH  Path to the 13C Bruker experiment
 
 Options:
-  --format [text|json]  Output format
+  -t, --threshold FLOAT  Peak threshold (auto if not set)
+  --format [text|json]   Output format
 ```
+
+Compares observed 13C peaks with the expected carbon count from the formula. Returns the raw
+comparison; the AI agent interprets the difference using symmetry-detection knowledge.
 
 **Example:**
 ```bash
-lucy analyze symmetry data/Ibuprofen C13H18O2
+ailsa analyze symmetry C13H18O2 data/Ibuprofen/2
 ```
 
 **Output:**
@@ -298,29 +308,29 @@ Potential equivalents (high intensity):
 ### Dereplication
 
 ```bash
-lucy dereplicate c13 SPECTRUM_PATH FORMULA [OPTIONS]
+ailsa dereplicate c13 C13_PATH FORMULA [OPTIONS]
 
 Arguments:
-  SPECTRUM_PATH  Path to 13C experiment
-  FORMULA        Molecular formula
+  C13_PATH  Path to the 13C Bruker experiment
+  FORMULA   Molecular formula (e.g., C13H18O2)
 
 Options:
-  --database PATH       Path to SD file (auto-discovers if not set)
-  --top-n INT          Number of matches to show (default: 5)
-  --threshold FLOAT     Match threshold (default: 0.7)
-  --format [text|json]  Output format
+  -d, --database PATH    Path to database (.db) or SD file (.sd/.sdf); auto-detects SQLite database first
+  -n, --top INTEGER      Number of top matches to show
+  -t, --threshold FLOAT  Match threshold (0-1). Default: 0.7
+  --format [text|json]   Output format
 ```
 
 **Examples:**
 ```bash
-# Auto-discover database (prefers COCONUT)
-lucy dereplicate c13 data/Ibuprofen/2 C13H18O2
+# Auto-discover database (SQLite preferred, falls back to SD files)
+ailsa dereplicate c13 data/Ibuprofen/2 C13H18O2
 
 # Use specific database
-lucy dereplicate c13 data/Ibuprofen/2 C13H18O2 --database data/reference/nmrshiftdb2withsignals.sd
+ailsa dereplicate c13 data/Ibuprofen/2 C13H18O2 --database data/reference/nmrshiftdb2withsignals.sd
 
 # More results
-lucy dereplicate c13 data/Ibuprofen/2 C13H18O2 --top-n 10
+ailsa dereplicate c13 data/Ibuprofen/2 C13H18O2 --top 10
 ```
 
 ---
@@ -330,70 +340,61 @@ lucy dereplicate c13 data/Ibuprofen/2 C13H18O2 --top-n 10
 #### Check LSD Availability
 
 ```bash
-lucy lsd check
+ailsa lsd check
 ```
 
-#### Generate LSD Input
+Checks whether `LSD` and `outlsd` are installed and available on PATH.
 
-```bash
-lucy lsd generate DATA_DIR FORMULA [OPTIONS]
+#### LSD Input Files
 
-Arguments:
-  DATA_DIR  Directory with Bruker experiments
-  FORMULA   Molecular formula
-
-Options:
-  -o, --output PATH     Output file path
-  --format [text|json]  Output format
-```
-
-**Example:**
-```bash
-lucy lsd generate data/Ibuprofen C13H18O2 -o ibuprofen.lsd
-```
+There is no CLI command that writes an LSD input file from a data directory. In a CASE run,
+the LSD-engineer agent builds the input file from the picked peaks and constraints. From
+Python, `LSDInputGenerator` builds the same input (see [Python API](#python-api)).
 
 #### Run LSD Solver
 
 ```bash
-lucy lsd run INPUT_FILE [OPTIONS]
+ailsa lsd run INPUT_FILE [OPTIONS]
 
 Arguments:
-  INPUT_FILE  Path to .lsd file
+  INPUT_FILE  Path to the LSD input file
 
 Options:
-  --timeout INT         Timeout in seconds (default: 60)
-  --output-dir PATH     Directory for output files
-  --format [text|json]  Output format
+  --timeout INTEGER      Timeout in seconds
+  -o, --output-dir PATH  Directory for solution files
+  --format [text|json]   Output format
 ```
 
 #### Rank LSD Solutions
 
 ```bash
-lucy lsd rank SMILES_FILE [OPTIONS]
+ailsa lsd rank SMILES_FILE [OPTIONS]
 
 Arguments:
-  SMILES_FILE     File containing SMILES (one per line), typically outlsd output
+  SMILES_FILE  File containing SMILES strings (one per line), typically outlsd output
 
 Options:
-  -s, --spectrum PATH   Path to Bruker 13C spectrum for experimental shifts
-  --shifts TEXT         Comma-separated 13C shifts in ppm (alternative to --spectrum)
-  -n, --top INTEGER     Number of top results to show (default: 10)
-  -t, --tolerance FLOAT Tolerance in ppm for matching (default: 3.0)
-  --table PATH          Path to HOSE lookup table (auto-detected if not set)
-  --format [text|json]  Output format
+  -s, --spectrum PATH    Path to Bruker 13C spectrum directory for experimental shifts
+  --shifts TEXT          Comma-separated list of experimental 13C shifts in ppm
+  -n, --top INTEGER      Number of top results to show
+  -t, --tolerance FLOAT  Tolerance in ppm for shift matching
+  --db PATH              Path to SQLite HOSE database (auto-detected if not set)
+  --table PATH           Path to HOSE lookup table (auto-detected if not set)
+  --max-radius INTEGER   Maximum HOSE radius (default 6; must match predict c13 for identical predictions)
+  --format [text|json]   Output format
 ```
 
 **Examples:**
 ```bash
 # Rank using curated shift list (RECOMMENDED)
 # Use the peak list that was refined during the CASE workflow
-lucy lsd rank outlsd.out --shifts "180.5,140.8,137.0,129.4,127.1,45.1,40.4,30.2,22.4,18.2"
+ailsa lsd rank outlsd.out --shifts "180.5,140.8,137.0,129.4,127.1,45.1,40.4,30.2,22.4,18.2"
 
 # Rank using experimental 13C spectrum (re-picks peaks from scratch)
-lucy lsd rank solutions.smi --spectrum data/Ibuprofen/2 --top 5
+ailsa lsd rank solutions.smi --spectrum data/Ibuprofen/2 --top 5
 
 # With custom tolerance
-lucy lsd rank outlsd.out --shifts "180.5,140.8,137.0,129.4,127.1" --tolerance 2.0
+ailsa lsd rank outlsd.out --shifts "180.5,140.8,137.0,129.4,127.1" --tolerance 2.0
 ```
 
 > **Best Practice**: Use `--shifts` with your curated peak list rather than `--spectrum`.
@@ -426,37 +427,43 @@ Top 5 solutions:
 #### Predict Shifts from SMILES
 
 ```bash
-lucy predict c13 SMILES [OPTIONS]
+ailsa predict c13 SMILES [OPTIONS]
 
 Arguments:
   SMILES  SMILES string of the molecule
 
 Options:
-  --table PATH          Path to HOSE lookup table
-  --format [text|json]  Output format
+  -d, --db PATH             Path to SQLite database with HOSE stats (preferred over JSON table)
+  -t, --table PATH          Path to HOSE lookup table (JSON); database is preferred if available
+  -r, --max-radius INTEGER  Maximum HOSE radius (default: 6)
+  --format [text|json]      Output format
 ```
 
 **Example:**
 ```bash
-lucy predict c13 "CC(C)Cc1ccc(cc1)C(C)C(=O)O"
+ailsa predict c13 "CC(C)Cc1ccc(cc1)C(C)C(=O)O"
 ```
 
 #### Build Lookup Table
 
 ```bash
-lucy predict build-table SD_FILE [OPTIONS]
+ailsa predict build-table SD_PATH [OPTIONS]
 
 Arguments:
-  SD_FILE  Path to SD file with 13C data (nmrshiftdb or COCONUT)
+  SD_PATH  Path to an SD file with 13C chemical shifts (COCONUT or nmrshiftdb2)
 
 Options:
-  -o, --output PATH     Output file path
-  --source [nmrshiftdb|coconut]  Database type (auto-detected)
+  -o, --output PATH               Output file path (default: data/reference/hose_lookup.json.gz)
+  -s, --source [coconut|nmrshiftdb|auto]  Source format (auto-detects by default)
+  -r, --max-radius INTEGER        Maximum HOSE radius (default: 6)
+  -l, --limit INTEGER             Limit number of molecules to process (for testing)
+  -w, --workers INTEGER           Number of parallel workers (default: CPU count)
+  --no-compress                   Don't compress output file
 ```
 
 **Example:**
 ```bash
-lucy predict build-table data/reference/nmrshiftdb2withsignals.sd
+ailsa predict build-table data/reference/nmrshiftdb2withsignals.sd
 ```
 
 ---
@@ -466,7 +473,7 @@ lucy predict build-table data/reference/nmrshiftdb2withsignals.sd
 ### Reading Spectra
 
 ```python
-from lucy_ng import BrukerReader
+from ailsa import BrukerReader
 
 # Read 1D spectrum
 spectrum_1d = BrukerReader.read_1d("data/Ibuprofen/2")
@@ -484,7 +491,7 @@ print(f"Shape: {spectrum_2d.data.shape}")
 ### Peak Picking
 
 ```python
-from lucy_ng import BrukerReader, AdaptivePeakPicker
+from ailsa import BrukerReader, AdaptivePeakPicker
 
 # Basic 1D peak picking
 spectrum = BrukerReader.read_1d("data/Ibuprofen/2")
@@ -505,8 +512,8 @@ dept_peaks = AdaptivePeakPicker.pick_peaks(
 ### DEPT-Guided HSQC Picking
 
 ```python
-from lucy_ng import BrukerReader
-from lucy_ng.processing import DEPTGuidedPicker
+from ailsa import BrukerReader
+from ailsa.processing import DEPTGuidedPicker
 
 # Load spectra
 hsqc = BrukerReader.read_2d("data/Ibuprofen/6")
@@ -533,8 +540,8 @@ for ppm, mult in result.carbon_multiplicities.items():
 ### HMBC-Guided Picking
 
 ```python
-from lucy_ng import BrukerReader
-from lucy_ng.processing import HMBCGuidedPicker
+from ailsa import BrukerReader
+from ailsa.processing import HMBCGuidedPicker
 
 hmbc = BrukerReader.read_2d("data/Ibuprofen/7")
 c13 = BrukerReader.read_1d("data/Ibuprofen/2")
@@ -557,9 +564,9 @@ print(f"Rejected: {result.rejected_count}")
 ### Symmetry Analysis
 
 ```python
-from lucy_ng import BrukerReader
-from lucy_ng.processing import DEPTGuidedPicker
-from lucy_ng.analysis import SymmetryAnalyzer
+from ailsa import BrukerReader
+from ailsa.processing import DEPTGuidedPicker
+from ailsa.analysis import SymmetryAnalyzer
 
 # Load spectra and pick peaks
 hsqc = BrukerReader.read_2d("data/Ibuprofen/6")
@@ -581,8 +588,8 @@ print(f"  Missing: {result.hydrogen_budget.missing_h}")
 ### Dereplication
 
 ```python
-from lucy_ng import BrukerReader
-from lucy_ng.dereplication import DereplicationService, CoconutLoader, NMRShiftDBLoader
+from ailsa import BrukerReader
+from ailsa.dereplication import DereplicationService, CoconutLoader, NMRShiftDBLoader
 
 # Load spectrum
 spectrum = BrukerReader.read_1d("data/Ibuprofen/2")
@@ -617,9 +624,9 @@ for match in result.top_matches:
 ### LSD Integration
 
 ```python
-from lucy_ng import BrukerReader
-from lucy_ng.processing import DEPTGuidedPicker, HMBCGuidedPicker
-from lucy_ng.lsd import LSDInputGenerator, LSDRunner
+from ailsa import BrukerReader
+from ailsa.processing import DEPTGuidedPicker, HMBCGuidedPicker
+from ailsa.lsd import LSDInputGenerator, LSDRunner
 
 # Load all spectra
 hsqc = BrukerReader.read_2d("data/Ibuprofen/6")
@@ -660,8 +667,8 @@ if LSDRunner.is_available():
 ### Solution Ranking
 
 ```python
-from lucy_ng import SolutionRanker, BrukerReader, AdaptivePeakPicker
-from lucy_ng.lsd.parser import LSDOutputParser
+from ailsa import SolutionRanker, BrukerReader, AdaptivePeakPicker
+from ailsa.lsd.parser import LSDOutputParser
 from pathlib import Path
 
 # Load experimental 13C shifts
@@ -672,8 +679,8 @@ experimental_shifts = [p.position for p in peaks.peaks]
 # Or provide shifts directly
 experimental_shifts = [180.5, 140.8, 137.0, 129.4, 127.1, 45.1, 40.4, 30.2, 22.4, 18.2]
 
-# Load LSD solutions
-solutions = LSDOutputParser.parse_solutions(Path("output/"))
+# Load LSD solutions (one SMILES per line, the standard outlsd output format)
+solutions = LSDOutputParser.parse_smiles_file(Path("outlsd.out"))
 
 # Create ranker from HOSE lookup table
 ranker = SolutionRanker.from_table_file(
@@ -702,7 +709,7 @@ for i, sol in enumerate(result.solutions):
 ### 13C Shift Prediction
 
 ```python
-from lucy_ng import C13Predictor, HOSELookupTable
+from ailsa import C13Predictor, HOSELookupTable
 from pathlib import Path
 
 # Load predictor from lookup table
@@ -722,22 +729,15 @@ for pred in result.predictions:
           f"(confidence: {pred.confidence:.2f}, radius: {pred.radius_used})")
 
 # Build a lookup table from SD file (one-time setup)
-from lucy_ng.prediction import HOSELookupTable, HOSECodeGenerator
-from lucy_ng.dereplication import NMRShiftDBLoader
+from ailsa.prediction import HOSELookupTable
+from pathlib import Path
 
-loader = NMRShiftDBLoader("data/reference/nmrshiftdb2withsignals.sd")
-loader.load()
-
-table = HOSELookupTable()
-generator = HOSECodeGenerator()
-
-for entry in loader.entries:
-    if entry.smiles:
-        mol = generator.prepare_mol(entry.smiles)
-        if mol:
-            # Add HOSE codes and shifts to table
-            # (simplified - see HOSELookupTable.build_from_loader for full implementation)
-            pass
+table = HOSELookupTable.build_from_nmrshiftdb(
+    Path("data/reference/nmrshiftdb2withsignals.sd"),
+    max_radius=6,
+)
+# Or, for a COCONUT SD file:
+# table = HOSELookupTable.build_from_coconut(Path("data/reference/coconut_predicted.sd"))
 
 # Save table for future use
 table.save("my_hose_table.json.gz")
@@ -751,11 +751,11 @@ table.save("my_hose_table.json.gz")
 
 ```python
 from pathlib import Path
-from lucy_ng import BrukerReader, SolutionRanker, AdaptivePeakPicker
-from lucy_ng.processing import DEPTGuidedPicker, HMBCGuidedPicker
-from lucy_ng.analysis import SymmetryAnalyzer
-from lucy_ng.dereplication import DereplicationService, NMRShiftDBLoader
-from lucy_ng.lsd import LSDInputGenerator, LSDRunner
+from ailsa import BrukerReader, SolutionRanker, AdaptivePeakPicker
+from ailsa.processing import DEPTGuidedPicker, HMBCGuidedPicker
+from ailsa.analysis import SymmetryAnalyzer
+from ailsa.dereplication import DereplicationService, NMRShiftDBLoader
+from ailsa.lsd import LSDInputGenerator, LSDRunner
 
 def elucidation_workflow(data_dir: str, formula: str):
     """Complete structure elucidation workflow."""
@@ -867,7 +867,7 @@ result = elucidation_workflow("data/Ibuprofen", "C13H18O2")
 
 ```python
 from pathlib import Path
-from lucy_ng import BrukerReader, AdaptivePeakPicker
+from ailsa import BrukerReader, AdaptivePeakPicker
 import json
 
 def batch_peak_picking(base_dir: str, output_file: str):
