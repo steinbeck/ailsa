@@ -242,6 +242,17 @@ h2 {{ font-family:var(--serif); font-weight:700; letter-spacing:-.01em; line-hei
   text-transform:uppercase; color:var(--accent); }}
 .credits b {{ color:var(--ink); }}
 
+/* ---- benchmark slide ---- */
+.config-note {{ font-size:12.5px; color:var(--muted); margin:8px 0 0; max-width:74ch; }}
+.bench-stats {{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }}
+.sizes {{ display:flex; flex-direction:column; gap:0; font-family:var(--mono); font-size:11px;
+  color:var(--muted); background:var(--bg2); border:1px solid var(--line); border-radius:8px; }}
+.sizes .row {{ display:flex; justify-content:space-between; gap:10px; padding:6px 12px;
+  border-bottom:1px solid var(--line); }}
+.sizes .row:last-child {{ border-bottom:none; }}
+.sizes .row.warn {{ color:var(--warn); font-weight:600; }}
+.pairline {{ font-size:12px; color:var(--muted); margin:2px 0 0; }}
+
 /* ---- combination "formula" (slide 1) ---- */
 .stack {{ display:flex; align-items:stretch; gap:12px; margin-top:24px; flex-wrap:wrap; }}
 .block {{ flex:1 1 0; min-width:180px; background:var(--bg2); border:1px solid var(--line);
@@ -292,7 +303,7 @@ h2 {{ font-family:var(--serif); font-weight:700; letter-spacing:-.01em; line-hei
 @media (max-width:720px) {{
   .slide {{ aspect-ratio:auto; }}
   .flow,.stats {{ grid-template-columns:1fr 1fr; }}
-  .grid9,.team,.two,.credits {{ grid-template-columns:1fr; }}
+  .grid9,.team,.two,.credits,.bench-stats {{ grid-template-columns:1fr; }}
   .mol {{ grid-template-columns:80px 1fr; }}
 }}
 @page {{ size:1280px 720px; margin:0; }}
@@ -491,6 +502,44 @@ h2 {{ font-family:var(--serif); font-weight:700; letter-spacing:-.01em; line-hei
       </div>
     </div>
     <div class="foot"><span class="brand"><b>AILSA</b> · data source</span><span>05 / 08</span></div>
+  </section>
+
+  <!-- ============ SLIDE 6 · BENCHMARK ============ -->
+  <section class="slide">
+    <div class="eyebrow"><span class="bar"></span><span>Blind benchmark</span><span class="n">256 public datasets</span><span class="n">nmrXiv</span></div>
+    <h2>Blind on 256 public datasets: 69.1 % solved at rank 1</h2>
+    <p class="config-note">Measured in a restricted configuration: without the agent team (unattended runs form none, so the specialists ran one at a time under the coordinator) and without statistical detection (outdated reference database on the compute host).</p>
+    <div class="two" style="margin-top:14px;flex:1;min-height:0;">
+      <div style="display:flex;flex-direction:column;gap:9px;">
+        <div class="nx-head">How it is measured</div>
+        <div class="step"><div class="sn">01</div><h4>Spectra in, nothing else</h4>
+          <p>The coordinator gets a sanitised directory of Bruker spectra and the molecular formula,
+            never a name or structure; dereplication is forbidden.</p></div>
+        <div class="step"><div class="sn">02</div><h4>Answers locked away</h4>
+          <p>Every file mapping a dataset to its answer is moved out of reach for the duration of
+            each batch; a system-prompt fence forbids looking for it.</p></div>
+        <div class="step"><div class="sn">03</div><h4>Graded from outside</h4>
+          <p>An independent grader re-derives every candidate's InChIKey with RDKit; the run's own
+            claim is never used.</p></div>
+        <div class="step"><div class="sn">04</div><h4>Constitution only</h4>
+          <p>Stereochemistry is not tested.</p></div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <div class="bench-stats">
+          <div class="stat"><div class="v">177 / 256</div><div class="k">correct structure at rank 1</div><div class="s">69.1 %</div></div>
+          <div class="stat"><div class="v">189 / 256</div><div class="k">within the top 10</div><div class="s">73.8 %</div></div>
+        </div>
+        <div class="sizes">
+          <div class="row"><span>&le; 15 heavy atoms</span><span>40 / 40</span><span>100 %</span></div>
+          <div class="row"><span>16&ndash;20</span><span>28 / 32</span><span>88 %</span></div>
+          <div class="row"><span>21&ndash;25</span><span>49 / 70</span><span>70 %</span></div>
+          <div class="row warn"><span>&ge; 26</span><span>60 / 114</span><span>53 %</span></div>
+        </div>
+        <p class="pairline">Same 102 datasets, two model generations: Opus 5 67 / 102 vs Opus 4.8 40 / 102 at rank 1 — won 30, lost 3, exact McNemar p = 1.4 · 10⁻⁶</p>
+      </div>
+    </div>
+    <div class="coord"><b>The limit is size.</b> Up to 15 heavy atoms every molecule was solved; from 26 upward about half. When a run fails, the right structure is almost never further down its list — generation, not ranking, is what limits it. 25 runs hit the three-hour limit and count as failures.</div>
+    <div class="foot"><span class="brand"><b>AILSA</b> · benchmark</span><span>06 / 08</span></div>
   </section>
 
   <!-- ============ SLIDE 7 · EXAMPLES ============ -->
