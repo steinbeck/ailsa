@@ -1,25 +1,24 @@
-# lucy-ng
+# AILSA
 
-**AI-Agent Powered Computer-Assisted Structure Elucidation for Organic Natural Products**
+**AI + LSD + Agents — AI-agent computer-assisted structure elucidation for organic natural products**
 
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-lucy-ng determines the structure of an unknown organic natural product from its NMR
-spectra. Its centrepiece is a **team of cooperating AI agents** that runs the full
+AILSA determines the structure of an unknown organic natural product from its NMR
+spectra. At its core is **[LSD](https://nuzillard.github.io/LSD/) — Jean-Marc
+Nuzillard's structure generator** — which enumerates every molecular graph consistent
+with the spectroscopic constraints without leaning on a chemical-shift database (see
+[Built on LSD](#built-on-lsd-and-established-tools) below). Driving it is a
+**coordinator leading a team of specialist AI agents** that runs the full
 Computer-Assisted Structure Elucidation (CASE) workflow autonomously — picking peaks,
-extracting constraints, driving the LSD solver, ranking candidates, and critiquing its
-own work — the way a group of human spectroscopists would, but unattended.
+extracting constraints, running LSD, ranking candidates, and critiquing its own work —
+the way a group of human spectroscopists would, but unattended.
 
-Underneath the team sits the `lucy` command-line toolkit. That toolkit does not reinvent
-the science: it is largely an **integration layer around established software written by
-others**, with **[LSD](https://nuzillard.github.io/LSD/) — Jean-Marc Nuzillard's structure
-generator — at its core** (see [Built on LSD](#built-on-lsd-and-established-tools) below).
-The genuinely novel part, and our own contribution, is the cooperative **agent team** that
-drives all of it unattended.
-
-> lucy-ng is a reference to the original *Lucy* CASE program written by the project author.
-> The existence of LSD made Lucy obsolete.
+The agent team is AILSA's own contribution; LSD does the structure generation
+underneath it. Everything the agents do is also available directly through the
+`ailsa` command-line toolkit, a thin integration layer around LSD and the other
+established packages it relies on (RDKit, nmrglue).
 
 ---
 
@@ -28,7 +27,7 @@ drives all of it unattended.
 - [Built on LSD and Established Tools](#built-on-lsd-and-established-tools)
 - [The CASE Agent Team](#the-case-agent-team)
 - [Running a CASE Elucidation](#running-a-case-elucidation)
-- [The `lucy` CLI](#the-lucy-cli)
+- [The `ailsa` CLI](#the-ailsa-cli)
 - [Evaluation](#evaluation)
 - [Installation](#installation)
 - [Scientific Background](#scientific-background)
@@ -46,13 +45,13 @@ consistent with the spectroscopic constraints — is done by **[LSD (Logic for S
 Determination)](https://nuzillard.github.io/LSD/), created and maintained by Jean-Marc
 Nuzillard** (Université de Reims Champagne-Ardenne, CNRS). LSD is the product of decades of
 rigorous work, it builds structures purely from 2D-NMR connectivity without leaning on a
-chemical-shift database, and it is the foundation without which lucy-ng simply would not
-exist. **If you use lucy-ng in research, cite LSD** — see [Citation](#license--citation).
+chemical-shift database, and it is the foundation without which AILSA simply would not
+exist. **If you use AILSA in research, cite LSD** — see [Citation](#license--citation).
 
-lucy-ng does not replace LSD or the other packages it relies on. It wraps and coordinates
+AILSA does not replace LSD or the other packages it relies on. It wraps and coordinates
 them:
 
-| Foundation | By | Its role in lucy-ng |
+| Foundation | By | Its role in AILSA |
 |------------|-----|---------------------|
 | **LSD** | Jean-Marc Nuzillard | The structure generator — the core solver |
 | **RDKit** | RDKit contributors | Cheminformatics: molecules, SMILES/InChI, substructure search |
@@ -60,7 +59,7 @@ them:
 | **HOSE codes** | W. Bremser (1978) | 13C shift-prediction descriptors |
 | **COCONUT**, **NMRShiftDB** | their respective communities | Reference data for dereplication and prediction |
 
-The `lucy` command-line tools are the wrappers through which these packages are driven.
+The `ailsa` command-line tools are the wrappers through which these packages are driven.
 **What is genuinely new here — our own contribution — is the [CASE agent team](#the-case-agent-team)**
 that operates all of them end to end, unattended.
 
@@ -70,52 +69,63 @@ that operates all of them end to end, unattended.
 
 Structure elucidation is not a single algorithm — it is an iterative, judgement-heavy
 process where evidence from several spectra has to be weighed, constraints have to be
-built carefully, and wrong turns have to be caught before they waste a solver run.
-lucy-ng models this as a **specialist team led by an orchestrator**, rather than as one
-monolithic prompt.
+built carefully, and wrong turns have to be caught before they waste a solver run. AILSA
+is designed as a **team of specialists that coordinate with each other**, rather than as
+one monolithic prompt or a coordinator that only ever talks to one specialist at a time.
 
-When you start a run, the orchestrator (`/lucy-ng:case`) spawns four specialists and
-supervises them as team lead. Each owns a part of the workflow:
+When you start a run, the coordinator (`/ailsa:case`) starts four specialists:
 
 | Agent | Role |
 |-------|------|
-| 🧪 **NMR Chemist** (`lucy-nmr-chemist`) | Peak picking, multiplicity assignment, statistical detection (hybridisation, neighbours), spectral-quality assessment. Establishes the chemistry-first evidence hierarchy. |
-| 🔧 **LSD Engineer** (`lucy-lsd-engineer`) | Builds LSD constraint files, runs the solver, manages the constraint inventory across iterations, adds HMBC correlations incrementally, converts solutions to structures. |
-| 📊 **Solution Analyst** (`lucy-solution-analyst`) | Ranks candidate structures by 13C-shift prediction, derives and verifies identity, assesses chemical plausibility, and reports the final result. |
-| 😈 **Devil's Advocate** (`lucy-devils-advocate`) | Quality gate. Validates **every** LSD file before the solver runs, checks that constraints persist across iterations, and flags loss or over-constraint — the primary defence against silent failure modes. |
+| 🧪 **NMR Chemist** (`ailsa-nmr-chemist`) | Peak picking, multiplicity assignment, statistical detection (hybridisation, neighbours), spectral-quality assessment. Establishes the chemistry-first evidence hierarchy. |
+| 🔧 **LSD Engineer** (`ailsa-lsd-engineer`) | Builds LSD constraint files, runs the solver, manages the constraint inventory across iterations, adds HMBC correlations incrementally, converts solutions to structures. |
+| 📊 **Solution Analyst** (`ailsa-solution-analyst`) | Ranks candidate structures by 13C-shift prediction, derives and verifies identity, assesses chemical plausibility, and reports the final result. |
+| 😈 **Devil's Advocate** (`ailsa-devils-advocate`) | Quality gate. Validates **every** LSD file before the solver runs, checks that constraints persist across iterations, and flags loss or over-constraint — the primary defence against silent failure modes. |
 
-A fifth agent, the **Diagnostic specialist** (`lucy-diagnostic`), is held in reserve and
+Two of those specialists talk to each other directly, without going through the
+coordinator. The LSD Engineer and the Devil's Advocate run a **direct review loop** on
+every LSD file: the LSD Engineer marks a new file "ready for validation", the Devil's
+Advocate approves it or blocks it with an issue list, and the solver runs only after
+approval. The LSD Engineer can also **ask the NMR chemist** directly for additional HMBC
+correlations or detection results, without routing the request through the coordinator.
+
+A fifth agent, the **Diagnostic specialist** (`ailsa-diagnostic`), is held in reserve and
 called only when a run gets stuck (zero solutions or a solution explosion) and basic
 intervention has failed.
+
+The team needs Claude Code's agent-team feature (see [Installation](#installation)); the
+benchmark figures quoted under [Evaluation](#evaluation) were measured in a restricted
+configuration without it — see that section for what changes and why.
 
 ### How a run unfolds
 
 ```
-                       ┌─────────────────────────────┐
-                       │   Orchestrator  /lucy-ng:case │
-                       │   (team lead + supervision)   │
-                       └──────────────┬────────────────┘
-            spawns + supervises ──────┼──────────────────────────
-                  │                   │                   │
-        ┌─────────▼──────┐  ┌─────────▼────────┐  ┌───────▼────────┐
-        │  NMR Chemist   │  │  LSD Engineer    │  │ Solution Analyst│
-        │  peaks/multipl.│→ │  constraints/LSD │→ │  rank + identify │
-        └────────────────┘  └─────────┬────────┘  └────────────────┘
-                                       │ every LSD file
-                              ┌────────▼─────────┐
-                              │ Devil's Advocate  │  ← validate before each solver run
-                              │  (quality gate)   │
-                              └───────────────────┘
+                    ┌────────────────────────────────┐
+                    │   Coordinator   /ailsa:case      │
+                    │   tasks · advisories ·           │
+                    │   writes CASE-PROGRESS.md        │
+                    └─────┬───────┬───────┬───────┬────┘
+                          │       │       │       │
+                 ┌────────▼──┐ ┌──▼──────────┐ ┌──▼───────────┐ ┌───▼─────────────┐
+                 │NMR Chemist│ │LSD Engineer │ │Devil's Advocate│ │Solution Analyst │
+                 └───────────┘ └──────┬──────┘ └───────▲────────┘ └─────────────────┘
+                                      │                │
+                                      └──◄───────────►─┘   direct review loop
+                                        every LSD file; solver runs only after approval
+
+                 NMR Chemist ◄────────── requests ─────────── LSD Engineer
+                           (additional HMBC correlations or detection results)
 ```
 
-The orchestrator monitors progress, detects unproductive loops, intervenes with
+The coordinator monitors progress, detects unproductive loops, intervenes with
 **advisory** constraints (telling the team *what* is wrong, not *how* to fix it, so the
-specialists keep their autonomy), and escalates to you only after repeated intervention
-cycles fail. It never does dereplication and never short-cuts the elucidation — a CASE
-run always starts from the raw spectra.
+specialists keep their autonomy), escalates to the Diagnostic specialist after repeated
+intervention cycles fail, and is the sole writer of the progress log
+(`CASE-PROGRESS.md`). It never does dereplication and never short-cuts the elucidation —
+a CASE run always starts from the raw spectra.
 
-The agents live in [`.claude/`](.claude/) (`agents/lucy-*.md` and
-`commands/lucy-ng/`) and are loaded as Claude Code skills.
+The agents live in [`.claude/`](https://github.com/steinbeck/ailsa/tree/master/.claude)
+(`agents/ailsa-*.md` and `commands/ailsa/`) and are loaded as Claude Code skills.
 
 ---
 
@@ -126,37 +136,37 @@ fresh machine is the CASE-host bootstrap, which provisions Python + dependencies
 solver, the reference database, **and** the CASE commands and team agents:
 
 ```bash
-git clone https://github.com/steinbeck/lucy-ng.git
-cd lucy-ng
+git clone https://github.com/steinbeck/ailsa.git
+cd ailsa
 ./scripts/bootstrap_case_host.sh
 ```
 
-See **[docs/SERVER_BOOTSTRAP.md](docs/SERVER_BOOTSTRAP.md)** for a headless/compute-host
-walkthrough.
+See **[docs/SERVER_BOOTSTRAP.md](https://github.com/steinbeck/ailsa/blob/master/docs/SERVER_BOOTSTRAP.md)**
+for a headless/compute-host walkthrough.
 
 Then, from a directory holding your Bruker NMR data, start Claude Code and run:
 
 ```
-/lucy-ng:case
+/ailsa:case
 ```
 
-The orchestrator picks up the spectra in the current directory, asks for the molecular
+The coordinator picks up the spectra in the current directory, asks for the molecular
 formula if it cannot infer one, assembles the team, and runs to completion. Other
 commands in the same family:
 
 | Command | Purpose |
 |---------|---------|
-| `/lucy-ng:case` | Full autonomous CASE elucidation (the agent team) |
-| `/lucy-ng:dereplicate` | Match a 13C spectrum against the reference database |
-| `/lucy-ng:predict` | Predict 13C shifts for a candidate SMILES |
-| `/lucy-ng:sanitise` | Strip identifiers from a dataset for blind evaluation |
-| `/lucy-ng:status` | Check environment readiness (LSD, database, install) |
+| `/ailsa:case` | Full autonomous CASE elucidation (the agent team) |
+| `/ailsa:dereplicate` | Match a 13C spectrum against the reference database |
+| `/ailsa:predict` | Predict 13C shifts for a candidate SMILES |
+| `/ailsa:sanitise` | Strip identifiers from a dataset for blind evaluation |
+| `/ailsa:status` | Check environment readiness (LSD, database, install) |
 
 ---
 
-## The `lucy` CLI
+## The `ailsa` CLI
 
-Everything the agents do is available directly through the `lucy` command. These commands
+Everything the agents do is available directly through the `ailsa` command. These commands
 are thin wrappers that orchestrate the [foundational packages above](#built-on-lsd-and-established-tools)
 — LSD, RDKit, nmrglue and the rest — behind one consistent interface; the science lives in
 those packages, not here. Every subcommand supports `--format json` for scripting. The
@@ -164,55 +174,56 @@ command groups:
 
 | Group | What it does |
 |-------|--------------|
-| `lucy read` | Read 1D / 2D Bruker spectra |
-| `lucy pick` | Peak picking (1D, DEPT-guided HSQC, guided HMBC) |
-| `lucy analyze` | Symmetry detection and structural analysis |
-| `lucy detect` | Statistical detection (hybridisation, neighbours) |
-| `lucy dereplicate` | Match a spectrum against the reference database |
-| `lucy identify` | Derive a deterministic identity (SMILES → InChIKey + DB name) |
-| `lucy predict` | Predict 13C shifts from structure (HOSE codes) |
-| `lucy lsd` | Generate LSD input, run the solver, rank solutions |
-| `lucy pylsd` | Multi-run LSD orchestration for 4J-HMBC handling |
-| `lucy fragment` | Fragment-library build / search |
-| `lucy visualize` | NMR correlation diagrams |
-| `lucy fetch` | Fetch datasets from external repositories |
-| `lucy jcamp` | Read 2D spectra from JCAMP-DX files (binary-free ingestion path) |
-| `lucy nus` | Reconstruct non-uniformly-sampled 2D spectra (NMRPipe + SMILE) |
-| `lucy webview` | Local dashboard for watching a CASE run |
-| `lucy database` | Download and inspect the reference database |
+| `ailsa read` | Read 1D / 2D Bruker spectra |
+| `ailsa pick` | Raw peak picking (1D, 2D, HSQC, HMBC); DEPT- and HMBC-guided filtering is done by the agents |
+| `ailsa analyze` | Symmetry detection and structural analysis |
+| `ailsa detect` | Statistical detection (hybridisation, neighbours) |
+| `ailsa dereplicate` | Match a spectrum against the reference database |
+| `ailsa identify` | Derive a deterministic identity (SMILES → InChIKey + DB name) |
+| `ailsa predict` | Predict 13C shifts from structure (HOSE codes) |
+| `ailsa lsd` | Check the solver, run it, rank and analyse solutions |
+| `ailsa pylsd` | Multi-run LSD orchestration for 4J-HMBC handling |
+| `ailsa fragment` | Fragment-library build / search |
+| `ailsa visualize` | NMR correlation diagrams |
+| `ailsa fetch` | Fetch datasets from external repositories |
+| `ailsa jcamp` | Read 2D spectra from JCAMP-DX files (binary-free ingestion path) |
+| `ailsa nus` | Reconstruct non-uniformly-sampled 2D spectra (NMRPipe + SMILE) |
+| `ailsa webview` | Local dashboard for watching a CASE run |
+| `ailsa database` | Download and inspect the reference database |
 
 A few representative invocations:
 
 ```bash
 # Inspect a carbon spectrum
-lucy read 1d data/Ibuprofen/2
+ailsa read 1d data/Ibuprofen/2
 
-# DEPT-guided HSQC picking (DEPT-135 as ground truth)
-lucy pick hsqc data/Ibuprofen/6 --dept135 data/Ibuprofen/3
+# Raw HSQC peak picking (the agent applies DEPT-guided filtering on top)
+ailsa pick hsqc data/Ibuprofen/6
 
-# Guided HMBC picking (cross-validated against 13C and HSQC)
-lucy pick hmbc data/Ibuprofen/7 --c13 data/Ibuprofen/2 --hsqc data/Ibuprofen/6
+# Raw HMBC peak picking (the agent applies cross-validation filtering on top)
+ailsa pick hmbc data/Ibuprofen/7
 
 # Dereplicate against the reference database
-lucy dereplicate c13 data/Ibuprofen/2 C13H18O2
+ailsa dereplicate c13 data/Ibuprofen/2 C13H18O2
 
-# Generate constraints, solve, and rank
-lucy lsd generate data/Ibuprofen C13H18O2 -o ibuprofen.lsd
-lucy lsd run ibuprofen.lsd
-lucy lsd rank output/ data/Ibuprofen/2 --top 10
+# The per-run LSD constraint file (compound.lsd) is built by the LSD-engineer
+# agent from the picked peaks and detection results -- there is no CLI command
+# that builds it from scratch.
+ailsa lsd run ibuprofen.lsd
+ailsa lsd rank solutions.smi --spectrum data/Ibuprofen/2 --top 10
 
 # Predict 13C shifts for a candidate
-lucy predict c13 "CC(C)Cc1ccc(cc1)C(C)C(=O)O"
+ailsa predict c13 "CC(C)Cc1ccc(cc1)C(C)C(=O)O"
 ```
 
 A Python API mirrors the CLI for custom workflows — see
-[docs/USER_GUIDE.md](docs/USER_GUIDE.md).
+[docs/USER_GUIDE.md](https://github.com/steinbeck/ailsa/blob/master/docs/USER_GUIDE.md).
 
 ---
 
 ## Evaluation
 
-lucy-ng is measured **blind**: the agent team gets a directory of Bruker spectra and a
+AILSA is measured **blind**: the coordinator gets a directory of Bruker spectra and a
 molecular formula, never the compound's name or structure, and dereplication is
 forbidden. Grading is done afterwards by an independent script that re-derives every
 candidate's InChIKey with RDKit — a run's own claim about its result is never used.
@@ -229,6 +240,16 @@ Runs that hit the time limit of about three hours without a report (25) count as
 231 runs that did report, 76.6 % have the correct structure first and 81.8 % in the top
 10. Molecules up to 15 heavy atoms were all solved; above 25 heavy atoms it is about half.
 
+These figures were measured in a restricted configuration: without the agent team,
+because Claude Code forms no team in unattended `claude -p` runs and the specialists
+therefore ran one at a time under the coordinator, and without statistical detection,
+because the reference database on the compute host had an outdated schema. Prediction,
+ranking and identity derivation worked normally. What the full configuration — with the
+team and with statistical detection — achieves is a separate, not-yet-answered question.
+See
+[docs/BENCHMARK.md#how-a-benchmark-run-executes](https://github.com/steinbeck/ailsa/blob/master/docs/BENCHMARK.md#how-a-benchmark-run-executes)
+for the detail.
+
 The top-10 figure is the one that matters in practice: ten candidates is the shortlist
 size a DP4/GIAO shift calculation is run on, so a result in that band is one a
 spectroscopist can finish. Matching is on constitution only — **stereochemistry is not
@@ -238,22 +259,29 @@ tested**.
 control, the current system solves 67 at rank 1 against 40, winning 30 and losing 3
 (exact McNemar, p = 1.4 · 10⁻⁶).
 
-**[docs/BENCHMARK.md](docs/BENCHMARK.md)** has the full picture: how blindness is
-enforced, what the audits found, results by size and by arm, what the numbers do *not*
-say, a measurement error that had flattered this comparison and how correcting it
-shrank the claimed gap, and the complete table of all 258 datasets with their metadata
-and per-model result.
+**[docs/BENCHMARK.md](https://github.com/steinbeck/ailsa/blob/master/docs/BENCHMARK.md)**
+has the full picture: how blindness is enforced, what the audits found, results by size
+and by arm, what the numbers do *not* say, a measurement error that had flattered this
+comparison and how correcting it shrank the claimed gap, and the complete table of all
+258 datasets with their metadata and per-model result.
 
 ---
 
 ## Installation
 
-To install lucy-ng, simply ask your AI to look at this repo and do the installation for you. Alternatively, you can follow the instructions below.
+To install AILSA, simply ask your AI to look at this repo and do the installation for you.
+Alternatively, you can follow the instructions below.
 
 ### CLI only
 
 ```bash
-pip install "lucy-ng @ git+https://github.com/steinbeck/lucy-ng.git"
+pip install ailsa
+```
+
+To install the development head instead of the latest release:
+
+```bash
+pip install "ailsa @ git+https://github.com/steinbeck/ailsa.git"
 ```
 
 > **macOS / zsh:** the quotes are required because zsh expands square brackets.
@@ -261,8 +289,8 @@ pip install "lucy-ng @ git+https://github.com/steinbeck/lucy-ng.git"
 ### Development
 
 ```bash
-git clone https://github.com/steinbeck/lucy-ng.git
-cd lucy-ng
+git clone https://github.com/steinbeck/ailsa.git
+cd ailsa
 pip install -e ".[dev]"
 ```
 
@@ -283,7 +311,7 @@ structure generation. Download it, extract it, and add its `bin/` directory to `
 Verify with:
 
 ```bash
-lucy lsd check     # must report both LSD and outlsd on PATH
+ailsa lsd check     # must report both LSD and outlsd on PATH
 ```
 
 ### Reference database
@@ -293,28 +321,31 @@ Dereplication, 13C prediction, and CASE ranking all share one pre-built SQLite d
 (~830 MB download → ~2.8 GB uncompressed).
 
 ```bash
-lucy database download -o data/reference/lucy-ng-derep.db
-lucy database info data/reference/lucy-ng-derep.db
+ailsa database download
+ailsa database info
 ```
 
-It is auto-discovered at `data/reference/lucy-ng-derep.db`. DOI:
+Both commands auto-resolve the database; the default location is
+`data/reference/ailsa-derep.db`. DOI:
 [10.6084/m9.figshare.31073554](https://doi.org/10.6084/m9.figshare.31073554). See
-[docs/INSTALLATION.md](docs/INSTALLATION.md#reference-database) for detail.
+[docs/INSTALLATION.md](https://github.com/steinbeck/ailsa/blob/master/docs/INSTALLATION.md#reference-database)
+for detail.
 
 ### NMRPipe + SMILE (NUS reconstruction)
 
-Automatic reconstruction of non-uniformly-sampled (NUS) 2D spectra (`lucy nus reconstruct`
+Automatic reconstruction of non-uniformly-sampled (NUS) 2D spectra (`ailsa nus reconstruct`
 / `pipeline`) uses NMRPipe with the SMILE plugin as its backend. Install NMRPipe (native
 `mac11_arm64`/Linux build) **and** the separate SMILE companion plugin
 (`plugin.smile.tZ`) from https://www.ibbr.umd.edu/nmrpipe/install, source its environment
 script, and add its `bin/` directory to `PATH`. Verify with:
 
 ```bash
-lucy nus check     # must report the backend "available"
+ailsa nus check     # must report the backend "available"
 ```
 
-See [docs/NUS-PORTABILITY.md](docs/NUS-PORTABILITY.md) for the full per-platform matrix
-(macOS Apple Silicon native / Linux native / Windows WSL2 gap).
+See [docs/NUS-PORTABILITY.md](https://github.com/steinbeck/ailsa/blob/master/docs/NUS-PORTABILITY.md)
+for the full per-platform matrix (macOS Apple Silicon native / Linux native / Windows
+WSL2 gap).
 
 ---
 
@@ -330,11 +361,11 @@ Two design choices matter most for getting correct answers:
 
 ### Guided peak picking
 
-Raw 2D peak picking produces many noise peaks and artefacts. lucy-ng uses DEPT-135 as
-ground truth (it definitively shows all protonated carbons), lowers the HSQC threshold
-until every DEPT carbon is matched, and filters HMBC peaks to require a matching carbon
-(from 13C) **and** proton (from HSQC). This removes the false correlations that would
-otherwise generate thousands of incorrect structures.
+Raw 2D peak picking produces many noise peaks and artefacts. The NMR-chemist agent uses
+DEPT-135 as ground truth (it definitively shows all protonated carbons), lowers the HSQC
+threshold until every DEPT carbon is matched, and filters HMBC peaks to require a
+matching carbon (from 13C) **and** proton (from HSQC). This removes the false
+correlations that would otherwise generate thousands of incorrect structures.
 
 | Constraint source | Typical LSD solutions |
 |-------------------|-----------------------|
@@ -345,7 +376,7 @@ otherwise generate thousands of incorrect structures.
 
 Equivalent carbons appear as single signals, so the observed carbon count is often below
 the formula count (e.g. a para-disubstituted benzene shows two pairs of equivalent
-carbons). lucy-ng detects this by comparing the formula's hydrogen budget with the
+carbons). AILSA detects this by comparing the formula's hydrogen budget with the
 observed C–H count and by analysing relative peak intensities, then encodes it as solver
 constraints rather than guessing.
 
@@ -354,8 +385,8 @@ constraints rather than guessing.
 ## Architecture
 
 ```
-lucy-ng/
-├── src/lucy_ng/
+ailsa/
+├── src/ailsa/
 │   ├── models/          # Pydantic v2 data models (Spectrum1D/2D, Peak1D, …)
 │   ├── readers/         # NMR file readers (BrukerReader)
 │   ├── processing/      # peak picking, signal processing
@@ -365,14 +396,16 @@ lucy-ng/
 │   ├── prediction/      # HOSE-code 13C shift prediction
 │   ├── ranking/         # candidate solution ranking
 │   ├── lsd/             # LSD solver integration + bundled fragment filters
+│   ├── fragments/       # fragment-library build / search / LSD injection
 │   ├── solvers/         # solver back-ends behind one interface
 │   ├── nus/             # non-uniform-sampling reconstruction + QC gate
 │   ├── nmrxiv/          # nmrXiv dataset fetching
 │   ├── database/        # reference-database access
+│   ├── data/            # bundled schemas (constraint-inventory JSON, …)
 │   ├── webview/         # local run dashboard
 │   ├── visualization/   # NMR correlation diagrams
-│   ├── identity.py      # deterministic identity derivation (lucy identify)
-│   └── cli/             # the `lucy` Click CLI
+│   ├── identity.py      # deterministic identity derivation (ailsa identify)
+│   └── cli/             # the `ailsa` Click CLI
 ├── .claude/             # CASE orchestrator command + team agents (skills)
 ├── tests/               # pytest suite
 ├── data/                # local test NMR datasets (Bruker format)
@@ -387,17 +420,19 @@ lucy-ng/
    serialisation.
 3. **HOSE codes use molecules without explicit hydrogens** — a hard invariant shared
    between database generation and prediction; mixing the two causes prediction
-   mismatches (see [CLAUDE.md](CLAUDE.md)).
+   mismatches (see [CLAUDE.md](https://github.com/steinbeck/ailsa/blob/master/CLAUDE.md)).
 
-For the AI-agent workflow, pitfalls, and best practices, see [CLAUDE.md](CLAUDE.md).
+Developer notes (commands, invariants) are in
+[CLAUDE.md](https://github.com/steinbeck/ailsa/blob/master/CLAUDE.md); the CASE workflow
+itself is defined in `.claude/commands/ailsa/case.md` and `.claude/agents/ailsa-*.md`.
 
 ---
 
 ## Supported Data
 
 **Input:** Bruker TopSpin 1D and 2D spectra (processed data from `pdata/1/`); 2D spectra
-from **JCAMP-DX** files via `lucy jcamp`, which needs no vendor binaries; **non-uniformly
-sampled** 2D data, reconstructed by `lucy nus` through NMRPipe + SMILE; SD files for
+from **JCAMP-DX** files via `ailsa jcamp`, which needs no vendor binaries; **non-uniformly
+sampled** 2D data, reconstructed by `ailsa nus` through NMRPipe + SMILE; SD files for
 reference databases.
 
 | Experiment | Detection | Notes |
@@ -416,8 +451,8 @@ reference databases.
 
 ```bash
 pytest                    # run tests
-pytest --cov=lucy_ng      # with coverage
-mypy src/lucy_ng          # type checking (strict)
+pytest --cov=ailsa         # with coverage
+mypy src/ailsa             # type checking (strict)
 ruff check src tests      # linting
 hatch build               # build the package
 ```
@@ -426,11 +461,11 @@ hatch build               # build the package
 
 ## License & Citation
 
-MIT License — see [LICENSE](LICENSE).
+MIT License — see [LICENSE](https://github.com/steinbeck/ailsa/blob/master/LICENSE).
 
 ### Cite LSD first
 
-lucy-ng is worthless without the LSD structure generator. **Any work using lucy-ng must
+AILSA is worthless without the LSD structure generator. **Any work using AILSA must
 cite LSD.** See the [LSD website](https://nuzillard.github.io/LSD/) for the author's
 current preferred citation; a key reference is:
 
@@ -441,17 +476,16 @@ current preferred citation; a key reference is:
 > ([doi:10.1002/mrc.4612](https://doi.org/10.1002/mrc.4612)).
 
 **Acknowledgments:** LSD by Jean-Marc Nuzillard (Université de Reims Champagne-Ardenne) ·
-original Lucy concept by Christoph Steinbeck · RDKit · nmrglue for NMR file parsing ·
-HOSE codes (W. Bremser, *Anal. Chim. Acta* **1978**, 103, 355–365) · COCONUT and
-NMRShiftDB for reference data.
+RDKit · nmrglue for NMR file parsing · HOSE codes (W. Bremser, *Anal. Chim. Acta* **1978**,
+103, 355–365) · COCONUT and NMRShiftDB for reference data.
 
-If you use lucy-ng itself, please also cite it (alongside LSD):
+If you use AILSA itself, please also cite it (alongside LSD):
 
 ```bibtex
-@software{lucy-ng,
+@software{ailsa,
   author = {Steinbeck, Christoph},
-  title  = {lucy-ng: AI-Agent Powered Computer-Assisted Structure Elucidation},
-  url    = {https://github.com/steinbeck/lucy-ng},
+  title  = {AILSA: AI + LSD + Agents — AI-agent computer-assisted structure elucidation from NMR},
+  url    = {https://github.com/steinbeck/ailsa},
   year   = {2026}
 }
 ```
