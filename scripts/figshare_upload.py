@@ -15,24 +15,12 @@ FILE_PATH = Path("data/reference/compounds.db.gz")
 CHUNK_SIZE = 10 * 1024 * 1024  # 10 MB chunks for reliability
 
 METADATA = {
-    "title": "lucy-ng Compound Database: NMR Chemical Shifts for Natural Products",
-    "description": """Pre-built SQLite database for lucy-ng containing 13C NMR chemical shifts for natural product dereplication.
+    "title": "AILSA reference database: 13C NMR shifts and HOSE statistics for natural-product dereplication and shift prediction (COCONUT + NMRShiftDB)",
+    "description": """Pre-built SQLite reference database for AILSA (AI + LSD + Agents), an AI-agent system for computer-assisted structure elucidation (CASE) of organic natural products from NMR spectra. AILSA is built on the LSD structure generator by Jean-Marc Nuzillard (Université de Reims Champagne-Ardenne).
 
-**Contents:**
-- 928,443 compounds total
-- COCONUT: 895,099 natural products with predicted 13C shifts
-- NMRShiftDB: 33,344 compounds with experimental 13C shifts
-- 111,493 unique molecular formulas indexed for fast lookup
+Contents: 928,443 compounds (COCONUT: 895,099 natural products with predicted 13C shifts; NMRShiftDB: 33,344 compounds with experimental 13C shifts), 111,493 unique molecular formulas, 7.9 million HOSE-code statistics. One file serves both dereplication and 13C prediction.
 
-**Usage:**
-gunzip -k compounds.db.gz
-lucy database info compounds.db
-
-**File format:** SQLite database (gzip compressed)
-- Uncompressed size: ~1.0 GB
-- Compressed size: ~343 MB
-
-**Related software:** https://github.com/steinbeck/lucy-ng
+Usage: install AILSA (https://github.com/steinbeck/ailsa), run "ailsa database download" - it fetches this file and installs it as data/reference/ailsa-derep.db - and check it with "ailsa database info". Source code and documentation: https://github.com/steinbeck/ailsa.
 """,
     "keywords": [
         "NMR spectroscopy",
@@ -88,7 +76,7 @@ def main():
     file_size = FILE_PATH.stat().st_size
 
     print("=" * 60)
-    print("Figshare Upload: lucy-ng Compound Database")
+    print("Figshare Upload: AILSA reference database")
     print("=" * 60)
     print(f"File: {FILE_PATH.name} ({file_size / 1e6:.1f} MB)")
     print(f"Chunk size: {CHUNK_SIZE / 1e6:.0f} MB")
