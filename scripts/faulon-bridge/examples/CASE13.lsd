@@ -19,14 +19,14 @@
 ;     "fragment_smiles": null, "fragment_atoms": null, "fragment_avgdev": null,
 ;     "fragment_filename": null, "deff_command": null, "fexp_command": null,
 ;     "search_result_count": 0,
-;     "conflict_reason": "fragment search unavailable: data/reference/lucy-ng-fragments.db not built (lucy fragment search aborted again at iteration 3). No goodlist fragment injected."
+;     "conflict_reason": "fragment search unavailable: data/reference/ailsa-fragments.db not built (ailsa fragment search aborted again at iteration 3). No goodlist fragment injected."
 ;   },
 ;   "detection_results": {
 ;     "hybridisation_queries": "NO DATA (has_data=false, v4 schema defect, total_observations=0 for every shift)",
 ;     "neighbours_queries": "NO DATA (has_data=false, all element frequencies 0.0)",
 ;     "hhb_result": "has_data=true but allowed_pairs=[] and forbidden_pairs=[] (51 DB compounds) -> no constraint",
 ;     "grouping_detected": ["tol 0.25: none", "tol 0.50: [148.38, 148.83] span 0.45 centroid 148.61 (HMBC F1 overlap only)"],
-;     "aromatic_cosy": "lucy detect aromatic-cosy -> 'No aromatic equivalence pairs detected' (no 2C-equivalent CH)"
+;     "aromatic_cosy": "ailsa detect aromatic-cosy -> 'No aromatic equivalence pairs detected' (no 2C-equivalent CH)"
 ;   },
 ;   "applied_from_detection": [
 ;     "148.83/148.38 F1 overlap -> APPLIED in batch 2 as grouped 'HMBC (4 5) 10' and 'HMBC (4 5) 5', and in batch 3 as grouped 'HMBC (4 5) 6'; no committed single carbon anywhere. ALL THREE F1-overlap correlations are now applied, all grouped."

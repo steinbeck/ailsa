@@ -1,8 +1,8 @@
-# lucy-ng → faulon-ng bridge (feasibility spike, 2026-08-11)
+# AILSA → faulon-ng bridge (feasibility spike, 2026-08-11)
 
 [faulon-ng](../../../faulon-ng) is a simulated-annealing CASE engine intended as an
 eventual alternative to LSD. This directory holds what was needed to feed it real
-lucy-ng data and measure the result. **Spike quality, not production** — nothing here
+AILSA data and measure the result. **Spike quality, not production** — nothing here
 is wired into the CASE workflow.
 
 ## Files
@@ -20,7 +20,7 @@ cd ../../../faulon-ng && .venv/bin/faulon-ng run out.sml --steps 100000 --top-n 
 
 ## Why convert from the .lsd and not from the raw peak lists
 
-The value lucy-ng adds sits between them. CASE13's `hmbc_raw.json` holds **4402** peaks,
+The value AILSA adds sits between them. CASE13's `hmbc_raw.json` holds **4402** peaks,
 mostly noise, and its `hsqc_raw.json` holds **2**. The `compound.lsd` holds the **15**
 HMBC and **6** HSQC the nmr-chemist kept and the devil's advocate cleared, plus the
 DEPT-derived multiplicities. faulon-ng runs no DEPT analysis of its own and says so at
@@ -30,7 +30,7 @@ startup:
 Using STATED per-atom hydrogenCount from .sml (bypassing DEPT).
 ```
 
-So the natural division of labour is: lucy-ng's specialists interpret the spectra,
+So the natural division of labour is: AILSA's specialists interpret the spectra,
 faulon-ng searches the structure space.
 
 ## Format mapping

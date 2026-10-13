@@ -1,5 +1,5 @@
 <?xml version="1.0" ?>
-<senecadataset title="CASE13 lucy-ng">
+<senecadataset title="CASE13 AILSA">
   <formula>C12H12N2O3</formula>
   <molecule xmlns="http://www.xml-cml.org/cml.dtd" title="ConnectionTable">
     <atom id="a0">
