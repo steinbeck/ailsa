@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Convert a lucy-ng `compound.lsd` into a SENECA `.sml` for faulon-ng.
+"""Convert an AILSA `compound.lsd` into a SENECA `.sml` for faulon-ng.
 
 Throwaway bridge for a feasibility test, not production code.
 
-Why the .lsd and not the raw peak lists: lucy-ng's value sits in the curation
+Why the .lsd and not the raw peak lists: AILSA's value sits in the curation
 between them. CASE13's `hmbc_raw.json` holds 4402 peaks (mostly noise) and its
 `hsqc_raw.json` only 2; the `compound.lsd` holds the 15 HMBC and 6 HSQC that the
 nmr-chemist kept and the devil's advocate cleared. faulon-ng does no DEPT
@@ -139,7 +139,7 @@ def build(atoms, corrs, formula, title):
     ))
 
     # --- DEPT-135: protonated carbons, CH2 negative --------------------------
-    # faulon-ng derives no multiplicities itself; this carries lucy-ng's
+    # faulon-ng derives no multiplicities itself; this carries AILSA's
     # validated CH/CH2/CH3 assignment across in the sign convention SENECA uses.
     dept = [a for a in carbons if a.nh > 0]
     specs.append(spectrum(
@@ -221,7 +221,7 @@ def main():
     if len(sys.argv) < 4:
         sys.exit(__doc__)
     lsd, formula, out = sys.argv[1], sys.argv[2], sys.argv[3]
-    title = sys.argv[5] if len(sys.argv) > 5 and sys.argv[4] == "--title" else "lucy-ng export"
+    title = sys.argv[5] if len(sys.argv) > 5 and sys.argv[4] == "--title" else "AILSA export"
 
     atoms, corrs = parse_lsd(lsd)
     if not atoms:
