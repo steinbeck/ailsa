@@ -294,7 +294,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 105-10-PLAN.md — Credit the COCONUT 13C shift source (ACD/Labs predictions, J.-M. Nuzillard, Zenodo doi:10.5281/zenodo.6561449, CC BY 4.0; D-17) in README, CLAUDE.md, docs, rdmo text, figshare paste text, upload scripts and deck (rebuilt, PDF re-exported)
+- [x] 105-10-PLAN.md — Credit the COCONUT 13C shift source (ACD/Labs predictions, J.-M. Nuzillard, Zenodo doi:10.5281/zenodo.6561449, CC BY 4.0; D-17) in README, CLAUDE.md, docs, rdmo text, figshare paste text, upload scripts and deck (rebuilt, PDF re-exported)
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
@@ -396,7 +396,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|-----------------|--------|-----------|
 | 104. Package and CLI | 6/6 | Complete    | 2026-10-03 |
-| 105. Documentation and outside face | 7/9 | In Progress|  |
+| 105. Documentation and outside face | 8/10 | In Progress|  |
 | 106. Freeze, rename and restructure the skill | 0/? | Not started | - |
 | 107. Evaluation bench and team-mode spike | 0/? | Not started | - |
 | 108. Foundation | 0/? | Not started | - |
