@@ -125,6 +125,26 @@ lucy-ng; the name lucy-ng should **disappear as far as possible** from everythin
   Plans 105-01, 105-03, 105-04, 105-06 and 105-09 were written against the old D-13 and **must be
   revised before execution**. Source: discussion 2026-10-12; plan `AILSA-Skills-Ueberarbeitungsplan.pdf`.
 
+### Data attribution (user, 2026-10-14)
+- **D-17:** **Credit the source of the COCONUT 13C shifts everywhere the reference database is
+  described.** Verified 2026-10-13/14: the 895,099 COCONUT compounds' shifts (23.7 M of the DB's
+  24.1 M shifts, and 100 % of `hose_stats`) are ACD/Labs C+H NMR Predictors and DB 2020.1.0
+  predictions, published by J.-M. Nuzillard as "Predicted 13C NMR Chemical Shifts of Natural
+  Products", Zenodo, DOI 10.5281/zenodo.6561449, CC BY 4.0 (2022; first record byte-identical to
+  our source file; same file name `acd_coconut.sdf`). CC BY requires attribution, which is missing
+  from README, docs, CLAUDE.md, the deck and the figshare record. Required wording (English form
+  of the user's text): "COCONUT 13C shifts: ACD/Labs predictions from J.-M. Nuzillard, Zenodo,
+  doi:10.5281/zenodo.6561449, CC BY 4.0". It goes into: README (database/data section),
+  `docs/` wherever the DB contents are described (at least ARCHITECTURE, INSTALLATION,
+  USER_GUIDE, BENCHMARK if it describes the DB), CLAUDE.md "Database Reference", the deck's
+  data/numbers tile if it describes the DB, the figshare record text
+  (`~/Downloads/ailsa-figshare-record.txt`) and the metadata in `scripts/figshare_upload.py` /
+  `scripts/zenodo_upload.py`. Stating that the shifts are *predicted* (not measured) is part of
+  the attribution. Public files carry this credit and nothing further about the data's provenance;
+  correspondence about the dataset stays private. The figshare record
+  is kept (not deleted); a CSP5-based DB replaces it later as a new version (separate phase).
+  Sequence: attribution lands BEFORE the user edits the figshare record (plan 105-07 Task 2).
+
 ### Resolved after research (2026-10-06)
 - **D-14:** **Docs must be correct against the current CLI, not only renamed.** Remove the MCP-server
   content from `docs/INSTALLATION.md` and `docs/ARCHITECTURE.md` (removed in v2.0; no `mcp` extra,
