@@ -1,12 +1,14 @@
 ---
 phase: 105-documentation-and-outside-face
 verified: 2026-10-14T15:30:42Z
-status: gaps_found
-score: 14/15 must-haves verified
+status: passed
+score: 15/15 must-haves verified
+re_verified: 2026-10-14T16:05:00Z (gap closed by 2760233)
 overrides_applied: 0
 gaps:
   - truth: "The benchmark slide shows the method, the figures, the paired comparison and the large-molecule limit honestly (D-06), and the deck PDF is a faithful 8-page export of it (105-06, 105-10)"
-    status: partial
+    status: closed
+    resolution: "2760233 puts the four measurement steps of slide 6 in a 2x2 grid; every PDF page now ends with its footer line (pdftotext per page), page 6 inspected as an image"
     reason: >-
       deck.html renders slide 6 correctly on screen, but the committed PDF (the print layout,
       fixed 1280x720) overflows on page 6: the four 'How it is measured' cards are taller than
@@ -197,3 +199,17 @@ diagram) are warnings, not blockers.
 
 _Verified: 2026-10-14T15:30:42Z_
 _Verifier: Claude (gsd-verifier)_
+
+## Re-verification after gap closure (2026-10-14)
+
+- **Gap closed:** `2760233` lays out the four "How it is measured" steps of slide 6 as a 2x2 grid.
+  Re-exported PDF: 8 pages; for every page the last text line is its footer (`AILSA · … 0N / 08`);
+  page 6 viewed as an image: callout and all four steps above the footer, nothing overlaps.
+- **Warnings addressed in the same commit:** README lines 16 and 64 now say "without human
+  intervention" instead of "unattended"; `docs/ARCHITECTURE.md` names the text-only commands instead
+  of claiming JSON output for every command (checked against `ailsa visualize --help`: only
+  `correlations`, no `--format`).
+- **Re-run:** outside-face gate 0 failing checks at `2760233`; CLI example audit 155 invocations,
+  0 problems; `tests/nus/test_portability_doc.py` 7 passed.
+- Still open and owned elsewhere: the README diagram alignment (cosmetic), the items under
+  "Owned by later phases".
