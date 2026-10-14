@@ -29,15 +29,35 @@ Plan: 1 of 9
 Status: Executing Phase 105
 Last activity: 2026-10-13 -- Phase 105 execution started
 
-**Resume here (2026-10-12):**
+**Resume here (2026-10-14):**
 
-1. Run **`/gsd-execute-phase 105`**. The D-13a revision is done (2026-10-12): 105-01/03/04/06/09
-   rewritten, 105-05 item 6 and its acceptance check fixed (CLAUDE.md agent wording), plan check
-   passed. Fixed phrases the gate greps: "specialists that coordinate with each other", "direct
+1. **Phase 105 is mid-execution.** Done: 105-01..06 and 105-08 (ballast files removed, user
+   approval "Altdateien löschen"). 105-07 (figshare) is paused at its browser checkpoint (Task 2);
+   Task 1 text is in `~/Downloads/ailsa-figshare-record.txt`. New decision **D-17** (2026-10-14,
+   105-CONTEXT.md): credit the COCONUT 13C shift source — ACD/Labs predictions published by
+   J.-M. Nuzillard, Zenodo doi:10.5281/zenodo.6561449, CC BY 4.0 — in README, docs, CLAUDE.md, deck,
+   figshare text and upload scripts, via an extra plan **105-10** (wave 2, before the 105-09 gate).
+   Order: 105-10 → user edits figshare in the browser (105-07 Task 2) → 105-07 Task 3 → 105-09 gate.
+   Fixed phrases the gate greps (D-13a): "specialists that coordinate with each other", "direct
    review loop", "ask the NMR chemist", "restricted configuration", "without the agent team",
    "without statistical detection", "do not form a team", "current schema".
-   Open point for 105-04: whether the figshare download carries the current DB schema is
-   unverified; the plan records the answer in its SUMMARY instead of promising it.
+
+1a. **Reference-DB provenance (2026-10-13/14).** The COCONUT shifts (23.7 M of 24.1 M) and 100 % of
+   `hose_stats` are ACD/Labs 2020.1.0 predictions from Nuzillard's public CC BY 4.0 Zenodo dataset
+   (first record byte-identical); D-17 adds the credit. A reference DB built from free CSP5
+   predictions was evaluated in quick task 261013-knr (scripts in `scripts/csp5-vs-acd/`; report
+   and its verified correction kept outside the repo under
+   `~/Dropbox/develop/data/csp5-vs-acd/report/` and `.../verify/`). Next: discuss with the user
+   whether a CSP5-based DB becomes a phase (full CSP5 run over COCONUT on the compute server, HOSE
+   tables from ACD vs CSP5 compared leave-molecule-out, ranking test).
+
+1b. **Open-weight comparison (partner lab), state 2026-10-14:** partner runs Qwen3.8-27B (Q4_K_M)
+   locally with OpenCode working on simple tasks. User's decision (2026-10-12): rewrite the
+   skill to best practices first (Phase 106), then derive a lean variant for the open-weight model;
+   no work with the current skills there. Partner waits; next step is ours, no date promised. The
+   partner pointed to NMR-Solver (Nat. Commun. 2026, doi:10.1038/s41467-026-71315-0; spectral
+   matching + fragment optimisation, NMRNet shift prediction) as a different, workflow-style
+   approach — related work for the paper.
 
 2. Then Phase 106: freeze the two measured skill states (tags on `f9aa7b3` and `6d2d126`),
    rename, and restructure to Anthropic's best practices (content-preserving), with a skill-lint
@@ -742,6 +762,7 @@ PROV-01 re-analysis: 37.86 ppm is a CH, so the gate was reporting a wrong input 
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
 | 261006-iob | Open-weight model (Qwen) harness options for the AILSA skill; reply draft to collaborators | 2026-10-06 | ca46432 | [261006-iob-open-weight-model-qwen-harness-options-f](./quick/261006-iob-open-weight-model-qwen-harness-options-f/) |
+| 261013-knr | CSP5 vs ACD/Labs 13C predictions on COCONUT (sample) and a held-out NMRShiftDB2 set | 2026-10-13 | b28bca2 | [261013-knr-csp5-vs-acd-13c-comparison-on-coconut](./quick/261013-knr-csp5-vs-acd-13c-comparison-on-coconut/) |
 
 ### Strategic Reference
 

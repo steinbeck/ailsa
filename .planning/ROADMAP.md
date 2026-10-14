@@ -204,7 +204,18 @@ lifted; the re-run finished 2026-09-29.
 now, or wait for the Phase 110 comparison; (2) Phase 110 arms — new vs old only, or with the
 no-team and no-statistics ablations; (3) re-upload the full reference DB to figshare as a new
 version if the public file is the outdated schema (conflicts with Phase 105's "no new upload");
-(4) fragment DB — install and use, or drop fragment search.
+(4) fragment DB — install and use, or drop fragment search; (5) a reference DB built from free CSP5 predictions over COCONUT in
+place of the ACD/Labs-predicted shifts (see STATE.md) — whether it becomes a phase and where it
+sits, to be discussed after Phase 105.
+
+**External dependency — open-weight comparison (partner lab, 2026-10-14):** the partner lab runs a
+local open-weight model (Qwen3.8-27B, Q4_K_M quantisation) in the OpenCode harness; OpenCode runs
+simple tasks there (2026-10-09). The user told the partner (2026-10-12) that the AILSA skill must
+first be rewritten to the best practices (Phase 106) and a lean variant for the open-weight model
+derived from it afterwards; running the current skills there would be wasted effort. The partner
+waits; the next step is ours, no date promised (2026-10-14). So **after Phase 106** a lean
+OpenCode/Qwen variant of the skill is owed — not yet a phase. Background research:
+`.planning/quick/261006-iob-*/`.
 
 ### Phases
 
