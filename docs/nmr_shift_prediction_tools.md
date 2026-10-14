@@ -7,13 +7,13 @@ A comprehensive overview of available open source tools for predicting NMR chemi
 ## Table of Contents
 
 1. [Graph Neural Network-Based Tools](#1-graph-neural-network-based-tools)
-2. [NMRNet - State of the Art (2024/2025)](#2-nmrnet-state-of-the-art-20242025)
-3. [ShiftML - Molecular Solids](#3-shiftml-molecular-solids)
-4. [ISiCLE - DFT-Based with Python Wrapper](#4-isicle-dft-based-with-python-wrapper)
-5. [ml4nmr - Grimme Lab](#5-ml4nmr-grimme-lab)
+2. [NMRNet - State of the Art (2024/2025)](#2-nmrnet---state-of-the-art-20242025)
+3. [ShiftML - Molecular Solids](#3-shiftml---molecular-solids)
+4. [ISiCLE - DFT-Based with Python Wrapper](#4-isicle---dft-based-with-python-wrapper)
+5. [ml4nmr - Grimme Lab](#5-ml4nmr---grimme-lab)
 6. [nmrshiftdb2 Predictor Tools](#6-nmrshiftdb2-predictor-tools)
-7. [PROSPRE - 1H Prediction Webserver](#7-prospre-1h-prediction-webserver)
-8. [GeqShift - Carbohydrates](#8-geqshift-carbohydrates)
+7. [PROSPRE - 1H Prediction Webserver](#7-prospre---1h-prediction-webserver)
+8. [GeqShift - Carbohydrates](#8-geqshift---carbohydrates)
 9. [General NMR Processing Tools](#9-general-nmr-processing-tools)
 10. [Summary and Recommendations](#10-summary-and-recommendations)
 

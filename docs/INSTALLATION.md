@@ -8,7 +8,7 @@ This guide covers all installation options for AILSA.
 - [Quick Installation](#quick-installation)
 - [Installation Options](#installation-options)
 - [External Dependencies](#external-dependencies)
-- [Reference Databases](#reference-databases)
+- [Reference Database](#reference-database)
 - [Verification](#verification)
 - [Troubleshooting](#troubleshooting)
 - [Claude Code Skill Installation](#claude-code-skill-installation)
