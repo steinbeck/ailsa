@@ -20,18 +20,18 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-21)
 
 **Core value:** AI agent autonomously determines compound structures from NMR, with a multi-agent team that uses the intended solver pipeline — not a manual bypass
-**Current focus:** Phase 105 — documentation-and-outside-face
+**Current focus:** Phase 105 complete; next Phase 106 (skill freeze/rename/restructure)
 
 ## Current Position
 
-Phase: 105 (documentation-and-outside-face) — ALL PLANS COMPLETE, verification pending
+Phase: 105 (documentation-and-outside-face) — COMPLETE, verified 2026-10-14
 Plan: 10 of 10
-Status: Phase 105 plans complete; phase verification next
-Last activity: 2026-10-14 -- 105-09 phase gate green (12 checks + CLI audit of 155 examples)
+Status: Phase 105 verified (15/15 after closing the deck-PDF gap); pushed to GitHub `steinbeck/ailsa`
+Last activity: 2026-10-14 -- Phase 105 verified and pushed; full CSP5 run over COCONUT started on the compute node
 
 **Resume here (2026-10-14):**
 
-1. **Phase 105: all ten plans done** (105-09 gate green 2026-10-14; it fixed TOC anchors, the PyPI
+1. **Phase 105 complete and verified 2026-10-14** (`105-VERIFICATION.md`: deck PDF page 6 fixed in re-verification; 105-09 gate green; it fixed TOC anchors, the PyPI
    deferral record (now "after Phase 111") and the false "every subcommand supports --format json"
    claim; two CLI code items in the phase's deferred-items.md). 105-07: the figshare record is
    published as version 3 under the AILSA name (2026-10-14, user edit in the browser). **GitHub repo
@@ -42,11 +42,17 @@ Last activity: 2026-10-14 -- 105-09 phase gate green (12 checks + CLI audit of 1
    the same day): every text that describes the reference DB carries "COCONUT 13C shifts: from
    J.-M. Nuzillard, Zenodo, doi:10.5281/zenodo.6561449, CC BY 4.0" and says the COCONUT shifts are
    predicted, the NMRShiftDB shifts experimental — the wording the user published on figshare, without
-   the prediction software's name. Next: phase verification (`/gsd-verify-work 105`); push only
-   after asking (public repo). Gate scripts: `105-check-outside-face.sh`, `105-check-cli-examples.py`.
+   the prediction software's name. User approved the push after verification (2026-10-14). Gate scripts: `105-check-outside-face.sh`, `105-check-cli-examples.py`.
    Fixed phrases the gate greps (D-13a): "specialists that coordinate with each other", "direct
    review loop", "ask the NMR chemist", "restricted configuration", "without the agent team",
    "without statistical detection", "do not form a team", "current schema".
+
+1c. **Full CSP5 run over COCONUT (started 2026-10-14, user request).** All 895,120 structures of the
+   COCONUT SD file behind the reference DB (same structures, same atom order, structures only — no
+   previous shift values on the host), CSP5 0.2.19 default single conformer, on the 40-thread compute
+   node (`ponder`), sharded/resumable pipeline from quick task 261013-knr. Work dir and status: see the
+   auto-memory note on the shift source. Next after it finishes: count check, cross-machine control,
+   then the comparison and the decision on a CSP5-based reference DB (ROADMAP open decision 5).
 
 1a. **Reference-DB provenance (2026-10-13/14).** The COCONUT shifts (23.7 M of 24.1 M) and 100 % of
    `hose_stats` are predicted shifts from Nuzillard's public CC BY 4.0 Zenodo dataset (first record
