@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v11.0
 milestone_name: AILSA Rename
 status: executing
-last_updated: "2026-10-13T07:49:05.431Z"
-last_activity: 2026-10-13 -- Phase 105 execution started
+last_updated: "2026-10-14T15:18:36.306Z"
+last_activity: 2026-10-14
 progress:
   total_phases: 8
-  completed_phases: 1
-  total_plans: 15
-  completed_plans: 6
-  percent: 13
+  completed_phases: 2
+  total_plans: 16
+  completed_plans: 16
+  percent: 25
 ---
 
 # lucy-ng State
@@ -24,14 +24,16 @@ See: .planning/PROJECT.md (updated 2026-07-21)
 
 ## Current Position
 
-Phase: 105 (documentation-and-outside-face) — EXECUTING
-Plan: 1 of 9
-Status: Executing Phase 105
-Last activity: 2026-10-14 -- 105-07 figshare record published; shift-source wording aligned
+Phase: 105 (documentation-and-outside-face) — ALL PLANS COMPLETE, verification pending
+Plan: 10 of 10
+Status: Phase 105 plans complete; phase verification next
+Last activity: 2026-10-14 -- 105-09 phase gate green (12 checks + CLI audit of 155 examples)
 
 **Resume here (2026-10-14):**
 
-1. **Phase 105 is mid-execution.** Done: 105-01..08 and 105-10. 105-07: the figshare record is
+1. **Phase 105: all ten plans done** (105-09 gate green 2026-10-14; it fixed TOC anchors, the PyPI
+   deferral record (now "after Phase 111") and the false "every subcommand supports --format json"
+   claim; two CLI code items in the phase's deferred-items.md). 105-07: the figshare record is
    published as version 3 under the AILSA name (2026-10-14, user edit in the browser). **GitHub repo
    renamed 2026-10-14** `steinbeck/lucy-ng` → `steinbeck/ailsa` (pulled forward from Phase 111 so the
    figshare text and README links resolve; old URLs redirect, local `origin` updated; compute-host
@@ -40,8 +42,8 @@ Last activity: 2026-10-14 -- 105-07 figshare record published; shift-source word
    the same day): every text that describes the reference DB carries "COCONUT 13C shifts: from
    J.-M. Nuzillard, Zenodo, doi:10.5281/zenodo.6561449, CC BY 4.0" and says the COCONUT shifts are
    predicted, the NMRShiftDB shifts experimental — the wording the user published on figshare, without
-   the prediction software's name. Next: the 105-09 gate, then phase verification; push only after
-   asking (public repo).
+   the prediction software's name. Next: phase verification (`/gsd-verify-work 105`); push only
+   after asking (public repo). Gate scripts: `105-check-outside-face.sh`, `105-check-cli-examples.py`.
    Fixed phrases the gate greps (D-13a): "specialists that coordinate with each other", "direct
    review loop", "ask the NMR chemist", "restricted configuration", "without the agent team",
    "without statistical detection", "do not form a team", "current schema".
@@ -766,6 +768,7 @@ PROV-01 re-analysis: 37.86 ppm is a CH, so the gate was reporting a wrong input 
 |---|-------------|------|--------|-----------|
 | 261006-iob | Open-weight model (Qwen) harness options for the AILSA skill; reply draft to collaborators | 2026-10-06 | ca46432 | [261006-iob-open-weight-model-qwen-harness-options-f](./quick/261006-iob-open-weight-model-qwen-harness-options-f/) |
 | 261013-knr | CSP5 vs the current COCONUT 13C predictions (sample) and a held-out NMRShiftDB2 set | 2026-10-13 | 75dc9a2 | [261013-knr-csp5-13c-comparison-on-coconut](./quick/261013-knr-csp5-13c-comparison-on-coconut/) |
+| Phase 105 P09 | 22min | 2 tasks | 12 files |
 
 ### Strategic Reference
 
@@ -775,7 +778,7 @@ Key v9.0 constraint (still in force): SYME and DEFF NOT are lucy-ng abstractions
 
 ## Session Continuity
 
-Last session: 2026-10-12T12:41:58.072Z
+Last session: 2026-10-14T15:18:14.806Z
 settled). Previously, 2026-10-01 — the Opus-5 re-run finished (102/102, 2026-09-29), all four
 arms regraded, final figures published in `docs/BENCHMARK.md` and the README (§ 9).
 Milestone v11.0 AILSA Rename is open (Phases 104–107, none started); the gate on Phases 106

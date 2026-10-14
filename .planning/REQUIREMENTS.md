@@ -16,10 +16,10 @@
 
 ### Documentation and outside face (DOC)
 
-- [ ] **DOC-01**: A reader of the README sees the project as AILSA, with the expansion *AI + LSD + Agents*, and LSD and Jean-Marc Nuzillard credited up front. *(Amended 2026-10-06: the "formerly called lucy-ng" note is struck — the user wants the old name to disappear as far as possible; see 105-CONTEXT.md D-01.)*
-- [ ] **DOC-02**: `docs/` (ARCHITECTURE, USER_GUIDE, BENCHMARK, NUS-PORTABILITY and the rest) and `CLAUDE.md` refer to the project, package, CLI and commands by the new names; no living document still instructs the reader to type `lucy`.
-- [ ] **DOC-03**: The figshare record of the reference database carries the new project name in title and description; the DOI and the uploaded file are unchanged.
-- [ ] **DOC-04**: The infographic deck (`docs/infographics/build.py`) is rebuilt under the new name with the current headline numbers (this also clears the "stale deck" backlog item).
+- [x] **DOC-01**: A reader of the README sees the project as AILSA, with the expansion *AI + LSD + Agents*, and LSD and Jean-Marc Nuzillard credited up front. *(Amended 2026-10-06: the "formerly called lucy-ng" note is struck — the user wants the old name to disappear as far as possible; see 105-CONTEXT.md D-01.)*
+- [x] **DOC-02**: `docs/` (ARCHITECTURE, USER_GUIDE, BENCHMARK, NUS-PORTABILITY and the rest) and `CLAUDE.md` refer to the project, package, CLI and commands by the new names; no living document still instructs the reader to type `lucy`.
+- [x] **DOC-03**: The figshare record of the reference database carries the new project name in title and description; the DOI and the uploaded file are unchanged.
+- [x] **DOC-04**: The infographic deck (`docs/infographics/build.py`) is rebuilt under the new name with the current headline numbers (this also clears the "stale deck" backlog item).
 
 ### Freeze the measured state (FREEZE)
 

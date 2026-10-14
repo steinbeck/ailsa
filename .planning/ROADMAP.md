@@ -220,7 +220,7 @@ OpenCode/Qwen variant of the skill is owed — not yet a phase. Background resea
 ### Phases
 
 - [x] **Phase 104: Package and CLI** — PyPI package `ailsa`, module `ailsa` replacing `lucy_ng`, CLI `ailsa` with `lucy` kept as a deprecated alias for one release; full suite/mypy/ruff green on the renamed tree (completed 2026-10-03; PyPI upload of 0.1.0 deferred by user until after Phase 105 — see 104-HUMAN-UAT.md)
-- [ ] **Phase 105: Documentation and outside face** — README, `docs/`, CLAUDE.md, the figshare record and the infographic deck under the new name; LSD and Nuzillard credited up front
+- [x] **Phase 105: Documentation and outside face** — README, `docs/`, CLAUDE.md, the figshare record and the infographic deck under the new name; LSD and Nuzillard credited up front (completed 2026-10-14)
 - [ ] **Phase 106: Freeze, rename and restructure the skill** — the two measured skill states tagged; `/ailsa:*` commands and `ailsa-*` agents; every skill file restructured to Anthropic's best practices (core under 500 lines, references, TOCs, no dead references, no history, no benchmark compounds, no model IDs, one term per role); an automated skill-lint check
 - [ ] **Phase 107: Evaluation bench and team-mode spike** — fixed ~25-dataset evaluation sample, per-run mechanics report, Mac/compute-host parity check, and a decided route for running the agent team unattended
 - [ ] **Phase 108: Foundation** — full reference DB on the compute host (figshare checked), silent `detect hhb` defect fixed, fragment DB decided, prerequisite checks cover every capability the skill relies on, devil's-advocate checks and sanitiser as scripts
@@ -302,7 +302,7 @@ Plans:
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
-- [ ] 105-09-PLAN.md — Phase gate: positive-controlled old-name grep, residue allow-list, link check, CLI-example audit, deck/figshare/bookkeeping checks, shift-source credit check
+- [x] 105-09-PLAN.md — Phase gate: positive-controlled old-name grep, residue allow-list, link check, CLI-example audit, deck/figshare/bookkeeping checks, shift-source credit check
 
 #### Phase 106: Freeze, rename and restructure the skill
 
@@ -396,7 +396,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|-----------------|--------|-----------|
 | 104. Package and CLI | 6/6 | Complete    | 2026-10-03 |
-| 105. Documentation and outside face | 9/10 | In Progress|  |
+| 105. Documentation and outside face | 10/10 | Complete   | 2026-10-14 |
 | 106. Freeze, rename and restructure the skill | 0/? | Not started | - |
 | 107. Evaluation bench and team-mode spike | 0/? | Not started | - |
 | 108. Foundation | 0/? | Not started | - |
