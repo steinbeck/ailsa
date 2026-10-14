@@ -465,7 +465,7 @@ Not applicable in the usual "library version" sense. The one relevant "what chan
      writes a `.lsd` file before rewriting this example, to confirm there truly is no CLI
      equivalent and the correct fix is "describe this as agent behaviour, not a CLI command."
 
-3. **Should `background/wenk-thesis.txt` and `background/Dissertation Michael Wenk.pdf` (8.2MB)
+3. **Should `background/wenk-thesis.txt` and the local thesis PDF in `background/` (8.2MB)
    be evaluated for removal alongside `sherlock-analysis.md`, per D-11's "evaluate the rest of
    background/"?**
    - What we know: neither is referenced by path from any code, doc, or test — the only "Wenk"

@@ -55,7 +55,7 @@ completed: 2026-10-13
 - Obtained and recorded the user's approval of the full removal list before any `git rm` ran (Task 1, resolved prior to this execution).
 - Re-ran the reference check immediately before removal: no tracked file outside `.planning/` named any of the five candidate paths.
 - Removed exactly the five approved files with `git rm`, committed in a single atomic commit.
-- Confirmed the untracked local thesis PDF (`background/Dissertation Michael Wenk.pdf`) and its `.gitignore` rule (`background/*.pdf`) are untouched.
+- Confirmed the untracked local thesis PDF (the local thesis PDF in `background/`) and its `.gitignore` rule (`background/*.pdf`) are untouched.
 
 ## Task Commits
 
@@ -114,7 +114,7 @@ nothing to allow-list from this plan — no old-name residue remains among these
 - `git ls-files analysis_ibuprofen docs/superpowers background` returns empty for the five
   removed paths (confirmed before writing this summary).
 - Commit `60d6818` exists: `git log --oneline --all | grep 60d6818` → found.
-- `background/Dissertation Michael Wenk.pdf` confirmed present and untracked (not in
+- the local thesis PDF in `background/` confirmed present and untracked (not in
   `git ls-files`) after removal.
 - `.planning/STATE.md` confirmed untouched (still shows as `M` unstaged, not included in any
   commit made by this execution).
