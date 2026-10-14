@@ -239,7 +239,8 @@ ailsa database info                      # verify row counts and schema version
 |----------|-------|
 | Source | Figshare, DOI [10.6084/m9.figshare.31073554](https://doi.org/10.6084/m9.figshare.31073554) |
 | Default path | `data/reference/ailsa-derep.db` |
-| Contents | 928,443 compounds (COCONUT + NMRShiftDB), 7.9M HOSE statistics |
+| Contents | 928,443 compounds (COCONUT: 895,099 with predicted 13C shifts; NMRShiftDB: 33,344 with experimental 13C shifts), 7.9M HOSE statistics |
+| COCONUT shift source | COCONUT 13C shifts: ACD/Labs predictions from J.-M. Nuzillard, Zenodo, doi:[10.5281/zenodo.6561449](https://doi.org/10.5281/zenodo.6561449), CC BY 4.0 — predicted, not measured (ACD/Labs C+H NMR Predictors and DB 2020.1.0) |
 
 Statistical detection (`ailsa detect …`, used by the NMR-chemist agent) needs the
 full reference database with the **current schema**: with a database file on an
@@ -260,6 +261,7 @@ ailsa dereplicate c13 spectrum_path formula --database /path/to/ailsa-derep.db
 
 > The raw COCONUT/NMRShiftDB SD files are only needed to **rebuild** the SQLite DB from
 > source (a maintenance task) — not for running AILSA.
+> The COCONUT SD file with the predicted 13C shifts comes from the Zenodo record credited in the table above.
 
 ## Verification
 

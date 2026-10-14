@@ -57,7 +57,7 @@ them:
 | **RDKit** | RDKit contributors | Cheminformatics: molecules, SMILES/InChI, substructure search |
 | **nmrglue** | J. J. Helmus et al. | Reading Bruker NMR data |
 | **HOSE codes** | W. Bremser (1978) | 13C shift-prediction descriptors |
-| **COCONUT**, **NMRShiftDB** | their respective communities | Reference data for dereplication and prediction |
+| **COCONUT**, **NMRShiftDB** | their respective communities (COCONUT 13C shifts: ACD/Labs predictions from J.-M. Nuzillard) | Reference data for dereplication and prediction |
 
 The `ailsa` command-line tools are the wrappers through which these packages are driven.
 **What is genuinely new here — our own contribution — is the [CASE agent team](#the-case-agent-team)**
@@ -320,6 +320,8 @@ Dereplication, 13C prediction, and CASE ranking all share one pre-built SQLite d
 **928,443 compounds** (COCONUT + NMRShiftDB) and **7.9 M HOSE-code statistics**
 (~830 MB download → ~2.8 GB uncompressed).
 
+The 13C shifts of the 895,099 COCONUT natural products are predicted, not measured (ACD/Labs C+H NMR Predictors and DB 2020.1.0); the 33,344 NMRShiftDB compounds carry experimental 13C shifts. COCONUT 13C shifts: ACD/Labs predictions from J.-M. Nuzillard, Zenodo, doi:[10.5281/zenodo.6561449](https://doi.org/10.5281/zenodo.6561449), CC BY 4.0.
+
 ```bash
 ailsa database download
 ailsa database info
@@ -477,7 +479,7 @@ current preferred citation; a key reference is:
 
 **Acknowledgments:** LSD by Jean-Marc Nuzillard (Université de Reims Champagne-Ardenne) ·
 RDKit · nmrglue for NMR file parsing · HOSE codes (W. Bremser, *Anal. Chim. Acta* **1978**,
-103, 355–365) · COCONUT and NMRShiftDB for reference data.
+103, 355–365) · COCONUT and NMRShiftDB for reference data (COCONUT 13C shifts: ACD/Labs predictions from J.-M. Nuzillard, Zenodo, doi:[10.5281/zenodo.6561449](https://doi.org/10.5281/zenodo.6561449), CC BY 4.0).
 
 If you use AILSA itself, please also cite it (alongside LSD):
 
