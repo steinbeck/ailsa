@@ -384,7 +384,7 @@ Plans:
 **Requirements**: REPO-01, REPO-02, REPO-03, REPO-04
 **Success Criteria** (what must be TRUE):
 
-  1. The GitHub repository is `steinbeck/ailsa`; the old `steinbeck/lucy-ng` URL redirects; the remotes of the local clone and of the compute host's checkout point at the new name.
+  1. The GitHub repository is `steinbeck/ailsa`; the old `steinbeck/lucy-ng` URL redirects; the remotes of the local clone and of the compute host's checkout point at the new name. *(GitHub rename and local remote done early on 2026-10-14 during Phase 105; the compute host's remote remains.)*
   2. The local working copy lives at `~/Dropbox/develop/ailsa`; the auto-memory directory is moved with it so the next session starts with its memory; every absolute path on the Mac (LaunchAgent, symlinks, scripts) is updated.
   3. `.planning/PROJECT.md`, `STATE.md`, `ROADMAP.md`, `MEMORY.md` and the CASE identity/UAT files speak the new name; `.planning/phases/` history, `milestones/`, git history and the compute host's result directories are untouched.
   4. A release tag `v11.0` marks the first release under the new name, with a changelog entry; the deferred PyPI upload of 0.1.0 follows.

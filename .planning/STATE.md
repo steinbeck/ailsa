@@ -31,8 +31,12 @@ Last activity: 2026-10-13 -- Phase 105 execution started
 
 **Resume here (2026-10-14):**
 
-1. **Phase 105 is mid-execution.** Done: 105-01..06 and 105-08 (ballast files removed, user
-   approval "Altdateien löschen"). 105-07 (figshare) is paused at its browser checkpoint (Task 2);
+1. **Phase 105 is mid-execution.** Done: 105-01..06, 105-08 (ballast files removed, user
+   approval "Altdateien löschen") and 105-10 (shift source credit). **GitHub repo renamed
+   2026-10-14** `steinbeck/lucy-ng` → `steinbeck/ailsa` (pulled forward from Phase 111 so the
+   figshare text and README links resolve; old URLs redirect, local `origin` updated; compute-host
+   checkout, local folder and auto-memory still move in Phase 111; never reuse the name `lucy-ng`
+   on GitHub, that would break the redirect). 105-07 (figshare) is paused at its browser checkpoint (Task 2);
    Task 1 text is in `~/Downloads/ailsa-figshare-record.txt`. New decision **D-17** (2026-10-14,
    105-CONTEXT.md): credit the COCONUT 13C shift source — ACD/Labs predictions published by
    J.-M. Nuzillard, Zenodo doi:10.5281/zenodo.6561449, CC BY 4.0 — in README, docs, CLAUDE.md, deck,
