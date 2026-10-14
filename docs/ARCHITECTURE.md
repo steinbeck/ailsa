@@ -335,7 +335,7 @@ class CoconutLoader:
                     yield self._parse_block(block)
 ```
 
-**Data provenance.** The pre-built reference database (`ailsa database download`) holds 928,443 compounds. The 13C shifts of the 895,099 COCONUT natural products are predicted, not measured (ACD/Labs C+H NMR Predictors and DB 2020.1.0); the 33,344 NMRShiftDB compounds carry experimental 13C shifts. COCONUT 13C shifts: ACD/Labs predictions from J.-M. Nuzillard, Zenodo, doi:[10.5281/zenodo.6561449](https://doi.org/10.5281/zenodo.6561449), CC BY 4.0.
+**Data provenance.** The pre-built reference database (`ailsa database download`) holds 928,443 compounds. The 13C shifts of the 895,099 COCONUT natural products are predicted, not measured; the 33,344 NMRShiftDB compounds carry experimental 13C shifts. COCONUT 13C shifts: from J.-M. Nuzillard, Zenodo, doi:[10.5281/zenodo.6561449](https://doi.org/10.5281/zenodo.6561449), CC BY 4.0.
 
 ### 6. Thin CLI, judgement in the agents
 

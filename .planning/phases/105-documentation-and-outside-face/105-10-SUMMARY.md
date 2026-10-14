@@ -42,14 +42,14 @@ completed: 2026-10-14
 
 ## Verification (acceptance output)
 
-Task 1 (per file: attr / doi / f4 / pnm / exp / lucy / deletions vs 8b179b4):
+Task 1 (per file: attr / doi / software name / pnm / exp / lucy / deletions vs 8b179b4):
 README 2/2/1/1/1/0/del 2; CLAUDE.md 1/1/1/1/1/0/del 1; INSTALLATION 1/1/1/1/1/0/del 1;
 SERVER_BOOTSTRAP 1/1/1/1/1/0/del 0; ARCHITECTURE 1/1/1/1/1/0/del 0; USER_GUIDE 1/1/1/1/4/0/del 0
 (USER_GUIDE already had other "experimental 13C shifts" hits). readme-found, ack, claude-row,
 claude-rule, inst-row, inst-quote all 1; README reference-database attr 1; README relative links 0;
 `tests/nus/test_portability_doc.py` 7 passed.
 
-Task 2: attr/f4/exp >= 1 in rdmo, record file, figshare script, Zenodo script; no old name in any;
+Task 2: attr/software name/exp >= 1 in rdmo, record file, figshare script, Zenodo script; no old name in any;
 record click-path has the References step and 8 numbered steps; all six 105-07 Task 1 strings
 still present in the record file (each 1, "Nuzillard" 2); deletions rdmo 0, figshare 0, Zenodo 2;
 longest rdmo line 114; `DESC SAME`; `REFS ['https://doi.org/10.5281/zenodo.6561449']`;
@@ -65,7 +65,6 @@ credits box sits fully above the "08 / 08" footer, tile wraps to two lines, no o
 - docs/BENCHMARK.md: mentions the reference DB only for its schema.
 - Deck slide 3 ("928K compounds", "7.9M HOSE stats"): size only; the deck credit sits on slide 8.
 - CLAUDE.md line 26 (download instruction): the credit sits in Database Reference.
-- scripts/csp5-vs-acd/README.md: already carries the credit.
 - docs/nmr_shift_prediction_tools.md: NMRShiftDB as another tool's training data, not this DB.
 - src/ailsa/cli/database.py: code; follow-up tracked in
   .planning/todos/pending/2026-10-14-cli-database-help-shift-credit.md, due before the PyPI upload.
@@ -90,3 +89,12 @@ proceed. Nothing pushed; STATE.md and ROADMAP.md untouched.
 ## Self-Check: PASSED
 
 Commits `4d64ddf`, `e9fed3a`, `ac7d7eb` found in git log; all listed files exist.
+
+## Amendment (2026-10-14, after 105-07)
+
+The user published the figshare record with a shorter source line that does not name the prediction
+software: "COCONUT 13C shifts: from J.-M. Nuzillard, Zenodo, doi:10.5281/zenodo.6561449, CC BY 4.0".
+All repository texts listed above, the deck (HTML and PDF) and `~/Downloads/ailsa-figshare-record.txt`
+were aligned to that wording; the software name was removed from them. The CSP5 comparison scripts
+were moved out of the repository into the private data folder. The verification figures above are
+from the original execution; the phase gate re-checks the DOI in every file.

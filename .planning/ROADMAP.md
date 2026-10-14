@@ -205,7 +205,7 @@ now, or wait for the Phase 110 comparison; (2) Phase 110 arms — new vs old onl
 no-team and no-statistics ablations; (3) re-upload the full reference DB to figshare as a new
 version if the public file is the outdated schema (conflicts with Phase 105's "no new upload");
 (4) fragment DB — install and use, or drop fragment search; (5) a reference DB built from free CSP5 predictions over COCONUT in
-place of the ACD/Labs-predicted shifts (see STATE.md) — whether it becomes a phase and where it
+place of the current predicted COCONUT shifts (see STATE.md) — whether it becomes a phase and where it
 sits, to be discussed after Phase 105.
 
 **External dependency — open-weight comparison (partner lab, 2026-10-14):** the partner lab runs a
@@ -294,7 +294,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [x] 105-10-PLAN.md — Credit the COCONUT 13C shift source (ACD/Labs predictions, J.-M. Nuzillard, Zenodo doi:10.5281/zenodo.6561449, CC BY 4.0; D-17) in README, CLAUDE.md, docs, rdmo text, figshare paste text, upload scripts and deck (rebuilt, PDF re-exported)
+- [x] 105-10-PLAN.md — Credit the COCONUT 13C shift source (J.-M. Nuzillard, Zenodo doi:10.5281/zenodo.6561449, CC BY 4.0; D-17) in README, CLAUDE.md, docs, rdmo text, figshare paste text, upload scripts and deck (rebuilt, PDF re-exported)
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
@@ -309,7 +309,7 @@ Plans:
 **Goal**: The CASE skill and its agents carry the AILSA name and follow Anthropic's skill-authoring best practices in form, while the exact skill states that produced the published benchmark figures stay recoverable.
 **Depends on**: Phase 105 (docs already use the final names). Not gated any more.
 **Requirements**: FREEZE-01, SKILL-01, SKILL-02, SKILL-03, SKILL-04, SKILL-05, SKILL-06
-**Note (D-17, 2026-10-14)**: skill files that describe the reference DB (`lucy-ng.md`, `dereplicate.md`, `predict.md` today) get the same shift-source credit as the docs: "COCONUT 13C shifts: ACD/Labs predictions from J.-M. Nuzillard, Zenodo, doi:10.5281/zenodo.6561449, CC BY 4.0".
+**Note (D-17, 2026-10-14)**: skill files that describe the reference DB (`lucy-ng.md`, `dereplicate.md`, `predict.md` today) get the same shift-source credit as the docs: "COCONUT 13C shifts: from J.-M. Nuzillard, Zenodo, doi:10.5281/zenodo.6561449, CC BY 4.0".
 **Note**: content-preserving restructuring only — renaming, splitting into references, removing dead references/history/benchmark compounds/model IDs, consistent terms, rationale instead of capital-letter emphasis. Changes to *how* the agents coordinate or which tools they use wait for Phases 107–109. Restructuring is not guaranteed to be behaviour-neutral for a language model; Phase 110 measures the end result.
 **Success Criteria** (what must be TRUE):
 

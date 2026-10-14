@@ -25,7 +25,7 @@ the database are a separate note under Phase 106 in ROADMAP.md.
 
 Add one sentence to the docstring, keeping "13C" in ASCII:
 "The COCONUT 13C shifts are predicted, not measured; the NMRShiftDB shifts are experimental.
-COCONUT 13C shifts: ACD/Labs predictions from J.-M. Nuzillard, Zenodo, doi:10.5281/zenodo.6561449,
+COCONUT 13C shifts: from J.-M. Nuzillard, Zenodo, doi:10.5281/zenodo.6561449,
 CC BY 4.0." Update any test that snapshots this help text.
 
 ## Acceptance

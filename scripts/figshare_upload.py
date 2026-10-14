@@ -20,7 +20,7 @@ METADATA = {
 
 Contents: 928,443 compounds (COCONUT: 895,099 natural products with predicted 13C shifts; NMRShiftDB: 33,344 compounds with experimental 13C shifts), 111,493 unique molecular formulas, 7.9 million HOSE-code statistics. One file serves both dereplication and 13C prediction.
 
-Data source: the 13C shifts of the 895,099 COCONUT natural products are predicted, not measured (ACD/Labs C+H NMR Predictors and DB 2020.1.0); the 33,344 NMRShiftDB compounds carry experimental 13C shifts. COCONUT 13C shifts: ACD/Labs predictions from J.-M. Nuzillard, Zenodo, doi:10.5281/zenodo.6561449, CC BY 4.0 (https://doi.org/10.5281/zenodo.6561449).
+Data source: the 13C shifts of the 895,099 COCONUT natural products are predicted, not measured; the 33,344 NMRShiftDB compounds carry experimental 13C shifts. COCONUT 13C shifts: from J.-M. Nuzillard, Zenodo, doi:10.5281/zenodo.6561449, CC BY 4.0 (https://doi.org/10.5281/zenodo.6561449).
 
 Usage: install AILSA (https://github.com/steinbeck/ailsa), run "ailsa database download" - it fetches this file and installs it as data/reference/ailsa-derep.db - and check it with "ailsa database info". Source code and documentation: https://github.com/steinbeck/ailsa.
 """,

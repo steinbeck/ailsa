@@ -321,7 +321,7 @@ Options:
   --format [text|json]   Output format
 ```
 
-**Reference data.** `ailsa dereplicate c13` and `ailsa predict c13` use the pre-built reference database when it is installed (`ailsa database download`, see INSTALLATION.md): 928,443 compounds. The 13C shifts of the 895,099 COCONUT natural products are predicted, not measured (ACD/Labs C+H NMR Predictors and DB 2020.1.0); the 33,344 NMRShiftDB compounds carry experimental 13C shifts. COCONUT 13C shifts: ACD/Labs predictions from J.-M. Nuzillard, Zenodo, doi:[10.5281/zenodo.6561449](https://doi.org/10.5281/zenodo.6561449), CC BY 4.0.
+**Reference data.** `ailsa dereplicate c13` and `ailsa predict c13` use the pre-built reference database when it is installed (`ailsa database download`, see INSTALLATION.md): 928,443 compounds. The 13C shifts of the 895,099 COCONUT natural products are predicted, not measured; the 33,344 NMRShiftDB compounds carry experimental 13C shifts. COCONUT 13C shifts: from J.-M. Nuzillard, Zenodo, doi:[10.5281/zenodo.6561449](https://doi.org/10.5281/zenodo.6561449), CC BY 4.0.
 
 **Examples:**
 ```bash

@@ -128,13 +128,13 @@ lucy-ng; the name lucy-ng should **disappear as far as possible** from everythin
 ### Data attribution (user, 2026-10-14)
 - **D-17:** **Credit the source of the COCONUT 13C shifts everywhere the reference database is
   described.** Verified 2026-10-13/14: the 895,099 COCONUT compounds' shifts (23.7 M of the DB's
-  24.1 M shifts, and 100 % of `hose_stats`) are ACD/Labs C+H NMR Predictors and DB 2020.1.0
-  predictions, published by J.-M. Nuzillard as "Predicted 13C NMR Chemical Shifts of Natural
-  Products", Zenodo, DOI 10.5281/zenodo.6561449, CC BY 4.0 (2022; first record byte-identical to
-  our source file; same file name `acd_coconut.sdf`). CC BY requires attribution, which is missing
-  from README, docs, CLAUDE.md, the deck and the figshare record. Required wording (English form
-  of the user's text): "COCONUT 13C shifts: ACD/Labs predictions from J.-M. Nuzillard, Zenodo,
-  doi:10.5281/zenodo.6561449, CC BY 4.0". It goes into: README (database/data section),
+  24.1 M shifts, and 100 % of `hose_stats`) are predicted shifts published by J.-M. Nuzillard as
+  "Predicted 13C NMR Chemical Shifts of Natural Products", Zenodo, DOI 10.5281/zenodo.6561449,
+  CC BY 4.0 (2022; first record byte-identical to our source file). CC BY requires attribution,
+  which is missing from README, docs, CLAUDE.md, the deck and the figshare record. Required
+  wording (amended 2026-10-14 to the text the user published on figshare): "COCONUT 13C shifts:
+  from J.-M. Nuzillard, Zenodo, doi:10.5281/zenodo.6561449, CC BY 4.0". Public texts do not name
+  the prediction software; the Zenodo record documents it. It goes into: README (database/data section),
   `docs/` wherever the DB contents are described (at least ARCHITECTURE, INSTALLATION,
   USER_GUIDE, BENCHMARK if it describes the DB), CLAUDE.md "Database Reference", the deck's
   data/numbers tile if it describes the DB, the figshare record text

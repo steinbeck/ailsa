@@ -93,7 +93,7 @@ The pre-built SQLite database powers **both** dereplication (formula-indexed com
 |----------|-------|
 | **DOI** | [10.6084/m9.figshare.31073554](https://doi.org/10.6084/m9.figshare.31073554) |
 | **Compounds** | 928,443 (COCONUT 895,099 with predicted 13C shifts + NMRShiftDB 33,344 with experimental 13C shifts) |
-| **COCONUT shift source** | COCONUT 13C shifts: ACD/Labs predictions from J.-M. Nuzillard, Zenodo, doi:[10.5281/zenodo.6561449](https://doi.org/10.5281/zenodo.6561449), CC BY 4.0 — predicted, not measured (ACD/Labs C+H NMR Predictors and DB 2020.1.0) |
+| **COCONUT shift source** | COCONUT 13C shifts: from J.-M. Nuzillard, Zenodo, doi:[10.5281/zenodo.6561449](https://doi.org/10.5281/zenodo.6561449), CC BY 4.0 — predicted, not measured |
 | **HOSE Statistics** | 7.9M entries for 13C prediction |
 | **Formulas** | 111,493 unique |
 | **Size** | ~830 MB download, ~2.8 GB uncompressed |
