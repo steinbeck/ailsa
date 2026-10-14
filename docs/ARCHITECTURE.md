@@ -39,7 +39,7 @@ Code skill) that drives the CLI.
 2. **Static Methods for Convenience**: Core operations are static for easy use
 3. **Immutable Data Models**: All models are Pydantic dataclasses
 4. **Explicit Error Handling**: Operations return result objects, not exceptions
-5. **Agent-first output**: every CLI command can emit structured JSON for the agents
+5. **Agent-first output**: the analysis commands emit structured JSON for the agents (`--format json`); the setup commands (`database`, `fragment build`/`info`, `lsd check`, `predict build-table`) and `visualize correlations` print text only
 
 ## Module Structure
 

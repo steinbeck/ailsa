@@ -13,7 +13,7 @@ with the spectroscopic constraints without leaning on a chemical-shift database 
 **coordinator leading a team of specialist AI agents** that runs the full
 Computer-Assisted Structure Elucidation (CASE) workflow autonomously — picking peaks,
 extracting constraints, running LSD, ranking candidates, and critiquing its own work —
-the way a group of human spectroscopists would, but unattended.
+the way a group of human spectroscopists would, but without human intervention.
 
 The agent team is AILSA's own contribution; LSD does the structure generation
 underneath it. Everything the agents do is also available directly through the
@@ -61,7 +61,7 @@ them:
 
 The `ailsa` command-line tools are the wrappers through which these packages are driven.
 **What is genuinely new here — our own contribution — is the [CASE agent team](#the-case-agent-team)**
-that operates all of them end to end, unattended.
+that operates all of them end to end, without human intervention.
 
 ---
 

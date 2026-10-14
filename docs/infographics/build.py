@@ -167,6 +167,8 @@ h2 {{ font-family:var(--serif); font-weight:700; letter-spacing:-.01em; line-hei
 .step h4 {{ margin:0; font-size:15px; font-family:var(--serif); font-weight:700; }}
 .step p {{ margin:0; font-size:12.5px; color:var(--muted); line-height:1.4; }}
 .step .tool {{ font-family:var(--mono); font-size:10.5px; color:var(--accent2); margin-top:2px; }}
+.steps2 {{ display:grid; grid-template-columns:1fr 1fr; gap:9px; }}
+.steps2 .step {{ padding:10px 12px 12px; gap:4px; }}
 
 /* ---- input layout illustration (slide 3) ---- */
 .inputbar {{ margin-top:16px; background:var(--bg2); border:1px solid var(--line);
@@ -303,7 +305,7 @@ h2 {{ font-family:var(--serif); font-weight:700; letter-spacing:-.01em; line-hei
 @media (max-width:720px) {{
   .slide {{ aspect-ratio:auto; }}
   .flow,.stats {{ grid-template-columns:1fr 1fr; }}
-  .grid9,.team,.two,.credits,.bench-stats {{ grid-template-columns:1fr; }}
+  .grid9,.team,.two,.credits,.bench-stats,.steps2 {{ grid-template-columns:1fr; }}
   .mol {{ grid-template-columns:80px 1fr; }}
 }}
 @page {{ size:1280px 720px; margin:0; }}
@@ -512,6 +514,7 @@ h2 {{ font-family:var(--serif); font-weight:700; letter-spacing:-.01em; line-hei
     <div class="two" style="margin-top:14px;flex:1;min-height:0;">
       <div style="display:flex;flex-direction:column;gap:9px;">
         <div class="nx-head">How it is measured</div>
+        <div class="steps2">
         <div class="step"><div class="sn">01</div><h4>Spectra in, nothing else</h4>
           <p>The coordinator gets a sanitised directory of Bruker spectra and the molecular formula,
             never a name or structure; dereplication is forbidden.</p></div>
@@ -523,6 +526,7 @@ h2 {{ font-family:var(--serif); font-weight:700; letter-spacing:-.01em; line-hei
             claim is never used.</p></div>
         <div class="step"><div class="sn">04</div><h4>Constitution only</h4>
           <p>Stereochemistry is not tested.</p></div>
+        </div>
       </div>
       <div style="display:flex;flex-direction:column;gap:12px;">
         <div class="bench-stats">
