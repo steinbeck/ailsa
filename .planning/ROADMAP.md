@@ -279,7 +279,7 @@ Plans:
   3. The figshare record of the reference database carries the new project name in title and description; the DOI and the uploaded file are unchanged.
   4. The infographic deck (`docs/infographics/build.py`) is rebuilt under the new name with the current headline numbers, clearing the outstanding "stale deck" backlog item.
 
-**Plans**: 9 plans in 2 waves
+**Plans**: 10 plans in 4 waves
 
 Plans:
 **Wave 1**
@@ -290,18 +290,26 @@ Plans:
 - [x] 105-04-PLAN.md — INSTALLATION (MCP removed), SERVER_BOOTSTRAP (final names, neutral DB discovery), NUS-PORTABILITY renamed
 - [x] 105-05-PLAN.md — CLAUDE.md developer memory + .gitignore comments + rdmo description + faulon-bridge spike renamed
 - [x] 105-06-PLAN.md — Infographic deck: 8 slides incl. new blind-benchmark slide, examples slide, refreshed numbers, Get-it box; deck.html + ailsa-infographics.pdf rebuilt
-- [ ] 105-07-PLAN.md — figshare record: paste-ready text + click-path, user edits in browser (checkpoint), public-API check; upload scripts renamed
 - [x] 105-08-PLAN.md — Removal of old-name ballast documents after user approval (checkpoint), then git rm
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 105-09-PLAN.md — Phase gate: positive-controlled old-name grep, residue allow-list, link check, CLI-example audit, deck/figshare/bookkeeping checks
+- [ ] 105-10-PLAN.md — Credit the COCONUT 13C shift source (ACD/Labs predictions, J.-M. Nuzillard, Zenodo doi:10.5281/zenodo.6561449, CC BY 4.0; D-17) in README, CLAUDE.md, docs, rdmo text, figshare paste text, upload scripts and deck (rebuilt, PDF re-exported)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 105-07-PLAN.md — figshare record: paste-ready text + click-path, user edits in browser (checkpoint), public-API check; upload scripts renamed (Task 1 done; resumes at the browser checkpoint after 105-10)
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
+- [ ] 105-09-PLAN.md — Phase gate: positive-controlled old-name grep, residue allow-list, link check, CLI-example audit, deck/figshare/bookkeeping checks, shift-source credit check
 
 #### Phase 106: Freeze, rename and restructure the skill
 
 **Goal**: The CASE skill and its agents carry the AILSA name and follow Anthropic's skill-authoring best practices in form, while the exact skill states that produced the published benchmark figures stay recoverable.
 **Depends on**: Phase 105 (docs already use the final names). Not gated any more.
 **Requirements**: FREEZE-01, SKILL-01, SKILL-02, SKILL-03, SKILL-04, SKILL-05, SKILL-06
+**Note (D-17, 2026-10-14)**: skill files that describe the reference DB (`lucy-ng.md`, `dereplicate.md`, `predict.md` today) get the same shift-source credit as the docs: "COCONUT 13C shifts: ACD/Labs predictions from J.-M. Nuzillard, Zenodo, doi:10.5281/zenodo.6561449, CC BY 4.0".
 **Note**: content-preserving restructuring only — renaming, splitting into references, removing dead references/history/benchmark compounds/model IDs, consistent terms, rationale instead of capital-letter emphasis. Changes to *how* the agents coordinate or which tools they use wait for Phases 107–109. Restructuring is not guaranteed to be behaviour-neutral for a language model; Phase 110 measures the end result.
 **Success Criteria** (what must be TRUE):
 
