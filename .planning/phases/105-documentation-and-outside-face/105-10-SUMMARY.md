@@ -36,13 +36,13 @@ completed: 2026-10-14
 
 ## Task Commits
 
-1. Task 1: README, CLAUDE.md, INSTALLATION, SERVER_BOOTSTRAP, ARCHITECTURE, USER_GUIDE - `4d64ddf`
-2. Task 2: rdmo text, figshare and Zenodo upload scripts - `e9fed3a` (the ~/Downloads record file is outside git)
-3. Task 3: deck build.py, deck.html, README, PDF - `ac7d7eb`
+1. Task 1: README, CLAUDE.md, INSTALLATION, SERVER_BOOTSTRAP, ARCHITECTURE, USER_GUIDE - `7205019`
+2. Task 2: rdmo text, figshare and Zenodo upload scripts - `fd068f5` (the ~/Downloads record file is outside git)
+3. Task 3: deck build.py, deck.html, README, PDF - `ca7d8bf`
 
 ## Verification (acceptance output)
 
-Task 1 (per file: attr / doi / software name / pnm / exp / lucy / deletions vs 8b179b4):
+Task 1 (per file: attr / doi / software name / pnm / exp / lucy / deletions vs 52583f1):
 README 2/2/1/1/1/0/del 2; CLAUDE.md 1/1/1/1/1/0/del 1; INSTALLATION 1/1/1/1/1/0/del 1;
 SERVER_BOOTSTRAP 1/1/1/1/1/0/del 0; ARCHITECTURE 1/1/1/1/1/0/del 0; USER_GUIDE 1/1/1/1/4/0/del 0
 (USER_GUIDE already had other "experimental 13C shifts" hits). readme-found, ack, claude-row,
@@ -88,7 +88,7 @@ proceed. Nothing pushed; STATE.md and ROADMAP.md untouched.
 
 ## Self-Check: PASSED
 
-Commits `4d64ddf`, `e9fed3a`, `ac7d7eb` found in git log; all listed files exist.
+Commits `7205019`, `fd068f5`, `ca7d8bf` found in git log; all listed files exist.
 
 ## Amendment (2026-10-14, after 105-07)
 

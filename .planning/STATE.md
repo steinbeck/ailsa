@@ -765,7 +765,7 @@ PROV-01 re-analysis: 37.86 ppm is a CH, so the gate was reporting a wrong input 
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
 | 261006-iob | Open-weight model (Qwen) harness options for the AILSA skill; reply draft to collaborators | 2026-10-06 | ca46432 | [261006-iob-open-weight-model-qwen-harness-options-f](./quick/261006-iob-open-weight-model-qwen-harness-options-f/) |
-| 261013-knr | CSP5 vs the current COCONUT 13C predictions (sample) and a held-out NMRShiftDB2 set | 2026-10-13 | b28bca2 | [261013-knr-csp5-13c-comparison-on-coconut](./quick/261013-knr-csp5-13c-comparison-on-coconut/) |
+| 261013-knr | CSP5 vs the current COCONUT 13C predictions (sample) and a held-out NMRShiftDB2 set | 2026-10-13 | 75dc9a2 | [261013-knr-csp5-13c-comparison-on-coconut](./quick/261013-knr-csp5-13c-comparison-on-coconut/) |
 
 ### Strategic Reference
 
