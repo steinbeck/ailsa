@@ -15,7 +15,7 @@ This document describes the technical architecture and design decisions behind A
 ## Overview
 
 AILSA is a layered Python library with two interfaces — the `ailsa` CLI (Click; every
-subcommand supports `--format json`) and the Python API — and a CASE agent layer (a Claude
+subcommand except the setup commands and `visualize` supports `--format json`) and the Python API — and a CASE agent layer (a Claude
 Code skill) that drives the CLI.
 
 ```
@@ -112,7 +112,7 @@ src/ailsa/
 ├── solvers/              # reserved for future solver integrations
 ├── data/                 # packaged schemas/fixtures
 │   └── schemas/
-└── cli/                  # `ailsa` Click CLI (every subcommand supports --format json)
+└── cli/                  # `ailsa` Click CLI (--format json on all but setup commands and visualize)
     ├── main.py, __main__.py
     ├── read.py, pick.py, analyze.py, detect.py, dereplicate.py
     ├── predict.py, lsd.py, pylsd.py, fragment.py, identify.py
@@ -254,8 +254,10 @@ class Peak1D(BaseModel):
 
 ### 3. Structured JSON Instead of Exceptions
 
-**Decision**: Every CLI command returns a structured result; with `--format json`, agents get
-that result as parseable JSON instead of formatted text.
+**Decision**: Every analysis command returns a structured result; with `--format json`, agents get
+that result as parseable JSON instead of formatted text. (The setup commands — `ailsa database …`,
+`ailsa lsd check`, `ailsa fragment build`/`info`, `ailsa predict build-table` — and
+`ailsa visualize` print text only.)
 
 **Rationale**:
 - AI agents can handle structured errors

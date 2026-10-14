@@ -40,7 +40,7 @@ src/ailsa/
 ├── ranking/         # candidate solution ranking
 ├── lsd/             # LSD solver integration
 ├── fragments/       # bundled LSD fragment / ring-exclusion filter files
-├── cli/             # ailsa Click CLI (all subcommands; every one supports --format json)
+├── cli/             # ailsa Click CLI (all subcommands; --format json on all but setup commands and visualize)
 └── …                # database, visualization, nmrxiv, solvers, data
 tests/               # pytest suite
 data/                # local test NMR datasets (Bruker format)
@@ -49,7 +49,7 @@ data/                # local test NMR datasets (Bruker format)
 docs/                # human docs (ARCHITECTURE, USER_GUIDE, …); docs/infographics/ = editable project slide deck (regenerate via build.py — see its README)
 ```
 
-The package exposes an `ailsa` CLI; every subcommand supports `--format json`. Command and flag definitions live in `src/ailsa/cli/` — use `ailsa --help` rather than duplicating a command catalogue here.
+The package exposes an `ailsa` CLI; every subcommand supports `--format json` except the setup commands (`database …`, `lsd check`, `fragment build`/`info`, `predict build-table`) and `visualize`, which print text. Command and flag definitions live in `src/ailsa/cli/` — use `ailsa --help` rather than duplicating a command catalogue here.
 
 ### Critical Architecture Decisions
 

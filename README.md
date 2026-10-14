@@ -169,8 +169,9 @@ commands in the same family:
 Everything the agents do is available directly through the `ailsa` command. These commands
 are thin wrappers that orchestrate the [foundational packages above](#built-on-lsd-and-established-tools)
 — LSD, RDKit, nmrglue and the rest — behind one consistent interface; the science lives in
-those packages, not here. Every subcommand supports `--format json` for scripting. The
-command groups:
+those packages, not here. Every subcommand supports `--format json` for scripting except the
+setup commands (`ailsa database …`, `ailsa lsd check`, `ailsa fragment build`/`info`,
+`ailsa predict build-table`) and `ailsa visualize`, which print text. The command groups:
 
 | Group | What it does |
 |-------|--------------|

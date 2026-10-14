@@ -568,7 +568,7 @@ h2 {{ font-family:var(--serif); font-weight:700; letter-spacing:-.01em; line-hei
       <div class="stat"><div class="v">111<span>K</span></div><div class="k">unique formulas</div><div class="s">formula-indexed lookup</div></div>
       <div class="stat"><div class="v">1372</div><div class="k">passing tests</div><div class="s">pytest · mypy-strict · ruff</div></div>
       <div class="stat"><div class="v">69.1<span>%</span></div><div class="k">rank 1 in the blind benchmark</div><div class="s">177 / 256 · restricted configuration, see slide 6</div></div>
-      <div class="stat"><div class="v">16</div><div class="k">CLI command groups</div><div class="s">every one --format json</div></div>
+      <div class="stat"><div class="v">16</div><div class="k">CLI command groups</div><div class="s">--format json on all analysis commands</div></div>
       <div class="stat"><div class="v">5</div><div class="k">agents in the team</div><div class="s">coordinator + 4 specialists</div></div>
     </div>
     <div class="credits">
