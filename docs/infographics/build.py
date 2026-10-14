@@ -562,7 +562,7 @@ h2 {{ font-family:var(--serif); font-weight:700; letter-spacing:-.01em; line-hei
     <div class="eyebrow"><span class="bar"></span><span>By the numbers</span><span class="n">Scale &amp; provenance</span></div>
     <h2>What the agent stands on</h2>
     <div class="stats">
-      <div class="stat"><div class="v">928<span>K</span></div><div class="k">reference compounds</div><div class="s">COCONUT + NMRShiftDB</div></div>
+      <div class="stat"><div class="v">928<span>K</span></div><div class="k">reference compounds</div><div class="s">COCONUT (predicted) + NMRShiftDB (experimental)</div></div>
       <div class="stat"><div class="v">7.9<span>M</span></div><div class="k">HOSE statistics</div><div class="s">¹³C shift prediction</div></div>
       <div class="stat"><div class="v">2.4<span>M</span></div><div class="k">fragment SSCs</div><div class="s">DEFF goodlist search</div></div>
       <div class="stat"><div class="v">111<span>K</span></div><div class="k">unique formulas</div><div class="s">formula-indexed lookup</div></div>
@@ -574,7 +574,8 @@ h2 {{ font-family:var(--serif); font-weight:700; letter-spacing:-.01em; line-hei
     <div class="credits">
       <div><h4>Built on</h4><p><b>LSD</b> — the deterministic structure generator by
         Jean-Marc Nuzillard (Université de Reims). <b>HOSE codes</b> — Bremser, 1978.
-        Parsing via <b>nmrglue</b>; cheminformatics via <b>RDKit</b>.</p></div>
+        Parsing via <b>nmrglue</b>; cheminformatics via <b>RDKit</b>.
+        <b>Reference data</b> — COCONUT and NMRShiftDB; COCONUT 13C shifts: ACD/Labs predictions from J.-M. Nuzillard, Zenodo, doi:10.5281/zenodo.6561449, CC BY 4.0.</p></div>
       <div><h4>Get it</h4><p><b>github.com/steinbeck/ailsa</b> &middot; <b>pip install ailsa</b> &middot; reference
         database DOI <b>10.6084/m9.figshare.31073554</b></p></div>
     </div>

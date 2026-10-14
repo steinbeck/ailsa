@@ -23,7 +23,7 @@ truth, not the HTML. Edit `build.py`, re-run it, and the HTML/PDF regenerate.
    `docs/BENCHMARK.md`
 7. **CASE1–9 worked examples** — RDKit structures, formula, nmrXiv ID, solved status
 8. **By the numbers** — DB / HOSE / fragments / tests / benchmark / CLI command groups;
-   credits (Nuzillard/LSD, Bremser/HOSE); Get it (repo, PyPI, database DOI)
+   credits (Nuzillard/LSD, Bremser/HOSE, source of the predicted COCONUT 13C shifts); Get it (repo, PyPI, database DOI)
 
 ## Files
 
