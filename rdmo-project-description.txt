@@ -24,6 +24,9 @@ Reference data
 A single SQLite database (~2.8 GB uncompressed, ~830 MB compressed, DOI 10.6084/m9.figshare.31073554)
 integrates 928,443 compounds from COCONUT and NMRShiftDB with 13C chemical shift assignments and
 7.9 million precomputed HOSE-code shift statistics used for structure ranking.
+The 13C shifts of the 895,099 COCONUT natural products are predicted, not measured
+(ACD/Labs C+H NMR Predictors and DB 2020.1.0); the 33,344 NMRShiftDB compounds carry experimental 13C shifts.
+COCONUT 13C shifts: ACD/Labs predictions from J.-M. Nuzillard, Zenodo, doi:10.5281/zenodo.6561449, CC BY 4.0.
 
 Generated data
 For each CASE run, AILSA produces machine-readable peak lists, statistically derived structural

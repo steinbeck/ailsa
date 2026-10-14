@@ -19,12 +19,14 @@ METADATA = {
 
 **Contents:**
 - **928,443 compounds** total
-- **COCONUT**: 895,099 natural products with predicted 13C shifts
+- **COCONUT**: 895,099 natural products with predicted 13C shifts (ACD/Labs C+H NMR Predictors and DB 2020.1.0)
 - **NMRShiftDB**: 33,344 compounds with experimental 13C shifts
 - **111,493 unique molecular formulas**
 - **7.9 million HOSE-code statistics**
 
 One file serves both dereplication and 13C prediction.
+
+**Data source:** COCONUT 13C shifts: ACD/Labs predictions from J.-M. Nuzillard, Zenodo, doi:10.5281/zenodo.6561449, CC BY 4.0.
 
 **Usage:**
 ```bash
@@ -55,7 +57,8 @@ ailsa database info
                 "identifier": "https://github.com/steinbeck/ailsa",
                 "relation": "isSupplementTo",
                 "resource_type": "software"
-            }
+            },
+            {"identifier": "10.5281/zenodo.6561449", "relation": "isDerivedFrom", "resource_type": "dataset"}
         ],
     }
 }
