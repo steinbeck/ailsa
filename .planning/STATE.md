@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-07-21)
 Phase: 105 (documentation-and-outside-face) — COMPLETE, verified 2026-10-14
 Plan: 10 of 10
 Status: Phase 105 verified (15/15 after closing the deck-PDF gap); pushed to GitHub `steinbeck/ailsa`
-Last activity: 2026-10-14 -- Phase 105 verified and pushed; full CSP5 run over COCONUT started on the compute node
+Last activity: 2026-10-14 -- full CSP5 run over COCONUT finished on the HPC cluster (886,164 molecules)
 
 **Resume here (2026-10-14):**
 
@@ -47,12 +47,17 @@ Last activity: 2026-10-14 -- Phase 105 verified and pushed; full CSP5 run over C
    review loop", "ask the NMR chemist", "restricted configuration", "without the agent team",
    "without statistical detection", "do not form a team", "current schema".
 
-1c. **Full CSP5 run over COCONUT (started 2026-10-14, user request).** All 895,120 structures of the
-   COCONUT SD file behind the reference DB (same structures, same atom order, structures only — no
-   previous shift values on the host), CSP5 0.2.19 default single conformer, on the 40-thread compute
-   node (`ponder`), sharded/resumable pipeline from quick task 261013-knr. Work dir and status: see the
-   auto-memory note on the shift source. Next after it finishes: count check, cross-machine control,
-   then the comparison and the decision on a CSP5-based reference DB (ROADMAP open decision 5).
+1c. **Full CSP5 run over COCONUT — DONE 2026-10-14 (user request).** All 895,120 structures of the
+   COCONUT SD file behind the reference DB (same structures and atom order, structures only), CSP5 0.2.19
+   default single conformer. Started on the compute node, moved to the university HPC cluster (SLURM array,
+   768 tasks, ~50 min); count check passed. Result: 886,164 molecules (99.0 %) with 23.76 M carbon shifts;
+   8,956 failed (7,141 3D-embedding timeouts, 1,492 embedding failures, 321 dropped by CSP5, 2 unreadable).
+   Controls: same accuracy against experiment on 400 NMRShiftDB2 molecules as the Mac run (1.799 vs
+   1.797 ppm); compute node and cluster agree to 0.01 ppm on 98.6 % of carbons. Agreement with the current
+   COCONUT shifts over 884,485 molecules / 23.69 M carbons: MAE 1.78 ppm, median 1.05, 70 % within 2 ppm,
+   0.8 % beyond 10 ppm; worst for CH (2.47) and olefinic sp2 (2.35), best aromatic (1.46) and C=O (1.49);
+   grows with size (>= 61 heavy atoms 2.14). Files and scripts outside the repo (path in the auto-memory).
+   Next: discuss the CSP5-based reference DB with the user (ROADMAP open decision 5).
 
 1a. **Reference-DB provenance (2026-10-13/14).** The COCONUT shifts (23.7 M of 24.1 M) and 100 % of
    `hose_stats` are predicted shifts from Nuzillard's public CC BY 4.0 Zenodo dataset (first record
