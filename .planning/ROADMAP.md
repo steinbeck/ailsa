@@ -298,7 +298,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 105-07-PLAN.md — figshare record: paste-ready text + click-path, user edits in browser (checkpoint), public-API check; upload scripts renamed (Task 1 done; resumes at the browser checkpoint after 105-10)
+- [x] 105-07-PLAN.md — figshare record: paste-ready text + click-path, user edits in browser (checkpoint), public-API check; upload scripts renamed (version 3 published 2026-10-14)
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
@@ -396,7 +396,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|-----------------|--------|-----------|
 | 104. Package and CLI | 6/6 | Complete    | 2026-10-03 |
-| 105. Documentation and outside face | 8/10 | In Progress|  |
+| 105. Documentation and outside face | 9/10 | In Progress|  |
 | 106. Freeze, rename and restructure the skill | 0/? | Not started | - |
 | 107. Evaluation bench and team-mode spike | 0/? | Not started | - |
 | 108. Foundation | 0/? | Not started | - |
