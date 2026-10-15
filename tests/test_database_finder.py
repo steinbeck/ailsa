@@ -127,6 +127,29 @@ class TestDatabaseFinderDualName:
         queried_names = [call[2] for call in calls if call[:2] == ["mdfind", "-name"]]
         assert queried_names == ["ailsa-derep.db", "lucy-ng-derep.db"]
 
+    def test_mdfind_skips_hits_whose_name_only_contains_the_db_name(
+        self, isolated, monkeypatch
+    ) -> None:
+        """``mdfind -name`` matches substrings, so the download archive
+        ``lucy-ng-derep.db.zip`` can come back first; the finder must return the
+        file whose name is exactly the DB name, never the archive."""
+        tmp_path, _home = isolated
+        elsewhere = tmp_path / "elsewhere"
+        elsewhere.mkdir()
+        archive = elsewhere / "lucy-ng-derep.db.zip"
+        archive.touch()
+        db = elsewhere / "lucy-ng-derep.db"
+        db.touch()
+
+        def fake_run(args, **kwargs):  # noqa: ANN001, ANN003 - test double
+            if args[:3] == ["mdfind", "-name", "lucy-ng-derep.db"]:
+                return _FakeCompletedProcess(returncode=0, stdout=f"{archive}\n{db}\n")
+            return _FakeCompletedProcess(returncode=0, stdout="")
+
+        monkeypatch.setattr("ailsa.database.finder.subprocess.run", fake_run)
+
+        assert DatabaseFinder.find_derep_database() == db
+
     def test_find_hose_database_cwd_legacy_and_new(self, isolated) -> None:
         """Test 8: find_hose_database() checks the cwd for both filenames."""
         tmp_path, _home = isolated

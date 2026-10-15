@@ -84,10 +84,13 @@ class DatabaseFinder:
                     text=True,
                     timeout=5,
                 )
-                if result.returncode == 0 and result.stdout.strip():
-                    found_path = Path(result.stdout.strip().split("\n")[0])
-                    if found_path.exists():
-                        return found_path
+                # `mdfind -name` matches substrings: the download archive
+                # `<name>.zip` can come first, so take only exact-name hits.
+                if result.returncode == 0:
+                    for line in result.stdout.splitlines():
+                        found_path = Path(line.strip())
+                        if found_path.name == name and found_path.exists():
+                            return found_path
             except (subprocess.TimeoutExpired, FileNotFoundError):
                 pass  # mdfind not available or timed out
 
