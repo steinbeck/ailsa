@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v11.0
 milestone_name: AILSA Rename
 status: executing
-last_updated: "2026-10-14T15:18:36.306Z"
-last_activity: 2026-10-14
+last_updated: "2026-10-15T13:30:00.000Z"
+last_activity: 2026-10-15
 progress:
   total_phases: 8
   completed_phases: 2
@@ -27,9 +27,17 @@ See: .planning/PROJECT.md (updated 2026-07-21)
 Phase: 105 (documentation-and-outside-face) — COMPLETE, verified 2026-10-14
 Plan: 10 of 10
 Status: Phase 105 verified (15/15 after closing the deck-PDF gap); pushed to GitHub `steinbeck/ailsa`
-Last activity: 2026-10-14 -- full CSP5 run over COCONUT finished on the HPC cluster (886,164 molecules)
+Last activity: 2026-10-15 -- worst-carbon comparison of CSP5 with the current COCONUT shifts; work moves to an always-on workstation
 
-**Resume here (2026-10-14):**
+**Resume here (2026-10-15):**
+
+0. **Work location (2026-10-15).** By the user's new rule, long jobs and long-running sessions no
+   longer run on the laptop. This project's working sessions continue on an always-on workstation
+   (Intel Mac, same Dropbox paths; project-local Python environments outside Dropbox, LSD binary
+   shared via Dropbox, reference DB present). Host details, environments, test baseline and the open
+   questions are in the private handover outside the repo (path in the auto-memory). Never work on
+   this Dropbox-synced checkout from two machines at once. Open with the user: (a) the ppm
+   threshold for the worst-carbon list (item 1d), (b) approval to push the local commits (public repo).
 
 1. **Phase 105 complete and verified 2026-10-14** (`105-VERIFICATION.md`: deck PDF page 6 fixed in re-verification; 105-09 gate green; it fixed TOC anchors, the PyPI
    deferral record (now "after Phase 111") and the false "every subcommand supports --format json"
@@ -58,6 +66,24 @@ Last activity: 2026-10-14 -- full CSP5 run over COCONUT finished on the HPC clus
    0.8 % beyond 10 ppm; worst for CH (2.47) and olefinic sp2 (2.35), best aromatic (1.46) and C=O (1.49);
    grows with size (>= 61 heavy atoms 2.14). Files and scripts outside the repo (path in the auto-memory).
    Next: discuss the CSP5-based reference DB with the user (ROADMAP open decision 5).
+
+1d. **Worst-carbon comparison — DONE 2026-10-15 (user request: which molecules have at least one
+   carbon where CSP5 differs from the current COCONUT shifts by more than a threshold still to be
+   set).** Per molecule: largest |difference|, its atom and carbon class, the same after comparing
+   sorted shift lists (no assignment), counts above 3/5/10 ppm, stereo descriptors. Control: same
+   884,485 molecules, 23,694,925 carbons and MAE 1.776 as item 1c. Molecules with >= 1 carbon beyond
+   the threshold: 3 ppm 88.6 %, 5 ppm 62.1 % (549,396), 8 ppm 24.7 %, 10 ppm 12.9 % (113,768),
+   15 ppm 4.0 %, 20 ppm 2.0 %; strongly size-dependent (10 ppm: 7 % up to 15 heavy atoms, 35 % from
+   61); at 10 ppm two thirds have exactly one such carbon, and for 62 % the gap falls to <= 10 ppm when
+   the shift lists are compared without assignment. Unspecified stereo has little effect. Check
+   against experiment (NMRShiftDB2 molecules whose measured values the current shifts reproduce for
+   < 10 % of carbons to 0.05 ppm, 850 molecules): current shifts 1.77 ppm, CSP5 1.92 ppm; where the
+   two differ by > 5 ppm the current value is closer to experiment in 61 % (CSP5 off by > 5 ppm in
+   48 %, the current value in 35 %). Normal per-carbon error against experiment: p95 about 5-7 ppm,
+   p99 about 10-12 ppm for both. Recommended to the user: 10 ppm (beyond both methods' normal
+   scatter; 5 ppm flags the majority). **Threshold not yet decided.** Proposed next step: draw 50
+   molecules from the chosen list and classify the causes (assignment swap, 3D structure, chemistry
+   CSP5 cannot handle, error in the current data). Files outside the repo (path in the auto-memory).
 
 1a. **Reference-DB provenance (2026-10-13/14).** The COCONUT shifts (23.7 M of 24.1 M) and 100 % of
    `hose_stats` are predicted shifts from Nuzillard's public CC BY 4.0 Zenodo dataset (first record
