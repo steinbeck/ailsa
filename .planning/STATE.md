@@ -38,6 +38,11 @@ Last activity: 2026-10-15 -- worst-carbon comparison of CSP5 with the current CO
    questions are in the private handover outside the repo (path in the auto-memory). Never work on
    this Dropbox-synced checkout from two machines at once. Open with the user: (a) the ppm
    threshold for the worst-carbon list (item 1d), (b) approval to push the local commits (public repo).
+   Setting up the workstation exposed a DB-lookup defect, fixed in `cd2c42d`: outside the repo the
+   finder fell back to Spotlight and took the first `mdfind -name` hit, which there was the download
+   archive `lucy-ng-derep.db.zip`; it now takes exact-name hits only (regression test added). Full
+   suite on the workstation after the fix: 1492 passed, 27 failed, 19 skipped (the slow full-COCONUT
+   import test deselected); all 27 failures are the known `CliRunner(mix_stderr=…)` test issue.
 
 1. **Phase 105 complete and verified 2026-10-14** (`105-VERIFICATION.md`: deck PDF page 6 fixed in re-verification; 105-09 gate green; it fixed TOC anchors, the PyPI
    deferral record (now "after Phase 111") and the false "every subcommand supports --format json"
