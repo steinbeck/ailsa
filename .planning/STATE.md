@@ -27,9 +27,37 @@ See: .planning/PROJECT.md (updated 2026-07-21)
 Phase: 105 (documentation-and-outside-face) — COMPLETE, verified 2026-10-14
 Plan: 10 of 10
 Status: Phase 105 verified (15/15 after closing the deck-PDF gap); pushed to GitHub `steinbeck/ailsa`
-Last activity: 2026-10-15 -- worst-carbon comparison of CSP5 with the current COCONUT shifts; work moves to an always-on workstation
+Last activity: 2026-10-29 -- 13C prediction without the current COCONUT shifts: NMRexp route closed, NMRNet++ run over COCONUT found geometry-dependent; next a graph-based 13C model
 
-**Resume here (2026-10-15):**
+**Resume here (2026-10-29):**
+
+00. **13C prediction without the current COCONUT shifts (2026-10-18..29).** Full record with every
+    number, script and file in the private status file outside the repo (path in the auto-memory).
+    - The user rejected the CSP5 replacement plan (2026-10-18); the worst-carbon threshold question
+      (item 1d) is therefore moot.
+    - NMRexp (Sci. Data 2025) covers only 0.9 % of COCONUT with a 13C spectrum, almost all small
+      molecules, so it cannot replace the COCONUT shifts.
+    - Assigning NMRexp spectra with NMRNet++ (arXiv 2601.18524; code MIT, weights CC BY 4.0) and
+      discarding uncertain ones keeps 10 % of the spectra. A cross-check against NMRShiftDB2
+      assignments the model never saw gives 99.5 % of carbons within 0.5 ppm, but almost only for
+      molecules up to 15 heavy atoms.
+    - A measured-only HOSE table barely improves with them (3.49 -> 3.43 ppm on the strict referee),
+      so that route is closed.
+    - NMRNet++ was run over all COCONUT (883,072 molecules). It agrees with the current shifts as
+      closely as CSP5 does (MAE 1.77 ppm) and is on par with them against measured natural-product
+      spectra.
+    - **It is, however, geometry-dependent.** With the 3D recipe in its own code (RDKit ETKDG + MMFF)
+      the prenyl =CH carbon is predicted around 25 ppm instead of ~122 ppm in 99 % of COCONUT cases
+      (about 40,000 carbons in 3.9 % of the molecules). With the authors' stored training-set geometry
+      (undocumented generator) it is correct, so evaluations on their stored test data flatter it.
+    - The user (2026-10-29): 13C prediction needs no 3D coordinates; NMRNet++ asks for them only
+      because it also predicts 1H.
+    - **Next:** measure a graph-based (2D) 13C model, then the benchmark re-ranking test, i.e. HOSE
+      tables built from each candidate source and the truth's own entries left out.
+    - Answers to the paper session's host-side questions were delivered in its private planning
+      folder.
+
+**Earlier resume notes (2026-10-15):**
 
 0. **Work location (2026-10-15).** By the user's new rule, long jobs and long-running sessions no
    longer run on the laptop. This project's working sessions continue on an always-on workstation
