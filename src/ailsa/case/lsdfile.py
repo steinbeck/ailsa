@@ -74,6 +74,9 @@ def render(problem: Problem, elim: int, max_solutions: int, methyl_4j: bool = Fa
 
     if elim > 0:
         lines.append(f"ELIM {elim} 0    ; the solver may drop up to {elim} correlation(s)")
+    # DUPL 1: keep every distinct atom assignment of a structure, not only the first one
+    # found; the ranking compares shifts atom by atom and needs the best assignment.
+    lines.append("DUPL 1")
     lines.append(f"MAXS {max_solutions}")
     if not problem.small_rings_allowed:
         lines += [

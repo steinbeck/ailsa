@@ -69,7 +69,7 @@ def heteroatom_variants(problem: Problem) -> list[Variant]:
     if len(sp3_now) >= 2 and rings_ok(n_sp2 + 2):
         for first in ("O", "N"):
             order = sorted(sp3_now, key=lambda a: (a.element != first, a.id))
-            pick = order[:2]
+            pick = sorted(order[:2], key=lambda a: a.id)
             label = "+2 sp2: " + ", ".join(a.label for a in pick)
             if all(v.label != label for v in variants):
                 variants.append(Variant(label=label, hyb={a.id: 2 for a in pick}))

@@ -112,12 +112,33 @@ def _in_windows(shift: float, windows: list[tuple[float, float]]) -> bool:
     return any(lo <= shift <= hi for lo, hi in windows)
 
 
-def pick_lines(spectrum: Spectrum1D, signed: bool) -> list[Line]:
-    """All lines above the default signal-to-noise floor."""
+def pick_lines(spectrum: Spectrum1D, signed: bool, min_prominence: float = 4.0) -> list[Line]:
+    """All lines above the default signal-to-noise floor that stand out from their base.
+
+    A local maximum on the flank of a broad hump or of a strong line clears the noise
+    floor without being a line of its own. Its prominence (height above the higher of
+    the two minima that separate it from taller peaks) is small; lines whose prominence
+    is below ``min_prominence`` times the noise are dropped.
+    """
+    from scipy.signal import peak_prominences  # type: ignore[import-untyped]
+
     peaks = AdaptivePeakPicker.pick_peaks(spectrum, detect_negative=signed, snr_floor=5.0)
-    return [
-        Line(shift=p.position, intensity=p.intensity, snr=float(p.snr or 0.0)) for p in peaks.peaks
-    ]
+    sigma = peaks.noise_sigma
+    data = spectrum.data
+    scale = spectrum.ppm_scale
+    lines = []
+    for sign in (1, -1):
+        chosen = [p for p in peaks.peaks if (p.intensity >= 0) == (sign > 0)]
+        if not chosen:
+            continue
+        index = [int(np.argmin(np.abs(scale - p.position))) for p in chosen]
+        prominence = peak_prominences(sign * data, index)[0]
+        for p, prom in zip(chosen, prominence, strict=True):
+            if sigma and prom < min_prominence * sigma:
+                continue
+            lines.append(Line(shift=p.position, intensity=p.intensity, snr=float(p.snr or 0.0)))
+    lines.sort(key=lambda ln: -ln.shift)
+    return lines
 
 
 def drop_satellites(lines: list[Line]) -> tuple[list[Line], list[Line]]:
