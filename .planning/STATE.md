@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v11.0
 milestone_name: AILSA Rename
 status: executing
-last_updated: "2026-10-15T13:30:00.000Z"
-last_activity: 2026-10-15
+last_updated: "2026-10-31T11:00:00.000Z"
+last_activity: 2026-10-31
 progress:
   total_phases: 8
   completed_phases: 2
@@ -20,16 +20,44 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-21)
 
 **Core value:** AI agent autonomously determines compound structures from NMR, with a multi-agent team that uses the intended solver pipeline — not a manual bypass
-**Current focus:** Phase 105 complete; next Phase 106 (skill freeze/rename/restructure)
+**Current focus:** Phase 105.1 (lean skill `ailsa-lite` for small open-weight models, inserted 2026-10-31); then Phase 106 (frontier skill rebuild)
 
 ## Current Position
 
 Phase: 105 (documentation-and-outside-face) — COMPLETE, verified 2026-10-14
 Plan: 10 of 10
 Status: Phase 105 verified (15/15 after closing the deck-PDF gap); pushed to GitHub `steinbeck/ailsa`
-Last activity: 2026-10-29 -- 13C prediction without the current COCONUT shifts: NMRexp route closed, NMRNet++ run over COCONUT found geometry-dependent; next a graph-based 13C model
+Last activity: 2026-10-31 -- lean skill ailsa-lite v0.1 and the `ailsa case` commands built; paper skill tagged
 
-**Resume here (2026-10-29):**
+**Resume here (2026-10-31):**
+
+000. **Lean skill first (user decision 2026-10-31).** Order now: (1) a lean skill for small
+    open-weight models so the partner lab can work, (2) the frontier skill rebuilt to best
+    practices but tuned for Anthropic's top models, (3) the measured skill archived as the paper
+    skill. Maintenance rules for the two skills: `docs/SKILLS.md` (share code, not prose; the CLI
+    is the contract; a skill ships with its CLI).
+    - **Paper skill frozen:** annotated tags `paper-skill-v1` (`f9aa7b3`) and `paper-skill-v2`
+      (`6d2d126`), local only until pushed. The skill files on master are byte-identical to v2.
+    - **Built (Phase 105.1, v0.1):** `src/ailsa/case/` + `ailsa case scan/setup/check/edit/show/
+      solve/rank/report`; skill `src/ailsa/skills/ailsa-lite/` (SKILL.md about 1 000 tokens plus a
+      fixing guide); `ailsa skill list/install`; guide `docs/AILSA-LITE.md`; 38 new tests.
+    - **Key mechanisms:** solvent multiplets detected from the data (labels are sometimes wrong,
+      referencing offsets up to 1.4 ppm); HSQC cross-peaks from local maxima, clustered per proton
+      multiplet; DEPT/edited-HSQC signs calibrated against sp2 CH; CH/CH2/CH3 chosen jointly with
+      symmetry copies and HSQC-only carbons by the formula's hydrogen count; HMBC filtered per
+      proton column against t1 noise; LSD runs escalate ELIM to the first level with structures
+      plus one more; ranking compares predicted and observed 13C atom by atom (LSD keeps the atom
+      numbering), which is much sharper than nearest-line matching.
+    - **Measured on the development datasets (no model):** truth at rank 1 for 4 of 9 (MAE
+      margins 0.5-4.5 ppm). Misses: a 13C spectrum with only the solvent in it, a dispersive APT
+      as the only carbon spectrum, the count of sp2 heteroatoms (needs variants), too few HMBC
+      peaks surviving the filters, and one dataset not yet diagnosed. **With a small Claude model following the skill: 2 of 2 right**,
+      8 turns, under a minute and about one cent each.
+    - **Next:** evaluate the commands alone on the blind benchmark datasets (truth from the private
+      grading folder, nothing on the compute host), fix the biggest failure classes (variants for
+      sp2 heteroatoms and multiplicities, HMBC filter), then the partner lab and a Qwen run.
+
+**Earlier resume notes (2026-10-29):**
 
 00. **13C prediction without the current COCONUT shifts (2026-10-18..29).** Full record with every
     number, script and file in the private status file outside the repo (path in the auto-memory).

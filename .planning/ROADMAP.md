@@ -208,19 +208,20 @@ version if the public file is the outdated schema (conflicts with Phase 105's "n
 place of the current predicted COCONUT shifts (see STATE.md) — whether it becomes a phase and where it
 sits, to be discussed after Phase 105.
 
-**External dependency — open-weight comparison (partner lab, 2026-10-14):** the partner lab runs a
-local open-weight model (Qwen3.8-27B, Q4_K_M quantisation) in the OpenCode harness; OpenCode runs
-simple tasks there (2026-10-09). The user told the partner (2026-10-12) that the AILSA skill must
-first be rewritten to the best practices (Phase 106) and a lean variant for the open-weight model
-derived from it afterwards; running the current skills there would be wasted effort. The partner
-waits; the next step is ours, no date promised (2026-10-14). So **after Phase 106** a lean
-OpenCode/Qwen variant of the skill is owed — not yet a phase. Background research:
+**External dependency — open-weight comparison (partner lab).** The partner lab runs a local
+open-weight model (Qwen3.8-27B, Q4_K_M quantisation) in the OpenCode harness and waits for a skill
+it can run. **User decision 2026-10-31 (supersedes the order of 2026-10-12):** the lean skill comes
+*first*, as an additional skill next to the frontier skill, so the partner can work; then the
+frontier skill is rebuilt (Phase 106); the measured skill is archived as the paper skill (git tags
+`paper-skill-v1`/`paper-skill-v2`, set 2026-10-31). How the two maintained skills share code but no
+prose: `docs/SKILLS.md`. Inserted as Phase 105.1. Background research:
 `.planning/quick/261006-iob-*/`.
 
 ### Phases
 
 - [x] **Phase 104: Package and CLI** — PyPI package `ailsa`, module `ailsa` replacing `lucy_ng`, CLI `ailsa` with `lucy` kept as a deprecated alias for one release; full suite/mypy/ruff green on the renamed tree (completed 2026-10-03; PyPI upload of 0.1.0 deferred by user until after Phase 105 — see 104-HUMAN-UAT.md)
 - [x] **Phase 105: Documentation and outside face** — README, `docs/`, CLAUDE.md, the figshare record and the infographic deck under the new name; LSD and Nuzillard credited up front (completed 2026-10-14)
+- [ ] **Phase 105.1: Lean skill for small open-weight models (INSERTED 2026-10-31)** — `ailsa-lite`, an Agent Skill of about 1 000 tokens on top of new `ailsa case` commands (scan, setup, check/edit, solve, rank, report) that do all bookkeeping; shipped as package data and installed with `ailsa skill install`; partner guide `docs/AILSA-LITE.md` (in progress: v0.1 built)
 - [ ] **Phase 106: Freeze, rename and restructure the skill** — the two measured skill states tagged; `/ailsa:*` commands and `ailsa-*` agents; every skill file restructured to Anthropic's best practices (core under 500 lines, references, TOCs, no dead references, no history, no benchmark compounds, no model IDs, one term per role); an automated skill-lint check
 - [ ] **Phase 107: Evaluation bench and team-mode spike** — fixed ~25-dataset evaluation sample, per-run mechanics report, Mac/compute-host parity check, and a decided route for running the agent team unattended
 - [ ] **Phase 108: Foundation** — full reference DB on the compute host (figshare checked), silent `detect hhb` defect fixed, fragment DB decided, prerequisite checks cover every capability the skill relies on, devil's-advocate checks and sanitiser as scripts
@@ -303,6 +304,29 @@ Plans:
 **Wave 4** *(blocked on Wave 3 completion)*
 
 - [x] 105-09-PLAN.md — Phase gate: positive-controlled old-name grep, residue allow-list, link check, CLI-example audit, deck/figshare/bookkeeping checks, shift-source credit check
+
+#### Phase 105.1: Lean skill for small open-weight models (INSERTED)
+
+**Goal**: A 20-35 B open-weight model in OpenCode can run AILSA end to end, because deterministic
+commands do the bookkeeping the frontier skill leaves to the model.
+**Depends on**: nothing (inserted before 106 by the user, 2026-10-31).
+**Design and maintenance rules**: `docs/SKILLS.md` (share code, not prose; the CLI is the contract;
+a skill ships with the CLI it calls).
+**Success Criteria** (what must be TRUE):
+
+  1. `ailsa case scan/setup/check/edit/solve/rank/report` run a dataset end to end; all state is in
+     `analysis/problem.json` with the source peak of every correlation and the reason for every
+     edit; the LSD input is generated, never hand-written.
+  2. `ailsa skill install ailsa-lite --target opencode|claude` installs the skill matching the
+     installed CLI; the skill passes the format, size, hygiene and command-contract tests.
+  3. The commands alone (no model) put the true structure at rank 1 on the development datasets
+     where the atom table is right; failures are listed with their cause.
+  4. A small model (proxy: a small Claude model) follows the skill to a report without help.
+  5. The partner lab has an install and run guide (`docs/AILSA-LITE.md`).
+
+**Status 2026-10-31**: v0.1 built. Without a model, rank 1 = truth on 4 of 9 development
+datasets; with a small Claude model 2 of 2 tried. Open: wider evaluation on blind datasets,
+heteroatom-hybridisation and multiplicity variants, carbons seen only in 2D spectra.
 
 #### Phase 106: Freeze, rename and restructure the skill
 
