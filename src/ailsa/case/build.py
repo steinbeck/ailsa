@@ -11,7 +11,9 @@ Every decision that is not forced by the data is recorded as an assumption with 
 
 from __future__ import annotations
 
+import functools
 import math
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -140,13 +142,27 @@ def _collect_carbons(inp: BuildInput, problem: Problem) -> list[CarbonSignal]:
     if is_apt:
         for sig, ln in zip(signals, cleaned.lines, strict=True):
             sig.apt_sign = ln.sign
-    elif "APT" in exps:
-        _attach_1d(signals, exps["APT"], problem.solvent, "apt")
-    if "DEPT-135" in exps:
-        _attach_1d(signals, exps["DEPT-135"], problem.solvent, "dept135")
-    if "DEPT-90" in exps:
-        _attach_1d(signals, exps["DEPT-90"], problem.solvent, "dept90")
+    for kind, tag in (("APT", "apt"), ("DEPT-135", "dept135"), ("DEPT-90", "dept90")):
+        if kind in exps and not (kind == "APT" and is_apt):
+            step = functools.partial(_attach_1d, signals, exps[kind], problem.solvent, tag)
+            _optional(problem, kind, step)
     return signals
+
+
+def _optional(problem: Problem, kind: str, step: Callable[[], object]) -> object:
+    """Run one spectrum's step; an unreadable spectrum is skipped and reported."""
+    try:
+        return step()
+    except Exception as exc:  # unreadable or truncated data: carry on without it
+        problem.spectra.pop(kind, None)
+        problem.assumptions.append(
+            Assumption(
+                code="unreadable",
+                text=f"{kind} could not be read and was not used ({type(exc).__name__})",
+                fix="ailsa case setup DATASET --force --use KIND=EXPNO  (another experiment)",
+            )
+        )
+        return None
 
 
 def _attach_1d(
@@ -642,7 +658,9 @@ def build_problem(inp: BuildInput) -> Problem:
     signals = _collect_carbons(inp, problem)
     unassigned_hsqc: list[sp.Cluster] = []
     if "HSQC" in inp.experiments:
-        unassigned_hsqc = _attach_hsqc(signals, inp.experiments["HSQC"], problem)
+        hsqc = inp.experiments["HSQC"]
+        found = _optional(problem, "HSQC", lambda: _attach_hsqc(signals, hsqc, problem))
+        unassigned_hsqc = found if isinstance(found, list) else []
     _decide_multiplicities(signals, problem, counts)
 
     level = float(np.median([c.peak_max for x in signals for c in x.clusters] or [1.0]))
@@ -752,9 +770,11 @@ def build_problem(inp: BuildInput) -> Problem:
             )
         )
     if "HMBC" in inp.experiments:
-        _add_hmbc(problem, inp.experiments["HMBC"])
+        hmbc = inp.experiments["HMBC"]
+        _optional(problem, "HMBC", lambda: _add_hmbc(problem, hmbc))
     if "COSY" in inp.experiments:
-        _add_cosy(problem, inp.experiments["COSY"])
+        cosy = inp.experiments["COSY"]
+        _optional(problem, "COSY", lambda: _add_cosy(problem, cosy))
     problem.log("setup", f"built from {', '.join(f'{k}={v}' for k, v in problem.spectra.items())}")
     return problem
 

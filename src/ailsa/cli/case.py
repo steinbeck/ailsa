@@ -446,8 +446,9 @@ def edit_cmd(
     default=None,
     help="Correlations the solver may drop (default: as few as needed, 0-3).",
 )
-@click.option("--max-solutions", default=2000, show_default=True, help="Stop after this many.")
+@click.option("--max-solutions", default=20000, show_default=True, help="Stop after this many.")
 @click.option("--timeout", default=600, show_default=True, help="Seconds per solver run.")
+@click.option("--budget", default=1800, show_default=True, help="Seconds for all runs together.")
 @click.option(
     "--methyl-4j", is_flag=True, help="Let HMBC from methyl protons to sp2 carbons span four bonds."
 )
@@ -458,6 +459,7 @@ def solve_cmd(
     elim: int | None,
     max_solutions: int,
     timeout: int,
+    budget: int,
     methyl_4j: bool,
     analysis: str | None,
     output_format: str,
@@ -480,6 +482,7 @@ def solve_cmd(
             max_solutions=max_solutions,
             timeout=timeout,
             methyl_4j=methyl_4j,
+            budget=budget,
         )
     except RuntimeError as exc:
         click.echo(f"Error: {exc}")
@@ -487,7 +490,7 @@ def solve_cmd(
     problem.save(adir)
     text = ["Solver runs:"]
     for r in outcome.runs:
-        note = " (limit reached: the list is incomplete)" if r.limit_reached else ""
+        note = " (limit or time reached: the list is incomplete)" if r.limit_reached else ""
         note += f" ERROR: {r.error}" if r.error else ""
         variant = f" [{r.variant}]" if r.variant else ""
         text.append(
@@ -495,6 +498,8 @@ def solve_cmd(
             f"-> {r.solutions} structure(s){note}"
         )
     found = sum(r.solutions for r in outcome.runs)
+    if outcome.budget_reached:
+        text.append("Time budget used up: later runs were not started.")
     if found and not any(r.limit_reached for r in outcome.runs):
         text.append("Every structure that fits these runs is in the list.")
     text.append("")
