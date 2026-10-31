@@ -19,6 +19,10 @@ FORMULA_FILES = (
     "molform.txt",
 )
 
+# Kinds whose raw data setup can process when no processed spectrum exists. Not DEPT
+# or APT: their signs carry the information, and automatic phasing is unreliable.
+RAW_OK = ("13C", "HSQC", "HMBC", "COSY")
+
 # Kinds the guided workflow uses, in the order they are reported.
 KINDS = (
     "13C",
@@ -46,6 +50,7 @@ class Experiment:
     solvent: str | None
     processed: bool
     edited: bool = False
+    raw: bool = False
 
     def to_dict(self) -> dict[str, object]:
         return {
@@ -54,6 +59,7 @@ class Experiment:
             "pulse_program": self.pulse_program,
             "scans": self.scans,
             "processed": self.processed,
+            "raw": self.raw,
             "edited": self.edited,
         }
 
@@ -151,6 +157,7 @@ def read_experiment(path: Path) -> Experiment | None:
     solvent = _param(text, "SOLVENT") or None
     processed_file = "2rr" if is_2d else "1r"
     processed = (path / "pdata" / "1" / processed_file).is_file()
+    raw = (path / ("ser" if is_2d else "fid")).is_file()
     kind = classify(pulse_program, nucleus, nucleus_f1, is_2d)
     edited = kind == "HSQC" and "hsqced" in pulse_program.lower()
     return Experiment(
@@ -164,6 +171,7 @@ def read_experiment(path: Path) -> Experiment | None:
         solvent=solvent,
         processed=processed,
         edited=edited,
+        raw=raw,
     )
 
 
@@ -188,7 +196,8 @@ def scan_dataset(dataset: Path) -> ScanResult:
     """Classify every experiment of ``dataset`` and choose one per kind.
 
     Choice per kind: processed data first, then most scans, then lowest experiment
-    number. An edited HSQC is preferred over a plain one.
+    number. An edited HSQC is preferred over a plain one. Without processed data, a raw
+    13C, HSQC, HMBC or COSY experiment is chosen (setup processes it).
     """
     dataset = dataset.resolve()
     result = ScanResult(dataset=dataset)
@@ -204,9 +213,12 @@ def scan_dataset(dataset: Path) -> ScanResult:
             result.experiments.append(experiment)
     for kind in {e.kind for e in result.experiments}:
         usable = [e for e in result.experiments if e.kind == kind and e.processed]
+        if not usable and kind in RAW_OK:
+            # No processed spectrum: setup processes the raw data itself.
+            usable = [e for e in result.experiments if e.kind == kind and e.raw]
         if not usable:
             continue
-        usable.sort(key=lambda e: (not e.edited, -e.scans, _expno_key(e.expno)))
+        usable.sort(key=lambda e: (not e.processed, not e.edited, -e.scans, _expno_key(e.expno)))
         result.chosen[kind] = usable[0]
     solvents = [e.solvent for e in result.experiments if e.solvent]
     result.solvent = max(set(solvents), key=solvents.count) if solvents else None

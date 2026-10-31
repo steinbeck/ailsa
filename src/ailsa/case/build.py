@@ -13,12 +13,14 @@ from __future__ import annotations
 
 import functools
 import math
+import re
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 
 import numpy as np
 
+from ailsa.case import rawproc
 from ailsa.case import spectra as sp
 from ailsa.case.model import (
     HALOGENS,
@@ -32,6 +34,7 @@ from ailsa.case.model import (
     parse_formula,
 )
 from ailsa.case.scan import Experiment, ScanResult
+from ailsa.models import Spectrum1D, Spectrum2D
 from ailsa.processing.peak_picker_2d import _compute_2d_noise_sigma as noise_sigma_2d
 from ailsa.readers import BrukerReader
 
@@ -134,7 +137,7 @@ def _collect_carbons(inp: BuildInput, problem: Problem) -> list[CarbonSignal]:
     if source is None:
         raise ValueError("the dataset has no processed 13C or APT spectrum")
     is_apt = source.kind == "APT"
-    spectrum = BrukerReader.read_1d(source.path)
+    spectrum = _read_1d(source)
     detected, offset = sp.detected_solvent(spectrum, signed=is_apt)
     if detected:
         problem.solvent = detected
@@ -149,6 +152,40 @@ def _collect_carbons(inp: BuildInput, problem: Problem) -> list[CarbonSignal]:
             step = functools.partial(_attach_1d, signals, exps[kind], problem.solvent, tag)
             _optional(problem, kind, step)
     return signals
+
+
+def _read_1d(exp: Experiment) -> Spectrum1D:
+    """The processed 1D spectrum, or one processed here from the raw FID."""
+    if exp.processed:
+        return BrukerReader.read_1d(exp.path)
+    return rawproc.process_1d(exp.path, signed=exp.kind not in ("13C", "1H"))
+
+
+def _read_2d(exp: Experiment) -> Spectrum2D:
+    """The processed 2D spectrum, or a magnitude spectrum processed here from the SER."""
+    if exp.processed:
+        return BrukerReader.read_2d(exp.path)
+    return rawproc.process_2d(exp.path, exp.kind)
+
+
+def _acquired_f1(exp: Experiment, spectrum: Spectrum2D) -> float:
+    """F1 resolution as measured (ppm per increment), not as zero-filled for display.
+
+    A 2D experiment often has only 128-256 increments; zero filling makes the axis look
+    finer than the data are, and a peak's carbon shift is only as good as the measured
+    increments allow.
+    """
+    acqu2s = exp.path / "acqu2s"
+    try:
+        text = acqu2s.read_text(errors="replace")
+        td = int(float(re.search(r"^##\$TD=\s*(\S+)", text, re.MULTILINE).group(1)))  # type: ignore[union-attr]
+        fnmode_match = re.search(r"^##\$FnMODE=\s*(\S+)", text, re.MULTILINE)
+        fnmode = int(fnmode_match.group(1)) if fnmode_match else 0
+    except (OSError, ValueError, AttributeError):
+        return 0.0
+    points = td // 2 if fnmode in (4, 5, 6) else td
+    width = abs(float(spectrum.f1_ppm_scale[0] - spectrum.f1_ppm_scale[-1]))
+    return width / max(points, 1)
 
 
 def _optional(problem: Problem, kind: str, step: Callable[[], object]) -> object:
@@ -175,7 +212,7 @@ def _attach_1d(
     Lines weaker than 8 % of the median of the stronger half are leakage (a quaternary
     carbon in a DEPT, a CH3 in a DEPT-90) and do not count as a signal.
     """
-    spectrum = BrukerReader.read_1d(exp.path)
+    spectrum = _read_1d(exp)
     cleaned = sp.carbon_lines(spectrum, solvent, signed=kind != "dept90")
     lines = cleaned.lines
     if lines:
@@ -208,7 +245,7 @@ def _attach_hsqc(
     A global carbon offset between HSQC and 13C referencing is estimated and removed.
     Where two carbon lines are close, a carbon that shows a DEPT signal is preferred.
     """
-    spectrum = BrukerReader.read_2d(exp.path)
+    spectrum = _read_2d(exp)
     clusters = sp.hsqc_clusters(spectrum, signed=True, threshold=0.01)
     clusters = [
         c
@@ -225,7 +262,7 @@ def _attach_hsqc(
         for c in clusters
         if not (c.c_shift >= 100 and c.h_shift < 4.0) and not (c.c_shift < 50 and c.h_shift > 6.0)
     ]
-    tol = max(0.6, 2.0 * sp.resolution(spectrum.f1_ppm_scale))
+    tol = max(0.6, 2.0 * sp.resolution(spectrum.f1_ppm_scale), 0.6 * _acquired_f1(exp, spectrum))
     offset = _hsqc_offset(signals, clusters)
     have_dept = any(s.dept135 is not None for s in signals)
     unassigned: list[sp.Cluster] = []
@@ -903,9 +940,9 @@ def _match_proton(table: list[tuple[float, int]], h: float, tol: float) -> tuple
 
 def _add_hmbc(problem: Problem, exp: Experiment) -> None:
     """HMBC correlations that survive the noise filters."""
-    spectrum = BrukerReader.read_2d(exp.path)
+    spectrum = _read_2d(exp)
     peaks = sp.peaks_2d(spectrum, snr_floor=5.0)
-    c_tol = max(0.5, 1.5 * sp.resolution(spectrum.f1_ppm_scale))
+    c_tol = max(0.5, 1.5 * sp.resolution(spectrum.f1_ppm_scale), 0.75 * _acquired_f1(exp, spectrum))
     h_tol = 0.05
     protons = _proton_table(problem)
     carbons = problem.signals()
@@ -978,7 +1015,7 @@ def _add_hmbc(problem: Problem, exp: Experiment) -> None:
 
 def _add_cosy(problem: Problem, exp: Experiment) -> None:
     """COSY correlations between protons on different carbons (not used by default)."""
-    spectrum = BrukerReader.read_2d(exp.path)
+    spectrum = _read_2d(exp)
     peaks = sp.peaks_2d(spectrum, snr_floor=8.0)
     protons = _proton_table(problem)
     seen: dict[tuple[int, int], sp.Peak2DLite] = {}

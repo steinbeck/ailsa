@@ -110,6 +110,8 @@ def scan_cmd(dataset: str, output_format: str) -> None:
             alts = [e.expno for e in result.alternatives(kind)]
             extra = f"   others: {', '.join(alts)}" if alts else ""
             edited = " (edited)" if result.chosen[kind].edited else ""
+            if not result.chosen[kind].processed:
+                edited += " (raw data: setup processes it)"
             text.append(f"  {kind:9} {result.chosen[kind].expno}{edited}{extra}")
     others = sorted({e.kind for e in result.experiments} - set(KINDS))
     if others:
