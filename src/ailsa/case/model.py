@@ -119,6 +119,7 @@ class RunRecord(BaseModel):
 
     number: int
     batch: int = 1
+    variant: str = ""
     directory: str
     elim: int
     solutions: int

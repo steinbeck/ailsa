@@ -14,6 +14,7 @@ from pathlib import Path
 FORMULA_FILES = (
     "molecular-formula.txt",
     "molecular_formula.txt",
+    "molecularformula.txt",
     "formula.txt",
     "molform.txt",
 )

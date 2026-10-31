@@ -34,6 +34,11 @@ from ailsa.case.scan import Experiment, ScanResult
 from ailsa.processing.peak_picker_2d import _compute_2d_noise_sigma as noise_sigma_2d
 from ailsa.readers import BrukerReader
 
+# t1 noise in an HMBC proton column: a peak on a carbon must exceed this factor times
+# this percentile of the peaks in the same column that hit no carbon.
+HMBC_NOISE_PERCENTILE = 90
+HMBC_NOISE_FACTOR = 2.0
+
 # A carbonyl carbon is fixed as C=O from these shifts; below, C=O and C=C/C=N overlap.
 CARBONYL_C = 168.0
 ALDEHYDE_C = 188.0
@@ -888,7 +893,7 @@ def _add_hmbc(problem: Problem, exp: Experiment) -> None:
         by_column.setdefault(aid, []).append(p)
     for aid, col in by_column.items():
         off = [p.snr for p in col if not carbons_near(p.c_shift)]
-        column_noise[aid] = float(np.percentile(off, 90)) if off else 0.0
+        column_noise[aid] = float(np.percentile(off, HMBC_NOISE_PERCENTILE)) if off else 0.0
 
     best: dict[tuple[tuple[int, ...], int], sp.Peak2DLite] = {}
     notes: dict[tuple[tuple[int, ...], int], str] = {}
@@ -903,7 +908,7 @@ def _add_hmbc(problem: Problem, exp: Experiment) -> None:
         xs = [x for x in xs if x not in own]
         if not xs:
             continue  # one-bond leakage onto the proton's own carbon
-        if p.snr < max(5.0, 2.0 * column_noise.get(aid, 0.0)):
+        if p.snr < max(5.0, HMBC_NOISE_FACTOR * column_noise.get(aid, 0.0)):
             continue
         group: list[int] = []
         for x in xs:

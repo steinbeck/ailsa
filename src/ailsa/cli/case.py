@@ -489,8 +489,9 @@ def solve_cmd(
     for r in outcome.runs:
         note = " (limit reached: the list is incomplete)" if r.limit_reached else ""
         note += f" ERROR: {r.error}" if r.error else ""
+        variant = f" [{r.variant}]" if r.variant else ""
         text.append(
-            f"  run {r.number}: solver may ignore up to {r.elim} correlation(s) "
+            f"  run {r.number}{variant}: solver may ignore up to {r.elim} correlation(s) "
             f"-> {r.solutions} structure(s){note}"
         )
     found = sum(r.solutions for r in outcome.runs)

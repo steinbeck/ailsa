@@ -13,6 +13,7 @@ from pathlib import Path
 
 from ailsa.case.lsdfile import render
 from ailsa.case.model import Problem, RunRecord, utc_now
+from ailsa.case.variants import Variant, heteroatom_variants
 from ailsa.lsd.runner import LSDRunner
 
 RUNS_DIR = "runs"
@@ -38,17 +39,59 @@ def solve(
     timeout: int = 600,
     extra_level: bool = True,
     methyl_4j: bool = False,
+    variants: bool = True,
 ) -> SolveResult:
     """Run LSD on ``problem``; with ``elim=None`` escalate from 0 to 3 as needed.
 
-    Every run gets its own directory ``runs/run_NN`` with the LSD input, the solver's
-    output and ``solutions.smi``. The runs are appended to ``problem.runs``.
+    With ``variants``, the alternative heteroatom hybridisations of
+    :func:`ailsa.case.variants.heteroatom_variants` are run as well, each with its own
+    escalation; the ranking then compares all their structures. Every run gets its own
+    directory ``runs/run_NN`` with the LSD input, the solver's output and
+    ``solutions.smi``. The runs are appended to ``problem.runs`` under one batch number.
     """
     runner = LSDRunner()
     if runner.lsd_path is None:
         raise RuntimeError("LSD is not installed or not on PATH (check with: ailsa lsd check)")
-    levels = [elim] if elim is not None else list(range(MAX_ELIM + 1))
     batch = max((r.batch for r in problem.runs), default=0) + 1
+    plans = [Variant(label="")]
+    if variants:
+        plans += heteroatom_variants(problem)
+    done: list[RunRecord] = []
+    for plan in plans:
+        target = plan.apply(problem) if plan.hyb else problem
+        done += _escalate(
+            problem,
+            target,
+            plan.label,
+            runner,
+            analysis_dir,
+            batch,
+            elim,
+            max_solutions,
+            timeout,
+            extra_level,
+            methyl_4j,
+        )
+        if any(r.error for r in done):
+            break
+    return SolveResult(runs=done)
+
+
+def _escalate(
+    problem: Problem,
+    target: Problem,
+    label: str,
+    runner: LSDRunner,
+    analysis_dir: Path,
+    batch: int,
+    elim: int | None,
+    max_solutions: int,
+    timeout: int,
+    extra_level: bool,
+    methyl_4j: bool,
+) -> list[RunRecord]:
+    """The ELIM escalation for one atom table; records go to ``problem``."""
+    levels = [elim] if elim is not None else list(range(MAX_ELIM + 1))
     done: list[RunRecord] = []
     for level in levels:
         number = len(problem.runs) + 1
@@ -56,7 +99,7 @@ def solve(
         run_dir.mkdir(parents=True, exist_ok=True)
         lsd_file = run_dir / "compound.lsd"
         lsd_file.write_text(
-            render(problem, elim=level, max_solutions=max_solutions, methyl_4j=methyl_4j)
+            render(target, elim=level, max_solutions=max_solutions, methyl_4j=methyl_4j)
         )
         result = runner.run_file(lsd_file, output_dir=run_dir, timeout=timeout)
         count = result.solution_count if result.return_code == 0 or result.success else 0
@@ -68,6 +111,7 @@ def solve(
         record = RunRecord(
             number=number,
             batch=batch,
+            variant=label,
             directory=str(run_dir.relative_to(analysis_dir)),
             elim=level,
             solutions=count,
@@ -79,14 +123,15 @@ def solve(
         )
         problem.runs.append(record)
         done.append(record)
-        problem.log("solve", f"run {number}: ELIM {level}, {count} solution(s)")
+        what = f" ({label})" if label else ""
+        problem.log("solve", f"run {number}{what}: ELIM {level}, {count} solution(s)")
         if error:
             break
         if count > 0:
             found = [r for r in done if r.solutions > 0]
             if not extra_level or elim is not None or len(found) > 1 or record.limit_reached:
                 break
-    return SolveResult(runs=done)
+    return done
 
 
 def _lsd_error(stdout: str, stderr: str) -> str:
