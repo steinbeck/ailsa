@@ -39,6 +39,8 @@ from ailsa.readers import BrukerReader
 # this percentile of the peaks in the same column that hit no carbon.
 HMBC_NOISE_PERCENTILE = 90
 HMBC_NOISE_FACTOR = 2.0
+# Peaks this much weaker than the strongest peak of the same proton were mostly wrong.
+HMBC_WEAK = 0.05
 
 # A carbonyl carbon is fixed as C=O from these shifts; below, C=O and C=C/C=N overlap.
 CARBONYL_C = 168.0
@@ -886,13 +888,17 @@ def _proton_table(problem: Problem) -> list[tuple[float, int]]:
 
 
 def _match_proton(table: list[tuple[float, int]], h: float, tol: float) -> tuple[int | None, bool]:
+    """The atom whose proton is nearest to ``h``, and whether another atom's is close too.
+
+    A 2D peak lands anywhere within its proton's multiplet, so a second proton within
+    the tolerance makes the attribution unreliable: on the benchmark data most strong
+    HMBC correlations that contradicted the true structure were such cases.
+    """
     near = sorted((abs(h - hs), aid) for hs, aid in table if abs(h - hs) <= tol)
     if not near:
         return None, False
     ids = {aid for _, aid in near}
-    if len(ids) > 1 and near[1][0] - near[0][0] < 0.015 and near[1][1] != near[0][1]:
-        return near[0][1], True
-    return near[0][1], False
+    return near[0][1], len(ids) > 1
 
 
 def _add_hmbc(problem: Problem, exp: Experiment) -> None:
@@ -943,12 +949,17 @@ def _add_hmbc(problem: Problem, exp: Experiment) -> None:
             notes[key] = "proton overlaps another proton" if ambiguous else ""
 
     items = sorted(best.items(), key=lambda kv: -kv[1].snr)
+    column_top: dict[int, float] = {}
+    for (_, aid), p in items:
+        column_top[aid] = max(column_top.get(aid, 0.0), p.snr)
     for n, ((xs_t, aid), p) in enumerate(items, start=1):
         xs_l = list(xs_t)
-        use = len(xs_l) <= 4 and not notes[(xs_t, aid)]
         reason = notes[(xs_t, aid)]
         if len(xs_l) > 4:
             reason = "more than four candidate carbons"
+        elif p.snr < HMBC_WEAK * column_top[aid]:
+            reason = "weak: below 5 % of the strongest peak of this proton"
+        use = not reason
         problem.correlations.append(
             Correlation(
                 id=f"B{n}",
