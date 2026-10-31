@@ -6,6 +6,7 @@ import click
 
 from ailsa import __version__
 from ailsa.cli.analyze import analyze
+from ailsa.cli.case import case
 from ailsa.cli.database import database
 from ailsa.cli.dereplicate import dereplicate
 from ailsa.cli.detect import detect
@@ -19,6 +20,7 @@ from ailsa.cli.pick import pick
 from ailsa.cli.predict import predict
 from ailsa.cli.pylsd import pylsd
 from ailsa.cli.read import read
+from ailsa.cli.skill import skill
 from ailsa.cli.visualize import visualize
 from ailsa.cli.webview import webview
 
@@ -34,6 +36,7 @@ def cli() -> None:
     Commands:
 
     \b
+      case        Guided structure elucidation, one step per command
       read        Read NMR spectra (1D, 2D)
       pick        Peak picking from spectra
       analyze     Analysis tools (symmetry detection)
@@ -49,11 +52,13 @@ def cli() -> None:
       webview     Dashboard server for live CASE runs
       nus         NUS (Non-Uniform Sampling) 2D reconstruction
       jcamp       JCAMP-DX ingestion (read -> pick -> QC -> write)
+      skill       Install the agent skills that ship with ailsa
     """
     pass
 
 
 # Register command groups
+cli.add_command(case)
 cli.add_command(read)
 cli.add_command(pick)
 cli.add_command(analyze)
@@ -70,6 +75,7 @@ cli.add_command(fragment)
 cli.add_command(webview)
 cli.add_command(nus)
 cli.add_command(jcamp)
+cli.add_command(skill)
 
 
 LUCY_DEPRECATION_MESSAGE = (
