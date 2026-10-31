@@ -53,9 +53,23 @@ Last activity: 2026-10-31 -- lean skill ailsa-lite v0.1 and the `ailsa case` com
       as the only carbon spectrum, the count of sp2 heteroatoms (needs variants), too few HMBC
       peaks surviving the filters, and one dataset not yet diagnosed. **With a small Claude model following the skill: 2 of 2 right**,
       8 turns, under a minute and about one cent each.
-    - **Next:** evaluate the commands alone on the blind benchmark datasets (truth from the private
-      grading folder, nothing on the compute host), fix the biggest failure classes (variants for
-      sp2 heteroatoms and multiplicities, HMBC filter), then the partner lab and a Qwen run.
+    - **Later the same day (commits up to `5706905`):** sp2-heteroatom variants run by solve;
+      LSD with DUPL 1 (every atom assignment, needed for atom-by-atom ranking) and MAXS 20000;
+      prominence filter for 13C lines on broad humps; counts chosen by a dynamic programme over
+      (carbons, hydrogens); HMBC peaks with a second proton within 0.05 ppm or below 5 % of their
+      column's strongest peak are not used; a time budget for solve; raw FID/SER processed when no
+      processed spectrum exists (a third of the benchmark has HSQC or HMBC only raw); 2D carbon
+      tolerances from the measured F1 increments; non-numeric experiment folders shown as aliases
+      (folder names can name the compound).
+    - **Commands alone on the first 60 blind benchmark datasets** (private evaluation scripts and
+      results outside the repo, path in the auto-memory): truth at rank 1 for 3 of 58 before the
+      HMBC fix; the diagnosis against the truth shows the atom table is the main gap (wrong
+      multiplicities, hybridisation or heteroatom hydrogens in most failures), then HMBC
+      correlations the truth violates (18 % before, 13 % after the fix). Real data are much harder
+      than the development set. A rerun with all fixes was still running at the end of the session.
+    - **Next:** the atom table on real data (multiplicity from 1H integrals, HSQC-only and noise
+      lines, heteroatom hydrogens), then a small-model run on benchmark data to see what the model's
+      edits recover; then the partner lab and a Qwen run.
 
 **Earlier resume notes (2026-10-29):**
 
