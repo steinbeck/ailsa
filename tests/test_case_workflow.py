@@ -193,3 +193,15 @@ def test_lsd_solves_small_problem(tmp_path) -> None:  # type: ignore[no-untyped-
     assert result.final is not None and result.final.solutions >= 1
     assert (tmp_path / result.final.directory / "solutions.smi").exists()
     shutil.rmtree(tmp_path / "runs")
+
+
+def test_scan_hides_folder_names(tmp_path) -> None:  # type: ignore[no-untyped-def]
+    """A non-numeric experiment folder may carry the compound's name: show an alias."""
+    from ailsa.case.scan import scan_dataset
+
+    for name, pulprog in (("3", "zgpg30"), ("4_NAME_HSQC", "hsqcedetgpsisp2.3")):
+        folder = tmp_path / name
+        folder.mkdir()
+        (folder / "acqus").write_text(f"##$PULPROG= <{pulprog}>\n##$NUC1= <13C>\n##$NS= 16\n")
+    result = scan_dataset(tmp_path)
+    assert sorted(e.expno for e in result.experiments) == ["3", "x1"]

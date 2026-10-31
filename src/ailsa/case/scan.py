@@ -193,9 +193,14 @@ def scan_dataset(dataset: Path) -> ScanResult:
     dataset = dataset.resolve()
     result = ScanResult(dataset=dataset)
     folders = [p for p in dataset.iterdir() if p.is_dir()]
+    aliases = 0
     for folder in sorted(folders, key=lambda p: _expno_key(p.name)):
         experiment = read_experiment(folder)
         if experiment is not None:
+            if not experiment.expno.isdigit():
+                # A folder name other than a number may name the compound; never show it.
+                aliases += 1
+                experiment.expno = f"x{aliases}"
             result.experiments.append(experiment)
     for kind in {e.kind for e in result.experiments}:
         usable = [e for e in result.experiments if e.kind == kind and e.processed]
