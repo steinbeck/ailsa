@@ -35,7 +35,7 @@ def solve(
     problem: Problem,
     analysis_dir: Path,
     elim: int | None = None,
-    max_solutions: int = 2000,
+    max_solutions: int = 20000,
     timeout: int = 600,
     extra_level: bool = True,
     methyl_4j: bool = False,
@@ -104,8 +104,8 @@ def _escalate(
         result = runner.run_file(lsd_file, output_dir=run_dir, timeout=timeout)
         count = result.solution_count if result.return_code == 0 or result.success else 0
         error = ""
-        if not result.success and count > 0:
-            error = "solutions found but not converted to SMILES"
+        if count > 0 and not (run_dir / "compound.sol").exists():
+            error = "the solver reported structures but wrote no solution file"
         elif result.return_code not in (0,) and count == 0:
             error = _lsd_error(result.stdout, result.stderr)
         record = RunRecord(

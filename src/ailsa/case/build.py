@@ -11,7 +11,6 @@ Every decision that is not forced by the data is recorded as an assumption with 
 
 from __future__ import annotations
 
-import itertools
 import math
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -470,8 +469,8 @@ def _decide_hybridisation(sig: CarbonSignal, counts: dict[str, int]) -> None:
 
 def _evidence(signals: list[CarbonSignal]) -> list[float]:
     """How strongly each line looks like two or more carbons, as an intensity ratio."""
-    protonated = [s.snr for s in signals if s.hydrogens > 0]
-    quaternary = [s.snr for s in signals if s.hydrogens == 0]
+    protonated = [s.snr for s in signals if s.hydrogens > 0 and not s.from_hsqc]
+    quaternary = [s.snr for s in signals if s.hydrogens == 0 and not s.from_hsqc]
     med_p = float(np.median(protonated)) if protonated else 1.0
     med_q = float(np.median(quaternary)) if quaternary else 1.0
     result = []
@@ -484,17 +483,28 @@ def _evidence(signals: list[CarbonSignal]) -> list[float]:
 def resolve_counts(
     signals: list[CarbonSignal], counts: dict[str, int]
 ) -> tuple[list[int], dict[int, int], int, str]:
-    """Copies per line and CH/CH3 choices that fit the formula.
+    """Copies and hydrogen count of every signal, chosen to fit the formula.
 
-    Searches, jointly: which HSQC-only carbons (``from_hsqc``) to add, the number of
-    copies of each 13C line (symmetry), and the hydrogen count of lines that may be CH
-    or CH3, such that the carbon count equals the formula and the hydrogens left fit
-    the heteroatoms. Prefers duplicating the most intense lines, adding HSQC-only
-    carbons that the solvent hides, and keeping the CH/CH3 choices.
+    For each signal the options are: how many carbons it stands for (0 drops a 13C line
+    as noise or impurity, or leaves out an HSQC-only candidate; 2 or 3 for symmetry
+    copies) and, where the spectra do not decide it, its hydrogen count. Each option has
+    a log-likelihood:
 
-    Returns copies per signal (0 drops an HSQC-only carbon), changed hydrogen counts
-    by index, the hydrogens left for heteroatoms, and a note on how clear the choice
-    was.
+    - copies: the line's intensity against the typical line, compared with the number
+      of carbons it would stand for (log-normal, so a line twice as strong as the
+      others fits two carbons);
+    - dropping a 13C line: unlikely a priori, less so for a weak line without HSQC
+      or DEPT signal;
+    - adding an HSQC-only carbon: likely under the solvent signal, otherwise in
+      proportion to its cross-peak;
+    - hydrogen count: the signal's own probabilities; a count the spectra fixed can
+      still change, at a high cost, so that a wrong cross-peak cannot make the formula
+      unreachable.
+
+    A dynamic programme over (carbons, hydrogens) finds the combination with the
+    highest total whose carbon count equals the formula and whose remaining hydrogens
+    fit the heteroatoms. Returns copies per signal, changed hydrogen counts by index,
+    the hydrogens left for heteroatoms, and a note.
     """
     n_c = counts.get("C", 0)
     n_h = counts.get("H", 0)
@@ -506,67 +516,70 @@ def resolve_counts(
     )
     hetero_cap = sum(HETERO_MAX_H.get(el, 0) * k for el, k in counts.items())
     hetero_cap -= min(carbonyls, counts.get("O", 0)) * HETERO_MAX_H["O"]
-    lines = [i for i, s in enumerate(signals) if not s.from_hsqc]
-    extras = [i for i, s in enumerate(signals) if s.from_hsqc]
-    deficit = n_c - len(lines)
     evidence = _evidence(signals)
-    uncertain = sorted(
-        (i for i, s in enumerate(signals) if s.options),
-        key=lambda i: _option_gap(signals[i].options),
-    )[:8]
-    order = sorted(lines, key=lambda i: -evidence[i])
-    candidates = order[: min(len(lines), max(deficit, 0) + 6)]
-    choice_space = list(itertools.product(*(sorted(signals[i].options) for i in uncertain)))
+    lines = [s for s in signals if not s.from_hsqc]
+    strong = sorted((s.snr for s in lines), reverse=True)[: max(1, len(lines) // 2)]
+    weak_level = 0.25 * float(np.median(strong)) if strong else 0.0
 
-    best: tuple[float, list[int], dict[int, int], int] | None = None
-    second = -math.inf
-    evaluated = 0
-    for k in range(0, max(0, min(deficit, len(extras))) + 1):
-        for chosen in itertools.combinations(extras, k):
-            extra_score = sum(signals[i].extra_evidence for i in chosen)
-            n_dup = deficit - k
-            multisets = (
-                itertools.combinations_with_replacement(candidates, n_dup) if n_dup > 0 else [()]
-            )
-            for multiset in multisets:
-                evaluated += 1
-                if evaluated > 40000:
-                    break
-                copies = [0 if signals[i].from_hsqc else 1 for i in range(len(signals))]
-                for i in chosen:
-                    copies[i] = 1
-                for i in multiset:
-                    copies[i] += 1
-                if any(
-                    c > 3 or (c == 3 and signals[i].hydrogens != 3) for i, c in enumerate(copies)
-                ):
+    def options(i: int) -> list[tuple[int, int, float]]:
+        sig = signals[i]
+        if sig.options:
+            h_opts = dict(sig.options)
+        else:
+            h_opts = {sig.hydrogens: 0.0}
+            for h in (0, 1, 2, 3):
+                if h != sig.hydrogens:
+                    h_opts[h] = -5.0 if (h == 0) != (sig.hydrogens == 0) else -4.0
+        result: list[tuple[int, int, float]] = []
+        if sig.from_hsqc:
+            result.append((0, 0, 0.0))
+            for h, lp in h_opts.items():
+                if h > 0:
+                    result.append((1, h, sig.extra_evidence + lp))
+            return result
+        weak = sig.snr < weak_level and not sig.protonated
+        result.append((0, 0, -1.0 if weak else -4.0))
+        ratio = max(evidence[i], 0.05)
+        for c in (1, 2, 3):
+            if c == 3 and not (sig.options.get(3, -9.0) > -9.0 or sig.hydrogens == 3):
+                continue
+            fit = -((math.log(ratio) - math.log(c)) ** 2) / (2 * 0.35**2)
+            base = -((math.log(ratio)) ** 2) / (2 * 0.35**2)
+            for h, lp in h_opts.items():
+                if c == 3 and h != 3:
                     continue
-                base = extra_score + sum(math.log(max(evidence[i], 0.05)) for i in multiset)
-                for choice in choice_space:
-                    hyd = {i: signals[i].hydrogens for i in range(len(signals))}
-                    for i, h in zip(uncertain, choice, strict=True):
-                        hyd[i] = h
-                    left = n_h - sum(hyd[i] * copies[i] for i in range(len(signals)))
-                    if not 0 <= left <= hetero_cap:
-                        continue
-                    score = base + sum(
-                        signals[i].options[h] * copies[i]
-                        for i, h in zip(uncertain, choice, strict=True)
-                    )
-                    if best is None or score > best[0]:
-                        if best is not None:
-                            second = max(second, best[0])
-                        changed = {i: hyd[i] for i in uncertain if hyd[i] != signals[i].hydrogens}
-                        best = (score, copies, changed, left)
-                    else:
-                        second = max(second, score)
-    if best is None:
+                result.append((c, h, lp + fit - base))
+        return result
+
+    # best[(carbons, hydrogens)] = (score, choices)
+    best: dict[tuple[int, int], tuple[float, tuple[tuple[int, int], ...]]] = {(0, 0): (0.0, ())}
+    for i in range(len(signals)):
+        nxt: dict[tuple[int, int], tuple[float, tuple[tuple[int, int], ...]]] = {}
+        for (nc, nh), (score, path) in best.items():
+            for c, h, lp in options(i):
+                key = (nc + c, nh + c * h)
+                if key[0] > n_c or key[1] > n_h:
+                    continue
+                cand = (score + lp, (*path, (c, h)))
+                if key not in nxt or cand[0] > nxt[key][0]:
+                    nxt[key] = cand
+        best = nxt
+    feasible = [
+        (score, path, n_h - nh)
+        for (nc, nh), (score, path) in best.items()
+        if nc == n_c and 0 <= n_h - nh <= hetero_cap
+    ]
+    if not feasible:
         copies = [0 if s.from_hsqc else 1 for s in signals]
         h_carbon = sum(s.hydrogens for s, c in zip(signals, copies, strict=True) if c)
         return copies, {}, n_h - h_carbon, "no choice fits the formula"
-    gap = best[0] - second
-    note = "clear" if gap >= 0.5 or second == -math.inf else "close alternatives exist"
-    return best[1], best[2], best[3], note
+    feasible.sort(key=lambda t: -t[0])
+    score, path, left = feasible[0]
+    copies = [c for c, _ in path]
+    changed = {i: h for i, (c, h) in enumerate(path) if c and h != signals[i].hydrogens}
+    margin = score - feasible[1][0] if len(feasible) > 1 else math.inf
+    note = "clear" if margin >= 1.0 else "close alternatives exist"
+    return copies, changed, left, note
 
 
 def _option_gap(options: dict[int, float]) -> float:
@@ -632,28 +645,6 @@ def build_problem(inp: BuildInput) -> Problem:
         unassigned_hsqc = _attach_hsqc(signals, inp.experiments["HSQC"], problem)
     _decide_multiplicities(signals, problem, counts)
 
-    # Surplus lines: drop clearly weak lines without HSQC or DEPT support.
-    surplus = len(signals) - counts.get("C", 0)
-    if surplus > 0:
-        strong = sorted((x.snr for x in signals), reverse=True)[: max(1, len(signals) // 2)]
-        weak_level = 0.25 * float(np.median(strong))
-        weak = sorted(
-            (x for x in signals if not x.protonated and x.snr < weak_level), key=lambda x: x.snr
-        )[:surplus]
-        for x in weak:
-            signals.remove(x)
-        if weak:
-            problem.assumptions.append(
-                Assumption(
-                    code="surplus",
-                    text=(
-                        f"{len(weak)} more lines than carbons in the formula; removed weak lines "
-                        "without HSQC/DEPT signal: " + ", ".join(f"{x.shift:.2f} ppm" for x in weak)
-                    ),
-                    fix="ailsa case edit DATASET --add-carbon SHIFT:C  (to put one back)",
-                )
-            )
-
     level = float(np.median([c.peak_max for x in signals for c in x.clusters] or [1.0]))
     signals += _hsqc_only_carbons(unassigned_hsqc, problem, counts, level)
     copies, changed, hetero_h, note = resolve_counts(signals, counts)
@@ -662,6 +653,18 @@ def build_problem(inp: BuildInput) -> Problem:
         signals[i].mult_source += "; set by the hydrogen count of the formula"
     for i, n in enumerate(copies):
         signals[i].copies = n
+    dropped = [x for x in signals if not x.from_hsqc and not x.copies]
+    if dropped:
+        problem.assumptions.append(
+            Assumption(
+                code="surplus",
+                text=(
+                    "left out as noise or impurity (the formula has fewer carbons): "
+                    + ", ".join(f"{x.shift:.2f} ppm" for x in dropped)
+                ),
+                fix="ailsa case edit DATASET --add-carbon SHIFT:TYPE  (to put one back)",
+            )
+        )
     added = [x for x in signals if x.from_hsqc and x.copies]
     unassigned_hsqc = [x.clusters[0] for x in signals if x.from_hsqc and not x.copies]
     signals = sorted((x for x in signals if x.copies), key=lambda x: -x.shift)
@@ -805,13 +808,14 @@ def _add_heteroatoms(problem: Problem, counts: dict[str, int], hetero_h: int) ->
     left = hetero_h
     placed: list[str] = []
     for el in ("O", "N", "S"):
-        for atom in hetero:
-            if left <= 0:
-                break
-            if atom.element == el and atom.hyb == 3 and atom.hydrogens < HETERO_MAX_H[el]:
-                atom.hydrogens += 1
-                left -= 1
-                placed.append(atom.label)
+        for _ in range(HETERO_MAX_H[el]):
+            for atom in hetero:
+                if left <= 0:
+                    break
+                if atom.element == el and atom.hyb == 3 and atom.hydrogens < HETERO_MAX_H[el]:
+                    atom.hydrogens += 1
+                    left -= 1
+                    placed.append(atom.label)
     if hetero_h:
         both = counts.get("O") and counts.get("N")
         problem.assumptions.append(

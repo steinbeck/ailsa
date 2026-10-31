@@ -18,6 +18,7 @@ from ailsa.case.lsdfile import lsd_index
 from ailsa.case.model import Problem
 from ailsa.identity import derive_identity
 from ailsa.lsd.analyzer import LSDSolutionAnalyzer, SolutionGraph
+from ailsa.prediction.models import PredictionResult
 from ailsa.prediction.resolver import resolve_c13_predictor
 
 RANKING_FILE = "ranking.json"
@@ -93,6 +94,7 @@ def rank_problem(problem: Problem, analysis_dir: Path, top: int = 10) -> RankRes
     atom_of = {v: problem.atom(k) for k, v in idx.items()}
     used = [c for c in problem.correlations if c.use and c.kind == "HMBC"]
     best: dict[str, Candidate] = {}
+    predicted: dict[str, PredictionResult] = {}
     total = skipped = 0
     for record in problem.runs:
         if record.number not in run_numbers or record.solutions == 0:
@@ -107,7 +109,10 @@ def rank_problem(problem: Problem, analysis_dir: Path, top: int = 10) -> RankRes
                 skipped += 1
                 continue
             mol, smiles, lsd_order = parsed
-            prediction = predictor.predict_from_smiles(smiles)
+            # One structure appears once per atom assignment: predict it only once.
+            if smiles not in predicted:
+                predicted[smiles] = predictor.predict_from_smiles(smiles)
+            prediction = predicted[smiles]
             errors: list[tuple[float, str]] = []
             for p in prediction.predictions:
                 atom = atom_of.get(lsd_order[p.atom_index])
