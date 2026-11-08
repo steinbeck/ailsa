@@ -37,7 +37,8 @@ Last activity: 2026-10-31 -- lean skill ailsa-lite v0.1 and the `ailsa case` com
     skill. Maintenance rules for the two skills: `docs/SKILLS.md` (share code, not prose; the CLI
     is the contract; a skill ships with its CLI).
     - **Paper skill frozen:** annotated tags `paper-skill-v1` (`f9aa7b3`) and `paper-skill-v2`
-      (`6d2d126`), local only until pushed. The skill files on master are byte-identical to v2.
+      (`6d2d126`), pushed with Phase 105.1 on 2026-11-08. The skill files on master are
+      byte-identical to v2.
     - **Built (Phase 105.1, v0.1):** `src/ailsa/case/` + `ailsa case scan/setup/check/edit/show/
       solve/rank/report`; skill `src/ailsa/skills/ailsa-lite/` (SKILL.md about 1 000 tokens plus a
       fixing guide); `ailsa skill list/install`; guide `docs/AILSA-LITE.md`; 38 new tests.
