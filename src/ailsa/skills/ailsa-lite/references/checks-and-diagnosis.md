@@ -210,9 +210,10 @@ Check all five points, then fix the largest gap.
    one or two. If there are none and the carbon lies at 160-220 ppm, apply the carbonyl case of
    1.4.
 4. **Open heteroatoms.** Every O or N without BOND, PROP or HMBC evidence multiplies the
-   structures. Constrain it only under the evidence rule of 1.4. With direct evidence for a set
-   of candidate carbons: `LIST L1 a b`, `ELEM L2 O`, `PROP L1 1 L2`. Without evidence, leave it
-   open.
+   structures. Constrain it only under the evidence rule of 1.4. With direct evidence that
+   heteroatom X sits on one of a set of candidate carbons: `LIST L1 a b`, `PROP X 1 L1` (X has
+   exactly one neighbour among them; `PROP X 0 L1` if all its neighbours are). `PROP L1 1 L2`
+   with L2 = all oxygens would force an O onto every candidate. Without evidence, leave it open.
 5. **Symmetry not written.** Fewer 13C lines than formula carbons
    (`ailsa analyze symmetry FORMULA C13_DIR`) but no `; equiv-pair` COSY or gem-dimethyl
    BONDs: LSD permutes the equivalent atoms (a para-disubstituted ring alone can multiply the

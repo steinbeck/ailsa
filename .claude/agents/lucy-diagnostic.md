@@ -60,7 +60,7 @@ MULT atom_index element hybridization hydrogen_count
 
 **Edge case: Nitrogen hybridization**
 - Pyridine-type nitrogen: sp2 (aromatic ring nitrogen with lone pair)
-- Pyrrole-type nitrogen: sp2 (aromatic ring nitrogen with H attached)
+- Pyrrole-type N-H: `N 3 1` in LSD. LSD's hybridisation number counts double bonds (3 = none, 2 = one), and a pyrrole N has none in the Kekulé structure. `N 2 1` gives an odd sp2 count and aborts the run (`error 390`).
 - Amine nitrogen: sp3 (NR3, NR2H, NRH2)
 - N-methyl in amide: sp3
 - Nitro group nitrogen: sp2
@@ -89,20 +89,21 @@ HMQC carbon_index proton_position
 **Proton position semantics:**
 - Defines a proton attached to the specified carbon
 - Proton position is typically equal to carbon_index (HSQC 5 5 means carbon 5 has proton H5)
-- Can define multiple protons on same carbon (CH2: HSQC 3 3, HSQC 3 3 — two separate commands)
+- One HSQC line per protonated atom, whatever its H count: a CH2 is `HSQC 3 3` once (MULT carries the H count). A second `HSQC 3 3` aborts LSD with `error 234`.
 
-**Ordering requirement:** All HSQC/HMQC commands MUST appear BEFORE any HMBC commands that reference those proton positions
+**Ordering:** write HSQC/HMQC lines before the HMBC lines by convention; LSD 3.4.9 accepts either order.
 
 **What this constrains:** Direct 1-bond C-H connectivity
 
 **What happens when wrong:**
 - HSQC missing for protonated carbon → carbon appears as quaternary → incorrect structure
 - HSQC for quaternary carbon → impossible constraint → 0 solutions
-- HSQC after HMBC → LSD error "H-X not defined"
+- HMBC proton without its own HSQC line → LSD `error 250` "H-X is not defined by an HMQC command"
+- Two HSQC lines for one atom → LSD `error 234`
 
 **How to detect errors:**
 - Compare HSQC count to protonated carbon count from DEPT-135
-- Check file order: all HSQC before all HMBC
+- Every HMBC proton has an HSQC line; no atom has two
 - Cross-validate HSQC positions against DEPT carbon positions
 
 ### HMBC - Long-Range C-H Correlations
@@ -134,7 +135,7 @@ HMBC carbon_index proton_position
 **How to detect errors:**
 - Compare each HMBC correlation to all HSQC positions (1J artifact check)
 - Check carbon shifts for close neighbors (< 3 ppm apart, may be misassigned)
-- Verify correlation order (all HSQC before all HMBC)
+- Verify every HMBC proton has its HSQC line
 
 ### BOND - Explicit Bond Constraint
 
@@ -190,7 +191,7 @@ LIST L1 1 2 3    ; Create list L1 containing atoms 1, 2, 3
 PROP list_1 count list_2
 ```
 
-**Semantics:** Each atom in list_1 has exactly `count` neighbors from list_2
+**Semantics:** Each atom in list_1 has exactly `count` neighbors from list_2. Append `+` for "at least" (`PROP L1 1 L2 +`) or `-` for "at most"; `count` 0 means "all neighbours in list_2". list_1 can also be one atom (`PROP 12 1 L2`). Lists are numbered `L1`–`L20` and hold only non-hydrogen atoms; a name such as `L_O` aborts the run (`error 114`).
 
 **Example:**
 ```
@@ -207,8 +208,7 @@ PROP L1 1 L2       ; Each carbonyl must have exactly 1 oxygen neighbor
 **What this constrains:** Neighborhood relationships without specifying exact bonds
 
 **What happens when wrong:**
-- Count too high → over-constrained → 0 solutions
-- Count too low → under-constrained → 1000+ solutions
+- Wrong count in either direction → the true structure is excluded (the count is exact unless `+` or `-` is appended) → 0 solutions or only wrong ones
 - Wrong lists → incorrect structural class → wrong structure
 
 **How to detect errors:**
@@ -458,49 +458,27 @@ HMBC 5 12    ; C155.2-H2.1 (1J artifact)
 - Impact: "Creates impossible constraint (1-bond from HSQC AND 2-3 bonds from HMBC) → 0 solutions"
 - Fix: "Remove HMBC command for C[X]-H[Y]"
 
-#### Check 4: Correlation Order (HSQC Before HMBC)
+#### Check 4: HSQC Declarations (every HMBC proton declared, no atom twice)
 
 **Procedure:**
-1. Find line numbers of all HSQC/HMQC commands in LSD file
-2. Find line numbers of all HMBC commands in LSD file
-3. Verify all HSQQ/HMQC lines < all HMBC lines
-
-**Example:**
-```
-; Correct order:
-Line 10: MULT 1 C 2 0
-Line 11: MULT 2 C 2 1
-...
-Line 25: HSQC 2 2       ; HSQC commands
-Line 26: HSQC 3 3
-Line 27: HSQC 4 4
-...
-Line 35: HMBC 1 2       ; HMBC commands after all HSQC
-Line 36: HMBC 1 3
+```bash
+sed 's/;.*//' compound.lsd | awk '/^HMBC/ {print $NF}' | sort -u > /tmp/h_used
+sed 's/;.*//' compound.lsd | awk '/^HSQC/ {print $3}'  | sort -u > /tmp/h_declared
+comm -23 /tmp/h_used /tmp/h_declared                                # protons used but never declared
+sed 's/;.*//' compound.lsd | awk '/^HSQC/ {print $2}' | sort | uniq -d   # atoms declared twice
 ```
 
-**If WRONG ORDER (FAIL):**
+**If a proton is used but not declared (FAIL):** LSD aborts with `error 250`, "Cannot set an HMBC correlation between X and H-Y because H-Y is not defined by an HMQC command". Usually an exchangeable OH/NH proton: add `HSQC Y Y` on the heteroatom index.
 
-Root cause: HMBC references proton position not yet defined by HSQC
+**If an atom is declared twice (FAIL):** LSD aborts with `error 234`, "atom X already correlates with H-X". A CH2 with two proton shifts gets one HSQC line; MULT carries the H count. Delete the duplicate.
 
-LSD error message: "Cannot set an HMBC correlation between X and H-Y because H-Y is not defined by an HMQC command"
-
-**Fix example:**
-```
-; Before (WRONG ORDER):
-Line 30: HMBC 1 5       ; References H5
-Line 35: HSQC 5 5       ; Defines H5
-
-; After (CORRECT ORDER):
-Line 30: HSQC 5 5       ; Define H5 first
-Line 35: HMBC 1 5       ; Then reference it
-```
+The order of HSQC and HMBC lines is not a cause: LSD 3.4.9 accepts HMBC lines before the HSQC lines (tested 2026-11-19).
 
 **Document in report:**
-- Finding: "Correlation order violation"
-- Evidence: "HMBC at line [X] references H[Y], but HSQC defining H[Y] is at line [Z] (after HMBC)"
-- Impact: "LSD cannot process HMBC before proton is defined → error → 0 solutions"
-- Fix: "Reorder LSD file: all HSQC commands before all HMBC commands"
+- Finding: "Undeclared HMBC proton" or "Duplicate HSQC declaration"
+- Evidence: "HMBC [C] [Y] uses H[Y], no HSQC [Y] [Y] in file" / "HSQC [X] [X] appears twice"
+- Impact: "LSD aborts before searching (error 250 / error 234) → 0 solutions"
+- Fix: "Add HSQC [Y] [Y]" / "Remove the second HSQC [X] [X]"
 
 #### Check 5: Close Carbon Ambiguity (Resolution-Based)
 
@@ -545,17 +523,17 @@ Root cause: HMBC correlation assigned to one carbon may actually belong to the o
 ; Before (DEFINITIVE assignment, may be wrong):
 HMBC 5 12    ; C155.08-H12 (but could be C155.32-H12)
 
-; After (AMBIGUOUS encoding with LIST/PROP):
-LIST L1 5 6           ; Atoms 5 (C155.08) and 6 (C155.32)
-LIST L_H12 12         ; Proton H12
-PROP L1 1 L_H12       ; One of {C5, C6} has exactly 1 connection to H12
+; After (AMBIGUOUS encoding, grouped carbon side):
+HMBC (5 6) 12    ; H12 correlates with C5 (155.08) or C6 (155.32)
 ```
+
+Group only the carbon side. `HMBC 12 (5 6)` (grouped proton side) aborts LSD (`error 116`), and a PROP over a "proton list" does not work: LSD lists hold only non-hydrogen atoms.
 
 **Document in report:**
 - Finding: "Close carbon ambiguity detected"
 - Evidence: "Carbons at [X] ppm and [Y] ppm are [Z] ppm apart, below minimum spacing [W] ppm (resolution [R] pts/ppm)"
 - Impact: "HMBC correlation may be assigned to wrong carbon → incorrect constraint → 0 solutions"
-- Fix: "Use LIST/PROP to encode ambiguity" (with LSD commands)
+- Fix: "Use grouped HMBC `HMBC (a b) h` to encode the ambiguity" (with LSD commands)
 
 ### 2.2 Solution Explosion Procedure
 
@@ -737,21 +715,20 @@ BOND 1 13    ; C172.4 (carbonyl) bonded to O13
 
 **Ether oxygen (sp3, 50-90 ppm adjacent carbon):**
 ```
-; If position ambiguous, use LIST/PROP:
-LIST L_Cether 5 6 7        ; Possible C-O-C carbons
-ELEM L_O O                 ; All oxygens
-PROP L_Cether 1 L_O        ; Each ether carbon has 1 oxygen neighbor
+; If position ambiguous, constrain the oxygen (here O13):
+LIST L1 5 6 7              ; candidate C-O carbons
+PROP 13 0 L1               ; all neighbours of O13 are among C5, C6, C7
 ```
+(`PROP L1 1 L2` with L1 = candidates and L2 = oxygens would force EVERY candidate to carry an oxygen.)
 
 **Amine nitrogen (sp3, N-CH3 or N-CH2):**
 ```
 ; If N-methyl attachment known:
 BOND N_idx CH3_idx
 
-; If ambiguous:
-LIST L_NCH3 9 10 11        ; Possible N-methyl carbons
-ELEM L_N N                 ; All nitrogens
-PROP L_NCH3 1 L_N          ; One N-methyl bonded to nitrogen
+; If ambiguous (nitrogen N14):
+LIST L1 9 10 11            ; candidate N-methyl carbons
+PROP 14 1 L1               ; N14 has exactly one neighbour among C9, C10, C11
 ```
 
 **Document in report:**

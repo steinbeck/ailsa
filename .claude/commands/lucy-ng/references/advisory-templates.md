@@ -266,7 +266,8 @@ Re-examination checklist (perform in order, stop when a concrete defect is found
      `lucy detect aromatic-cosy` with the correct grouped shifts. Send updated
      HMBC equivalence groups to lsd-engineer for the next iteration.
    - If yes AND they were already passed: confirm lsd-engineer used grouped notation
-     `HMBC N (M1 M2)` syntax in the LSD file.
+     `HMBC (C1 C2) H` syntax in the LSD file (carbon side grouped; a grouped proton side,
+     `HMBC C (H1 H2)`, aborts LSD with error 116).
 
 3. Multiplicity spot-check: for any suspect peak (DBE candidate or near-equivalent),
    confirm DEPT-135 sign is consistent with the assignment.

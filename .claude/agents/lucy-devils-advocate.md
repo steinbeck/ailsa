@@ -64,7 +64,7 @@ Count each constraint type in BOTH files:
 ### Content Comparison
 
 Beyond counts, verify content matches:
-- Every `DEFF F1 "ring3"`, `DEFF F2 "ring4"`, and `FEXP "NOT F1 AND NOT F2"` line in iteration N-1 must appear in iteration N (exact string match)
+- Every `DEFF F1 "ring3"` and `DEFF F2 "ring4"` line in iteration N-1 must appear in iteration N (exact string match), and the one FEXP line must still contain `NOT F1 AND NOT F2` (it reads `FEXP "F3 AND NOT F1 AND NOT F2"` while a fragment is applied)
 - Every BOND line in iteration N-1 must appear in iteration N (unless advisory says remove)
 - Every PROP/LIST/ELEM grouping in iteration N-1 must appear in iteration N
 - Parenthesized HMBC syntax `(N M)` must not revert to simple syntax
@@ -84,11 +84,11 @@ These 5 bugs were found in prior live testing. Check for ALL on EVERY validation
 
 **What happened:** Agent wrote ring exclusion (DEFF NOT or DEFF F/FEXP) in iteration 1, forgot to carry it forward. Result: strained-ring solutions survived.
 
-**Check:** Verify DEFF F1, DEFF F2, and FEXP are all present. If any are missing: CRITICAL.
+**Check:** Verify DEFF F1, DEFF F2, and exactly one FEXP line are present. If any are missing: CRITICAL. Two or more FEXP lines: CRITICAL (LSD aborts with `error 402`; all filters belong in one expression).
 
 ```bash
 grep -c "^DEFF F" compound.lsd   # Must be >= 2
-grep -c "^FEXP" compound.lsd     # Must be >= 1
+grep -c "^FEXP" compound.lsd     # Must be exactly 1
 ```
 
 **Expected minimum block (native form):**
@@ -97,8 +97,9 @@ DEFF F1 "ring3"
 DEFF F2 "ring4"
 FEXP "NOT F1 AND NOT F2"
 ```
+With a fragment goodlist: `DEFF F3 "<fragment file>"` added and `FEXP "F3 AND NOT F1 AND NOT F2"`.
 
-**Legacy form (older iterations):** If iterating on a compound where early iterations used `DEFF NOT C1CC1` / `DEFF NOT C1CCC1` syntax, accept the legacy form for those early iterations: verify `grep -c "^DEFF NOT" compound.lsd >= 2`. Do not flag CRITICAL on old files for lacking DEFF F — use legacy grep as fallback check.
+**`DEFF NOT` is not LSD syntax:** `DEFF NOT C1CC1` aborts the run (`error 150`), and `lucy lsd run` passes the file to LSD unchanged. Any `DEFF NOT` line is CRITICAL, also in a file carried over from an older iteration: replace it with the native block above.
 
 ### Bug 2: Signal Grouping Not Applied (WARNING)
 
@@ -172,7 +173,15 @@ grep -n "^HSQC" compound.lsd | tail -1  # last HSQC line
 grep -n "^HMBC" compound.lsd | head -1  # first HMBC line
 ```
 
-If first HMBC line < last HSQC line: flag CRITICAL.
+If first HMBC line < last HSQC line: flag WARNING. HSQC first is the house convention; LSD 3.4.9 accepts either order (tested 2026-11-19), so do not block the run for it.
+
+### One HSQC Line per Atom
+
+```bash
+sed 's/;.*//' compound.lsd | awk '/^HSQC/ {print $2}' | sort | uniq -d   # any output = CRITICAL
+```
+
+A second `HSQC X X` for the same atom aborts the run (`error 234`). A CH2 with two proton shifts still gets one line; MULT carries the H count.
 
 ### HMBC Reference Validity
 
@@ -197,7 +206,7 @@ Missing declarations abort the solver outright (`exit 255, error 250`) rather th
 
 ### Badlist Completeness
 
-For natural products, expect DEFF F1 "ring3" + DEFF F2 "ring4" + FEXP (native form) OR DEFF NOT C1CC1 + DEFF NOT C1CCC1 (legacy form). `grep -c "^DEFF F" compound.lsd` must be >= 2 (native) OR `grep -c "^DEFF NOT" compound.lsd` must be >= 2 (legacy). If neither condition holds: flag WARNING.
+For natural products, expect DEFF F1 "ring3" + DEFF F2 "ring4" + one FEXP line. `grep -c "^DEFF F" compound.lsd` must be >= 2. If not: flag WARNING. A `DEFF NOT` line is CRITICAL (see Bug 1).
 
 ### Ranking Prerequisites (WARNING)
 
@@ -217,24 +226,23 @@ If either fails: flag WARNING ("atom-by-atom ranking prerequisites missing").
 
 ### Fragment File Existence
 
-If the LSD file contains a `DEFF F` command (goodlist fragment reference, NOT `DEFF NOT`):
+If the LSD file contains a `DEFF F3` (or higher) command — the goodlist fragment reference. The ring filters `DEFF F1 "ring3"` / `DEFF F2 "ring4"` are copied into the directory by `lucy lsd run` and are not checked here:
 1. Extract filename from between double quotes in the DEFF F command
 2. Check that the file exists in the same directory as compound.lsd
 3. If file missing: flag CRITICAL -- "DEFF references fragment file '<filename>' but file does not exist in <iteration_dir>/"
 4. If file exists: verify it contains SSTR commands (basic sanity check)
 
-If no DEFF F command found, check inventory deff_fexp.status:
-- If "applied": flag CRITICAL -- "Inventory claims fragment applied but no DEFF F command found in LSD file"
+If no DEFF F3 (or higher) command found, check inventory deff_fexp.status:
+- If "applied": flag CRITICAL -- "Inventory claims fragment applied but no fragment DEFF command found in LSD file"
 - If "discarded" or "none" or null: OK (no fragment expected)
 
-### Fragment Ordering
+### Single Filter Expression
 
-If DEFF F and FEXP commands are present:
-1. Get line number of DEFF F command
-2. Get line number of first MULT command
-3. If DEFF F line > first MULT line: flag CRITICAL -- "DEFF F1 must appear BEFORE MULT definitions (goodlist ordering rule)"
-4. Get line number of FEXP command
-5. If FEXP line > first MULT line: flag CRITICAL -- "FEXP must appear BEFORE MULT definitions"
+If a fragment DEFF F3 (or higher) is present:
+1. `grep -c "^FEXP" compound.lsd` must be exactly 1. Two FEXP lines (e.g. `FEXP "F3"` next to `FEXP "NOT F1 AND NOT F2"`): flag CRITICAL -- "LSD accepts one FEXP line (error 402); merge into FEXP \"F3 AND NOT F1 AND NOT F2\""
+2. The FEXP line must name every defined filter: F3 (or the fragment's Fn) as well as `NOT F1 AND NOT F2`. A defined filter missing from the expression is inactive: flag CRITICAL.
+
+Where the DEFF/FEXP lines stand in the file does not matter to LSD (tested 2026-11-19); do not flag their position.
 
 ### Aromatic Ring Expectation
 
@@ -314,15 +322,15 @@ For each constraint type, run three checks using the extracted inventory and the
 | `mult_count` | `grep -c "^MULT" compound.lsd` | Exact |
 | `hsqc_count` | `grep -c "^HSQC" compound.lsd` | Exact |
 | `hmbc_total` | `grep -c "^HMBC" compound.lsd` | Exact |
-| `ring_exclusion_enabled` | `grep -c "^DEFF F" compound.lsd` >= 2 AND `grep -c "^FEXP" compound.lsd` >= 1 | Must be true when enabled |
+| `ring_exclusion_enabled` | `grep -c "^DEFF F" compound.lsd` >= 2 AND `grep -c "^FEXP" compound.lsd` == 1 | Must be true when enabled |
 | `cosy_equiv_pairs` (array length) | `grep -c "^COSY.*; equiv-pair" compound.lsd` | Exact — counts only equivalence-derived COSY, not peak-data COSY |
 | `bond_constraints` (array length) | `grep -c "^BOND" compound.lsd` | Exact |
 | `grouped_hmbc` (array length) | `grep -c "^HMBC (" compound.lsd` | Exact |
-| `deff_fexp.status == "applied"` | `grep -c "^DEFF F" compound.lsd` == 1 AND `grep -c "^FEXP" compound.lsd` == 1 | Both present if applied |
+| `deff_fexp.status == "applied"` | `grep -c "^DEFF F[3-9] " compound.lsd` == 1 AND `grep -c "^FEXP" compound.lsd` == 1 | Both present if applied |
 
 If any mismatch: flag CRITICAL -- "Inventory claims N {type} but file has M. Inventory is inaccurate."
 
-If deff_fexp.status is "none" or "discarded", verify `grep -c "^DEFF F" compound.lsd` == 0 (no stale fragment references).
+If deff_fexp.status is "none" or "discarded", verify `grep -c "^DEFF F[3-9] " compound.lsd` == 0 (no stale fragment references; the ring filters F1/F2 stay).
 
 **Check 2: No Regression?** (current counts >= previous iteration counts)
 
@@ -563,7 +571,7 @@ Review `pending_from_detection` array in the inventory:
 
 The inventory provides structured sources of truth for all known bugs. With inventory, use these enhanced checks instead of (or in addition to) the legacy grep-based approach:
 
-- **Bug 1 (Ring exclusion dropped):** Use inventory `ring_exclusion_enabled` field as source of truth. Check 1 validates `grep -c "^DEFF F"` >= 2 AND `grep -c "^FEXP"` >= 1 when enabled. Check 2 validates `ring_exclusion_enabled` does not revert from true to false. Legacy fallback: if `deff_not_patterns` array is non-empty and `ring_exclusion_enabled` absent, use `grep -c "^DEFF NOT"` >= 2 for that iteration (backward compat for older iterations).
+- **Bug 1 (Ring exclusion dropped):** Use inventory `ring_exclusion_enabled` field as source of truth. Check 1 validates `grep -c "^DEFF F"` >= 2 AND `grep -c "^FEXP"` == 1 when enabled. Check 2 validates `ring_exclusion_enabled` does not revert from true to false. An older inventory with non-empty `deff_not_patterns` means the file still carries `DEFF NOT` lines: CRITICAL (LSD `error 150`), rewrite them as the native DEFF F1/F2 + FEXP block.
   *Without inventory (legacy):* grep-based count comparison as described in Section 2.
 
 - **Bug 2 (Signal grouping not applied):** Check `pending_from_detection` array. If grouping detected but never applied, it stays in pending and triggers WARNING after 3 iterations.
@@ -593,8 +601,9 @@ Grouped notation: N entries (preserved / N/A)
 DEFF FEXP: <filename> exists in iteration_NN/ (verified)
   OR: No fragment applied (deff_fexp.status = "none")
   OR: Fragment discarded (deff_fexp.status = "discarded", conflict logged)
-Correlation order: HSQC before HMBC (correct)
-Fragment ordering: DEFF F1/FEXP before MULT (correct) OR N/A (no fragment)
+Correlation order: HSQC before HMBC (correct) / WARNING: HMBC before HSQC (convention only)
+HSQC lines: one per atom (correct)
+Filter expression: one FEXP line naming every DEFF filter (correct)
 Inventory accuracy: all counts match actual file
 Concerns: <list or "None">
 Aromatic ring check: N/A (no ranking yet or no aromatic expectation) / PASS (solutions contain aromatic ring) / WARNING: all solutions non-aromatic despite aromatic expectation from NMR

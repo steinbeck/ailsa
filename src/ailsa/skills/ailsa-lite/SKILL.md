@@ -2,7 +2,7 @@
 name: ailsa-lite
 description: Determines the structure of an unknown organic compound from its NMR spectra and molecular formula, working as a structure elucidation chemist with the ailsa command line and the LSD solver. Use when asked to elucidate, solve or identify a structure from a folder of Bruker NMR data (13C, HSQC, HMBC; DEPT, APT or COSY if present). Same tools and rules as the full AILSA skill, condensed for one agent with a small context window.
 metadata:
-  version: "0.2.0"
+  version: "0.2.1"
   requires: "ailsa (the same commands the full AILSA skill uses); LSD and outlsd on PATH; the reference database"
 ---
 

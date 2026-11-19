@@ -99,22 +99,30 @@ CASE_MD_PATH = ".claude/commands/lucy-ng/case.md"
 #: `DUPL 1` in every LSD file, measured shift first in each carbon's MULT comment)
 #: changes `case.md`, the lsd-engineer, solution-analyst and devils-advocate files.
 #: The paper skill stays available unchanged under the tags `paper-skill-v1/v2`.
+#:
+#: 2026-11-19, approved by the user: LSD facts corrected after testing each one against
+#: LSD 3.4.9 -- one FEXP line only (a second aborts, error 402; fragment and ring filters
+#: share `FEXP "F3 AND NOT F1 AND NOT F2"`), one HSQC line per atom (error 234), pyrrole
+#: N-H is `N 3 1`, PROP counts are exact, `j_coupling` = `path_length` + 1, `DEFF NOT`
+#: is rejected (error 150) and not translated, list names are L1-L20 (error 114),
+#: grouped HMBC only on the carbon side, HSQC/HMBC order is a convention, not an error.
+#: Changes the lsd-engineer, devils-advocate, diagnostic and solution-analyst files.
 EXPECTED_SHA256: dict[str, str] = {
     CASE_MD_PATH: "8c6946c0d3534c6ac18ec647f26454cb39d85751ad26762270f5fdb95c391e1f",
     ".claude/agents/lucy-nmr-chemist.md": (
         "c643b44d3e49bcd7eb0de0125fca051f9c59cf9b1ceff1906143d39d9bdca19e"
     ),
     ".claude/agents/lucy-lsd-engineer.md": (
-        "430f6e84116b6ce33ac44f901cff6e72051b24f8971dff6d27b6ea3ef443b0e7"
+        "d4fb5127dcdf6adc609192571e10a9db35601f821f09a57fc3084e3e1907b602"
     ),
     ".claude/agents/lucy-solution-analyst.md": (
-        "cbe2e980a11c0b71b09e884325cd04f8de74684278e25bb26372dd012c6a0d6d"
+        "30007673ad565fdd60b2d206f1d2b0ecc6da5fd5187cabb5a56173af69a9ada4"
     ),
     ".claude/agents/lucy-devils-advocate.md": (
-        "02be08ee672a3be894c0c5e992c8cfb50f55100dcdb1a9f202e5361c3aec2192"
+        "c8e01e362eed870b7f21862ff9d657c2a775b79a26bdf8398e0c757c1d385b98"
     ),
     ".claude/agents/lucy-diagnostic.md": (
-        "41cf15d781dde1a8daaf828ba6d296e61bd4eb0a663f42d4572278b8f49a07cb"
+        "5d22e2a09cbc49efde841cbc652b1d24369d64c666242a8735e56f4ef7acd423"
     ),
 }
 

@@ -116,6 +116,8 @@ PROP L1 1 L2    ; each atom of L1 has exactly 1 neighbour in L2
 - `PROP X n L` means exactly n neighbours in list L; `PROP X n L +` at least n; `PROP X n L -`
   at most n; `PROP X 0 L` all neighbours in L. X is one atom or a list.
 - LSD reads LIST, ELEM and PROP lines in order: define a list before the PROP that uses it.
+- Lists are numbered `L1` to `L20` and hold only non-hydrogen atoms; a name such as `L_O`
+  aborts the run (error 114).
 
 ### ELIM: let LSD ignore a few correlations
 

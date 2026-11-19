@@ -144,7 +144,7 @@ For each top candidate (typically top 5), assess:
 - If a candidate's predicted shifts show aromatic carbons matching the experimental count: increase confidence
 - This catches cases where the warnings array alone is insufficient (e.g., when LSD produces structures that technically have aromatic atoms but in wrong positions)
 
-**Root cause note:** When all solutions lack aromatic rings despite clear aromatic NMR evidence, use `lucy lsd analyze compound.sol compound.lsd --format json` to identify which correlations have `path_length >= 4` in the accepted solution — these are 4J couplings. Report as a plausibility annotation: "ELIM dropped correlation [atom1-atom2 at shift1-shift2]: consistent with 4J in [inferred geometry]." Do NOT advise removing them — ELIM handles this automatically. Post-hoc explanation only.
+**Root cause note:** When all solutions lack aromatic rings despite clear aromatic NMR evidence, use `lucy lsd analyze compound.sol compound.lsd --format json` to identify which correlations have `j_coupling >= 4` in the accepted solution — these are 4J couplings. (`path_length` counts only the bonds between the two heavy atoms, so a 4J coupling has `path_length` 3: `j_coupling` = `path_length` + 1.) Report as a plausibility annotation: "ELIM dropped correlation [atom1-atom2 at shift1-shift2]: consistent with 4J in [inferred geometry]." Do NOT advise removing them — ELIM handles this automatically. Post-hoc explanation only.
 
 **Remediation to report:** "Aromatic ring expected based on shifts but absent in plausible solutions. Agent should escalate ELIM N by +1 per the ELIM Escalation procedure if all HMBC are already included."
 

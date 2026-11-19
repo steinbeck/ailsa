@@ -93,7 +93,9 @@ HMBC 1 2    ; carbon 1 correlates to proton on carbon 2  ; standard 2-3J
 HMBC (5 6) 10  ; H10 correlates to either C5 or C6 (ambiguous/grouped)
 ```
 
-**CORRELATION ORDER RULE (CRITICAL):** ALL HSQC commands MUST appear BEFORE any HMBC commands. LSD defines proton positions through HSQC. Error if violated: "Cannot set HMBC correlation because H-Y is not defined by an HMQC command."
+**ONE HSQC LINE PER ATOM (CRITICAL):** a CH2 or CH3 gets a single `HSQC X X`; MULT already gives the H count. A CH2 with two proton shifts (diastereotopic) still gets one line. A second `HSQC X X` for the same atom aborts the run (`error 234`, "atom X already correlates with H-X").
+
+**CORRELATION ORDER:** write all HSQC lines before the HMBC lines. This is a convention for readable files; LSD 3.4.9 accepts either order (tested 2026-11-19).
 
 **HETEROATOM-PROTON RULE (CRITICAL):** Any proton used as the H-side of an HMBC line needs its own `HSQC X X` declaration first — including exchangeable OH/NH protons, where X is the *heteroatom* index, not a carbon. Omitting it does not merely drop the correlation, it **aborts the run**: `exit 255, error 250`.
 
@@ -113,8 +115,12 @@ Verified against LSD (CASE96, 2026-08-09): the HMBC handler opens with `non_nul(
 BOND 1 14       ; atom 1 bonded to atom 14
 LIST L1 1 2     ; list of atoms 1 and 2
 ELEM L2 O       ; list of all oxygens
-PROP L1 1 L2    ; each atom in L1 has at least 1 neighbor from L2
+PROP L1 1 L2    ; each atom in L1 has exactly 1 neighbor from L2
 ```
+
+`PROP` counts are exact: `PROP L1 1 L2 +` means at least 1, `PROP L1 1 L2 -` at most 1, and
+`PROP L1 0 L2` means all neighbours are in L2. The first field can also be one atom
+(`PROP 12 1 L2`). Lists are numbered `L1` to `L20`; a name such as `L_O` aborts the run (`error 114`).
 
 **FIX-10 PROHIBITION — No hard heteroatom PROP/BOND from a single statistical detection value (G-PROP-EVIDENCE):**
 
@@ -321,8 +327,21 @@ FEXP "NOT F1 AND NOT F2"
 **F-number reservation:** F1 and F2 are RESERVED for ring exclusion. Fragment goodlist uses F3
 and above. Do not assign F1 or F2 to fragment goodlist DEFF commands.
 
+**ONE FEXP LINE (CRITICAL):** LSD accepts a single FEXP line per file; a second one aborts the
+run (`error 402`, "Attempting to redefine the filter expression"). Every filter goes into that one
+expression. With a fragment goodlist (F3) the block is:
+```
+DEFF F1 "ring3"
+DEFF F2 "ring4"
+DEFF F3 "fragment_abc123def456.lsd"
+FEXP "F3 AND NOT F1 AND NOT F2"
+```
+Keep all DEFF lines and the FEXP line together in this block after the correlations, before EXIT.
+LSD reads them anywhere before EXIT (tested 2026-11-19); one block makes them easy to check.
+
 Exception: Remove DEFF F1/ring3 exclusion only if 13C shows 45-55 ppm + formula has O
-(possible epoxide — let LSD explore). Adjust FEXP accordingly: `FEXP "NOT F2"`.
+(possible epoxide — let LSD explore). Adjust FEXP accordingly: `FEXP "NOT F2"` (with a fragment:
+`FEXP "F3 AND NOT F2"`).
 
 **CRITICAL: These DEFF F / FEXP lines MUST persist across ALL iterations. Dropping them is a well-documented constraint-loss failure mode.**
 
@@ -353,14 +372,14 @@ From `fragment search`:
 From `fragment to-lsd`:
 - `filename`: name of the generated .lsd file (e.g., `fragment_abc123def456.lsd`)
 - `deff_command`: the DEFF F3 command string to insert in compound.lsd (F3 because F1/F2 are reserved for ring exclusion)
-- `fexp_command`: the FEXP command string to insert in compound.lsd
+- `fexp_command`: the fragment's own filter expression (`FEXP "F3"`). Do NOT add it as a second FEXP line: merge it into the single FEXP line of the filter block, `FEXP "F3 AND NOT F1 AND NOT F2"` (see ONE FEXP LINE above).
 
-**LSD file ordering rule:** `DEFF F3 "filename.lsd"` and `FEXP "F3"` go AFTER the inventory comment block (`; === END CONSTRAINT INVENTORY ===`) but BEFORE the first MULT command. This is different from ring-exclusion DEFF F1/F2 / FEXP which also goes after correlations.
+**LSD file placement rule:** `DEFF F3 "filename.lsd"` joins the filter block after the correlations, next to DEFF F1/F2, and F3 enters the one FEXP line.
 
-**Fragment persistence rule:** Carry the fragment DEFF F3/FEXP forward across iterations (read from previous LSD file, never reconstruct), same as the ring-exclusion DEFF F1/F2/FEXP.
+**Fragment persistence rule:** Carry the fragment DEFF F3 line and the merged FEXP line forward across iterations (read from previous LSD file, never reconstruct), same as the ring-exclusion DEFF F1/F2.
 
 **Zero-solution fallback protocol:** If LSD returns 0 solutions AND a fragment was injected:
-1. Remove the fragment DEFF Fn and FEXP lines from the LSD file (Fn = the fragment goodlist filter, F3 by default — check the `deff_command` field in the inventory for the actual filter index; do NOT remove the ring-exclusion DEFF F1/F2 lines)
+1. Remove the fragment DEFF Fn line and take `Fn AND ` out of the FEXP line, which goes back to `FEXP "NOT F1 AND NOT F2"` (Fn = the fragment goodlist filter, F3 by default — check the `deff_command` field in the inventory for the actual filter index). Do NOT delete the FEXP line itself or the ring-exclusion DEFF F1/F2 lines: without FEXP the ring filters are silently off.
 2. Re-run LSD without fragment
 3. If solutions return, the fragment conflicts with the data -- discard it
 4. Update inventory `deff_fexp.status` to `"discarded"` with `conflict_reason` explaining why
@@ -380,9 +399,10 @@ Before every LSD run, verify:
 5. HMBC references only defined H positions — every H-side atom has its own `HSQC X X`, **including exchangeable OH/NH protons on heteroatom indices** (missing one aborts the run with `exit 255, error 250`, it does not merely drop the correlation)
 6. Heteroatom constraints: BOND for C=O only when convergent evidence confirms it (Cq via DEPT/HSQC + 160-220 ppm shift + unambiguous C=O context + O in formula — three independent sources). For ALL other heteroatom placements: leave OPEN unless direct HMBC/HSQC/exchangeable-H evidence establishes connectivity. NEVER emit `PROP X O n` or hard heteroatom BOND from a single detect-neighbours value alone — especially a 'typical' (~0.5-0.9) value or when carbon is the dominant neighbour. Devils-advocate G-PROP-EVIDENCE gate will BLOCK. (FIX-10)
 7. NO ELIM on first run (ELIM is added only after all HMBC are included and 0 plausible solutions remain — see ELIM Escalation)
-8. Ring exclusion DEFF F1 "ring3" + DEFF F2 "ring4" + FEXP "NOT F1 AND NOT F2" present
+8. Ring exclusion DEFF F1 "ring3" + DEFF F2 "ring4" present, and exactly ONE FEXP line: `FEXP "NOT F1 AND NOT F2"`, or `FEXP "F3 AND NOT F1 AND NOT F2"` with a fragment
 9. Constraint Inventory block present at top of file with correct counts
-10. If fragment applied: DEFF F3/FEXP present after inventory block but before first MULT, fragment .lsd file exists in iteration dir (F3 = fragment goodlist; F1/F2 = ring exclusion — distinct namespaces)
+10. If fragment applied: DEFF F3 in the filter block, F3 in the one FEXP line, fragment .lsd file exists in iteration dir (F3 = fragment goodlist; F1/F2 = ring exclusion — distinct namespaces)
+11. One HSQC line per protonated atom (no atom twice)
 
 ## 2. Incremental HMBC Strategy
 
@@ -520,7 +540,7 @@ ALL labeled fields are MANDATORY. They match the orchestrator's loop detection p
 | `list_prop_constraints` | string array | LIST/PROP descriptions |
 | `elim_value` | int or null | **Deprecated alias.** Use `elim_budget` instead. Kept for backward-compat with old iterations. |
 | `elim_budget` | int | Current ELIM N value (0 = no ELIM command written; N > 0 = ELIM N 0 present in LSD file). Update when escalated. |
-| `deff_not_patterns` | string array | **Deprecated.** Set to `[]` — ring exclusion is now emitted as DEFF F1/F2 + FEXP (tracked by `ring_exclusion_enabled`). Kept for backward-compat with DA legacy checks on old iterations. |
+| `deff_not_patterns` | string array | **Deprecated.** Set to `[]` — ring exclusion is now emitted as DEFF F1/F2 + FEXP (tracked by `ring_exclusion_enabled`). Kept so older inventories still validate; `DEFF NOT` lines themselves abort LSD (`error 150`) and are never written. |
 | `ring_exclusion_enabled` | boolean | True when DEFF F1+F2+FEXP ring exclusion block is present. |
 | `deff_fexp` | object or null | Fragment goodlist tracking: status, smiles, filename, commands, conflict_reason |
 | `detection_results` | object | Raw output from `lucy detect` commands |
@@ -554,7 +574,7 @@ The inventory block goes at the TOP of the file, BEFORE any MULT definitions. Us
 ;     "fragment_avgdev": 0.45,
 ;     "fragment_filename": "fragment_abc123def456.lsd",
 ;     "deff_command": "DEFF F3 \"fragment_abc123def456.lsd\"",
-;     "fexp_command": "FEXP \"F3\"",
+;     "fexp_command": "FEXP \"F3 AND NOT F1 AND NOT F2\"",
 ;     "search_result_count": 3,
 ;     "conflict_reason": null
 ;   },
@@ -568,8 +588,11 @@ The inventory block goes at the TOP of the file, BEFORE any MULT definitions. Us
 ;   "pending_from_detection": ["COSY-equivalence BOND/COSY for grouped [44.90, 45.03] -- NOT YET APPLIED"]
 ; }
 ; === END CONSTRAINT INVENTORY ===
+; ... MULT, DUPL/MAXS, HSQC, HMBC, BOND/LIST/PROP ...
+DEFF F1 "ring3"
+DEFF F2 "ring4"
 DEFF F3 "fragment_abc123def456.lsd"
-FEXP "F3"
+FEXP "F3 AND NOT F1 AND NOT F2"
 ```
 
 HMBC correlations appear BELOW the inventory block in the LSD file as standard `HMBC X Y` (no explicit bond range). If ELIM escalation was applied, the ELIM command appears after the last HMBC correlation, before DEFF/FEXP commands.
@@ -580,13 +603,13 @@ After writing all MULT, HSQC, first HMBC batch, BOND, and ring exclusion (DEFF F
 
 1. Count each constraint type from what was just written
 2. Build the inventory JSON with all fields populated
-3. **CRITICAL:** Set `ring_exclusion_enabled: true` and `deff_not_patterns: []` in inventory. Verify DEFF F1 "ring3" + DEFF F2 "ring4" + FEXP "NOT F1 AND NOT F2" appear in the LSD file. This is the primary defense against Bug 1 (ring exclusion dropped).
+3. **CRITICAL:** Set `ring_exclusion_enabled: true` and `deff_not_patterns: []` in inventory. Verify DEFF F1 "ring3" + DEFF F2 "ring4" and exactly one FEXP line containing `NOT F1 AND NOT F2` appear in the LSD file. This is the primary defense against Bug 1 (ring exclusion dropped).
 4. Populate `detection_results` from nmr-chemist's detection message
 5. Classify each detection result: `applied_from_detection` or `pending_from_detection`
 5a. Run fragment search: `lucy fragment search --shifts "<13c_shifts>" --format json --top 1`
     - If result_count > 0: run `lucy fragment to-lsd "<smiles>" --output-dir analysis/iteration_01/ --format json`, populate deff_fexp with status "applied" and all fields
     - If result_count == 0: set deff_fexp to `{"status": "none", "fragment_smiles": null, "fragment_atoms": null, "fragment_avgdev": null, "fragment_filename": null, "deff_command": null, "fexp_command": null, "search_result_count": 0, "conflict_reason": null}`
-    - DEFF F3/FEXP lines go after inventory block, before first MULT (F3 = fragment goodlist, reserved above ring-exclusion F1/F2)
+    - DEFF F3 joins the filter block and the one FEXP line becomes `FEXP "F3 AND NOT F1 AND NOT F2"` (F3 = fragment goodlist, reserved above ring-exclusion F1/F2)
 5b. Record `elim_budget`: integer field (current ELIM N value; 0 when no ELIM command written). Update this value when ELIM is escalated.
 6. Write the inventory block at the TOP of the LSD file (before MULT lines)
 7. Write the inventory and all LSD commands in a SINGLE Write operation
@@ -605,7 +628,7 @@ After writing all MULT, HSQC, first HMBC batch, BOND, and ring exclusion (DEFF F
    - Update `elim_budget` if ELIM was escalated (copy forward the current N value from the LSD file)
    - If advisory says add/remove constraints: update relevant fields and corresponding LSD commands
    - Review `pending_from_detection`: apply any pending items that should now become constraints (move to `applied_from_detection`)
-   - Copy deff_fexp from previous inventory. If previous status was "applied", carry forward DEFF F3/FEXP lines (check `deff_command` in the inventory for the actual Fn index). Re-run fragment search for logging. If previous was "discarded", keep "discarded" status.
+   - Copy deff_fexp from previous inventory. If previous status was "applied", carry forward the DEFF F3 line and the merged FEXP line (check `deff_command` in the inventory for the actual Fn index). Re-run fragment search for logging. If previous was "discarded", keep "discarded" status.
 5. Write the updated inventory block at the TOP of the new LSD file
 6. Write ALL LSD commands below (copied from previous + new batch)
 
@@ -649,8 +672,8 @@ After writing all MULT, HSQC, first HMBC batch, BOND, and ring exclusion (DEFF F
       - Run: `lucy fragment to-lsd "<smiles>" --output-dir analysis/iteration_NN/ --format json`
       - Parse JSON: extract filename, deff_command, fexp_command
       - Set deff_fexp = {"status": "applied", ...populate all fields...}
-      - DEFF/FEXP lines go in LSD file AFTER inventory block, BEFORE first MULT
-6. Build/update LSD file: inventory block first (initialized or updated per Section 5C/5D), then DEFF F3/FEXP (if fragment applied), then MULT defs, HSQC, HMBC batch, BOND/LIST/PROP, DEFF F1+F2/FEXP ring exclusion
+      - DEFF F3 goes into the filter block; F3 enters the one FEXP line (`FEXP "F3 AND NOT F1 AND NOT F2"`)
+6. Build/update LSD file: inventory block first (initialized or updated per Section 5C/5D), then MULT defs, HSQC, HMBC batch, BOND/LIST/PROP, then the filter block: DEFF F1 + F2 (+ F3 if fragment applied) and ONE FEXP line
 7. Write to `analysis/iteration_NN/compound.lsd` (single Write: inventory + all commands)
 8. Send "ready for validation" to devils-advocate via SendMessage
 9. **WAIT for devils-advocate approval** -- do NOT run solver until APPROVED
