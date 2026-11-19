@@ -298,6 +298,18 @@ class LSDRunner:
                 cwd=output_dir,
             )
 
+            # An input error ("error 420 - 6 commands read" plus an explanation on the next
+            # line) must be reported as such, not as a failed SMILES conversion.
+            lsd_error = self._lsd_error(proc.stdout + "\n" + proc.stderr)
+            if lsd_error:
+                return LSDResult(
+                    success=False,
+                    solution_count=0,
+                    stdout=proc.stdout,
+                    stderr=lsd_error,
+                    return_code=proc.returncode or 1,
+                )
+
             # Find output files
             output_files = list(output_dir.glob("*.sol")) + list(output_dir.glob("*.out"))
 
@@ -375,9 +387,29 @@ class LSDRunner:
                     if match:
                         return int(match.group(1))
 
-        # Fallback: count .sol files
-        sol_files = [f for f in output_files if f.suffix == ".sol"]
-        return len(sol_files)
+        # Fallback: the solution counter LSD writes next to its output. A .sol file alone
+        # proves nothing: LSD writes one (the input echo) even when it finds no structure.
+        for f in output_files:
+            counter = f.parent / "solncounter"
+            if counter.exists():
+                try:
+                    return int(counter.read_text().split()[0])
+                except (ValueError, IndexError):
+                    return 0
+        return 0
+
+    @staticmethod
+    def _lsd_error(text: str) -> str:
+        """LSD's own error report ("LSD error 420: <explanation>"), or "" if there is none."""
+        import re
+
+        lines = text.splitlines()
+        for i, line in enumerate(lines):
+            match = re.match(r"\s*error (\d+)\b", line)
+            if match:
+                detail = lines[i + 1].strip() if i + 1 < len(lines) else ""
+                return f"LSD error {match.group(1)}: {detail}".rstrip(": ")
+        return ""
 
     @classmethod
     def _find_lsd(cls) -> Path | None:

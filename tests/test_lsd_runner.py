@@ -136,20 +136,29 @@ class TestLSDRunnerExecution:
         assert result.return_code is not None
 
     def test_count_solutions_from_files(self):
-        """Test solution counting from output files."""
+        """Without a count on stdout, the count comes from LSD's solncounter file.
+
+        A .sol file alone is no evidence: LSD writes one (the input echo) even when
+        it finds no structure, so it must not count as a solution.
+        """
         runner = LSDRunner()
 
-        # Test with mock file list
         with tempfile.TemporaryDirectory() as tmpdir:
             tmpdir = Path(tmpdir)
-            (tmpdir / "sol1.sol").write_text("solution 1")
-            (tmpdir / "sol2.sol").write_text("solution 2")
-            (tmpdir / "output.out").write_text("log")
-
+            (tmpdir / "compound.sol").write_text("# From file: compound.lsd.\n")
             files = list(tmpdir.glob("*"))
-            count = runner._count_solutions("", files)
+            assert runner._count_solutions("", files) == 0
 
-            assert count == 2  # Two .sol files
+            (tmpdir / "solncounter").write_text("7\n")
+            assert runner._count_solutions("", files) == 7
+
+    def test_lsd_error_is_reported(self):
+        """LSD's own error line and its explanation are returned, not a guess."""
+        out = "header\nerror 420 - 6 commands read\nAttempting to bind atoms 1 and 2 leads to x.\n"
+        assert LSDRunner._lsd_error(out) == (
+            "LSD error 420: Attempting to bind atoms 1 and 2 leads to x."
+        )
+        assert LSDRunner._lsd_error("1 solution found.\n") == ""
 
     def test_count_solutions_from_stdout(self):
         """Test solution counting from stdout."""

@@ -105,6 +105,10 @@ def lsd_run(
                 click.echo(f"  Output files:")
                 for f in result.output_files:
                     click.echo(f"    - {f}")
+        elif "No solution found" in f"{result.stdout}\n{result.stderr}":
+            # Not a failure: the constraints admit no structure
+            click.echo("LSD completed: no structure fits the constraints")
+            click.echo("  Solutions found: 0")
         else:
             click.echo(f"LSD failed (return code: {result.return_code})")
             if result.stderr:
@@ -575,8 +579,63 @@ def lsd_validate_inventory(lsd_file: str, output_format: str) -> None:
         raise SystemExit(1)
 
 
+def _rank_assigned_cli(
+    lsd_files: tuple[str, ...],
+    top: int,
+    tolerance: float,
+    db: str | None,
+    table: str | None,
+    max_radius: int,
+    output_format: str,
+) -> None:
+    """Atom-by-atom ranking for ``ailsa lsd rank --assigned``."""
+    from dataclasses import asdict
+
+    from ailsa.ranking.assigned import rank_assigned
+
+    try:
+        predictor = resolve_c13_predictor(db=db, table=table, max_radius=max_radius)
+        result = rank_assigned([Path(f) for f in lsd_files], predictor, tolerance=tolerance)
+    except (ValueError, FileNotFoundError) as e:
+        click.echo(f"Error: {e}", err=True)
+        raise SystemExit(1) from None
+    if output_format == "json":
+        data = {
+            "mode": "assigned",
+            "total_solutions": result.total,
+            "distinct_structures": result.distinct,
+            "skipped": result.skipped,
+            "tolerance": tolerance,
+            "observed_shifts": result.observed,
+            "warnings": result.warnings,
+            "candidates": [asdict(c) for c in result.candidates[:top]],
+        }
+        click.echo(json.dumps(data, indent=2))
+        return
+    click.echo(
+        f"Atom-by-atom ranking: {result.total} solutions, {result.distinct} distinct structures"
+        f" ({result.skipped} skipped); observed shifts for {len(result.observed)} carbons"
+    )
+    for w in result.warnings:
+        click.echo(f"  Warning: {w}")
+    click.echo(f"\nRank   MAE   within {tolerance:g} ppm  max error (LSD atom)  SMILES")
+    for c in result.candidates[:top]:
+        click.echo(
+            f"{c.rank:4d} {c.mae:6.2f}   {c.within_tolerance:3d}/{c.compared:<3d}        "
+            f"{c.max_error:5.1f} (C{c.worst_atom})       {c.smiles}"
+        )
+
+
 @lsd.command("rank")
-@click.argument("smiles_file", type=click.Path(exists=True))
+@click.argument("smiles_file", type=click.Path(exists=True), required=False)
+@click.option(
+    "--assigned",
+    "assigned",
+    type=click.Path(exists=True, dir_okay=False),
+    multiple=True,
+    help="Atom-by-atom mode: the LSD input file of a run (repeat for several runs). "
+    "Compares each carbon's predicted shift with the observed shift of that same LSD atom.",
+)
 @click.option(
     "--spectrum",
     "-s",
@@ -631,7 +690,8 @@ def lsd_validate_inventory(lsd_file: str, output_format: str) -> None:
     help="Output format.",
 )
 def lsd_rank(
-    smiles_file: str,
+    smiles_file: str | None,
+    assigned: tuple[str, ...],
     spectrum: str | None,
     shifts: str | None,
     top: int,
@@ -658,7 +718,22 @@ def lsd_rank(
       ailsa lsd rank outlsd.out --spectrum data/Ibuprofen/2
 
       ailsa lsd rank solutions.smi --shifts "180.5,140.8,137.0,129.4"
+
+    Atom-by-atom mode (--assigned): LSD numbers the atoms of every solution as in
+    its input, so each carbon's predicted shift is compared with the observed
+    shift of that same atom, read from SHIX lines or from the first number in the
+    carbon's MULT comment ("MULT 1 C 2 0 ; 155.71"). The solutions come from the
+    .sol file next to the input; SMILES_FILE and --shifts are not needed. Write
+    DUPL 1 in the input so that LSD keeps every atom assignment.
+
+      ailsa lsd rank --assigned iteration_05/compound.lsd
     """
+    if assigned:
+        _rank_assigned_cli(assigned, top, tolerance, db, table, max_radius, output_format)
+        return
+    if smiles_file is None:
+        click.echo("Error: Provide SMILES_FILE (or --assigned LSD_FILE)", err=True)
+        raise SystemExit(1)
     # Get experimental shifts
     if spectrum and shifts:
         click.echo("Error: Provide either --spectrum or --shifts, not both", err=True)
