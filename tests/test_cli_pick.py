@@ -198,6 +198,32 @@ class TestPickHSQC:
         assert data["negative_crosspeak_count"] == 0, data
 
 
+    def test_pick_hsqc_lists_negative_crosspeaks_when_edited(self, tmp_path, monkeypatch) -> None:
+        """In an edited HSQC the negative CH2 cross-peak is listed, with negative intensity."""
+        from ailsa.cli import pick as pick_module
+        from ailsa.models import Spectrum2D
+
+        data = np.zeros((128, 128))
+        data[40, 40] = 1000.0  # CH, positive
+        data[90, 80] = -900.0  # CH2, negative
+        spectrum = Spectrum2D(
+            data=data,
+            f1_ppm_scale=np.linspace(160.0, 0.0, 128),
+            f2_ppm_scale=np.linspace(10.0, 0.0, 128),
+            f1_nucleus="13C",
+            f2_nucleus="1H",
+            experiment_type="HSQC",
+            frequency=500.0,
+        )
+        monkeypatch.setattr(pick_module.BrukerReader, "read_2d", staticmethod(lambda _p: spectrum))
+        result = CliRunner().invoke(pick, ["hsqc", str(tmp_path), "--format", "json"])
+        assert result.exit_code == 0, result.output
+        out = json.loads(result.output)
+        assert out["multiplicity_edited"] is True
+        intensities = sorted(p["intensity"] for p in out["peaks"])
+        assert intensities[0] < 0 < intensities[-1], out["peaks"]
+
+
 class TestDetectMultiplicityEdited:
     """Unit tests for the deterministic _detect_multiplicity_edited helper."""
 

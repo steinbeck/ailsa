@@ -224,16 +224,22 @@ def pick_hsqc(path: str, threshold: float, output_format: str) -> None:
     PATH is the path to the HSQC Bruker experiment directory.
 
     Returns raw cross-peaks without DEPT-guided filtering. The AI agent
-    applies DEPT-guided filtering logic using skill knowledge.
+    applies DEPT-guided filtering logic using skill knowledge. In a
+    multiplicity-edited HSQC the negative (CH2) cross-peaks are listed with
+    negative intensity.
     """
     spectrum = BrukerReader.read_2d(path)
-    peaks = PeakPicker2D.pick_peaks(spectrum, threshold=threshold)
 
     # Deterministic multiplicity-editing detector (MULT-04 / D-05), ported
     # from the proven pick_1d negative_detected path. Independent of the
     # peak-picking --threshold (uses the fixed 0.05 fraction).
     multiplicity_edited, negative_crosspeak_count = _detect_multiplicity_edited(
         spectrum.data
+    )
+    # In an edited HSQC the CH2 cross-peaks are negative; list them too (with their
+    # negative intensity), or every CH2 correlation would be missing from the output.
+    peaks = PeakPicker2D.pick_peaks(
+        spectrum, threshold=threshold, detect_negative=multiplicity_edited
     )
 
     if output_format == "json":
