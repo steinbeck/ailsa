@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-07-21)
 Phase: 105 (documentation-and-outside-face) — COMPLETE, verified 2026-10-14
 Plan: 10 of 10
 Status: Phase 105 verified (15/15 after closing the deck-PDF gap); pushed to GitHub `steinbeck/ailsa`
-Last activity: 2026-11-19 -- lean skill 0.2 (frontier tools, agentic); atom-by-atom ranking in both skills; pushed
+Last activity: 2026-11-19 -- frontier-skill LSD facts fixed and tested (6a80d9e); lean skill 0.2.1
 
 **Resume here (2026-11-19):**
 
@@ -50,10 +50,14 @@ Last activity: 2026-11-19 -- lean skill 0.2 (frontier tools, agentic); atom-by-a
       and put the shift first in carbon MULT comments; the devil's advocate checks both.
     - **Tests:** 1444 passed; the 27 known old failures remain (JCAMP 24, dereplicate SD 1, click
       `mix_stderr` 2).
-    - **Next:** (1) fix the frontier-skill bugs found while condensing: two FEXP lines abort LSD
-      (error 402, write one `FEXP "F3 AND NOT F1 AND NOT F2"`), two HSQC lines for one CH2 (error
-      234), pyrrole N-H must be `N 3 1`, PROP means exactly n, `lsd analyze` j_coupling = path + 1,
-      the claim that `lsd run` translates SYME/DEFF NOT is false; (2) Qwen rerun of 0.2 on the 40
+    - **Done 2026-11-19 (`6a80d9e`):** the frontier-skill LSD bugs found while condensing are
+      fixed, each tested against LSD 3.4.9 on butanone/pyrrole first: one FEXP line (error 402),
+      one HSQC per atom (234), pyrrole `N 3 1` (390), PROP exact, `j_coupling` = path + 1,
+      `DEFF NOT` rejected (150) and no longer accepted as legacy, list names L1-L20 (114),
+      grouped HMBC carbon side only (116), HSQC/HMBC order only a convention. The devil's
+      advocate had two contradictory fragment rules (DEFF/FEXP before MULT vs ring block after
+      the correlations) and fragment greps that also matched F1/F2; both fixed. Lean skill 0.2.1.
+    - **Next:** (2) Qwen rerun of 0.2 on the 40
       blind datasets (setup on Sheldon `~/llm/`, private prep/grading in `~/case-eval/qwen-blind/` on
       the MBP2019): first copy the schema-7 DB to Sheldon (its DB is schema 3, `detect neighbours`
       fails), raise the time limit well above 2 h or disable Qwen's thinking mode (probe: about
