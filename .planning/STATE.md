@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v11.0
 milestone_name: AILSA Rename
 status: executing
-last_updated: "2026-10-31T11:00:00.000Z"
-last_activity: 2026-10-31
+last_updated: "2026-11-19T12:00:00.000Z"
+last_activity: 2026-11-19
 progress:
   total_phases: 8
   completed_phases: 2
@@ -27,7 +27,41 @@ See: .planning/PROJECT.md (updated 2026-07-21)
 Phase: 105 (documentation-and-outside-face) — COMPLETE, verified 2026-10-14
 Plan: 10 of 10
 Status: Phase 105 verified (15/15 after closing the deck-PDF gap); pushed to GitHub `steinbeck/ailsa`
-Last activity: 2026-10-31 -- lean skill ailsa-lite v0.1 and the `ailsa case` commands built; paper skill tagged
+Last activity: 2026-11-19 -- lean skill 0.2 (frontier tools, agentic); atom-by-atom ranking in both skills; pushed
+
+**Resume here (2026-11-19):**
+
+00. **Lean skill 0.2 and atom-by-atom ranking — pushed (`958527e`, `188b2d2`, `9377d45`).**
+    - **User decision 2026-11-19:** the lean skill must give the small model exactly the frontier
+      skill's tools and leave the agentic work to it (the model writes the LSD files). Scripts
+      that decide are out. Rules in `docs/SKILLS.md` (rule 1: same instruments, the agent decides;
+      lean text derived from the frontier skill; a test enforces lean ⊆ frontier commands).
+    - **Why:** v0.1 (`ailsa case` pipeline) with Qwen3.8-27B on 40 blind benchmark datasets found 2,
+      exactly the 2 the commands found without any model (hard 20: 0/20; easy 20, all solved by the
+      full skill: 2/20). The scripts' atom table set the limit.
+    - **0.2:** `src/ailsa/skills/ailsa-lite/SKILL.md` + `references/` (nmr-analysis, lsd-input,
+      checks-and-diagnosis, ranking), about 19 000 Qwen tokens, condensed from the frontier agents.
+    - **Tool fixes (both skills):** `pick hsqc` lists the negative CH2 cross-peaks of an edited
+      HSQC; `lsd run` reports LSD's own error line and "no structure fits" instead of a false
+      ring-filter message. **New:** `lsd rank --assigned compound.lsd` compares each carbon with the
+      measured shift of the same LSD atom (SHIX or the first number in the MULT comment); warns
+      without `DUPL 1`. On a blind dev dataset it put the right structure at rank 1 where the
+      nearest-line ranking had it at 3. Both skills now rank this way, write `DUPL 1` + `MAXS 20000`
+      and put the shift first in carbon MULT comments; the devil's advocate checks both.
+    - **Tests:** 1444 passed; the 27 known old failures remain (JCAMP 24, dereplicate SD 1, click
+      `mix_stderr` 2).
+    - **Next:** (1) fix the frontier-skill bugs found while condensing: two FEXP lines abort LSD
+      (error 402, write one `FEXP "F3 AND NOT F1 AND NOT F2"`), two HSQC lines for one CH2 (error
+      234), pyrrole N-H must be `N 3 1`, PROP means exactly n, `lsd analyze` j_coupling = path + 1,
+      the claim that `lsd run` translates SYME/DEFF NOT is false; (2) Qwen rerun of 0.2 on the 40
+      blind datasets (setup on Sheldon `~/llm/`, private prep/grading in `~/case-eval/qwen-blind/` on
+      the MBP2019): first copy the schema-7 DB to Sheldon (its DB is schema 3, `detect neighbours`
+      fails), raise the time limit well above 2 h or disable Qwen's thinking mode (probe: about
+      2 min per step, still in step 1 after 1 h, context compaction near 46k).
+    - **Benchmark blindness (for the paper):** the dataset sanitisation left name fragments inside
+      words in 76/258 datasets, compound names in file names (5), authors' spin simulations (10), an
+      earlier CASE result inside one dataset, and never touched the `##$TI` title field (filled in
+      195). Details in the private audit notes; the Qwen copies were re-sanitised.
 
 **Resume here (2026-10-31):**
 
