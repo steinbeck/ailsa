@@ -46,9 +46,10 @@ def test_description() -> None:
 
 def test_size_budget() -> None:
     assert len(SKILL_MD.read_text().splitlines()) <= 200
-    # what a run loads in the normal case: SKILL.md only; at most also the fixing guide
+    # SKILL.md plus every reference file must fit next to the harness prompt (about 10k) and
+    # a run's working context in a 64k window (about 3.5 characters per token for this text)
     total = sum(len(p.read_text()) for p in FILES if p.name != "CHANGELOG.md")
-    assert total / 4 <= 6000, "more than about 6000 tokens of instructions"
+    assert total / 3.5 <= 20000, "more than about 20000 tokens of instructions"
 
 
 @pytest.mark.parametrize("path", FILES, ids=lambda p: p.name)
@@ -73,21 +74,59 @@ def _commands() -> list[list[str]]:
             for chunk in re.findall(r"`(ailsa [^`]+)`", line) + (
                 [line.strip()] if line.strip().startswith("ailsa ") else []
             ):
-                found.append(shlex.split(chunk.replace("...", "")))
+                chunk = chunk.replace("...", "").rstrip("\\ ")  # a line continued with "\"
+                try:
+                    found.append(shlex.split(chunk))
+                except ValueError:  # unbalanced quotes in a shortened example
+                    found.append(chunk.split())
     return found
+
+
+FRONTIER = [
+    *sorted((SKILL_DIR.parents[3] / ".claude" / "commands" / "lucy-ng").rglob("*.md")),
+    *sorted((SKILL_DIR.parents[3] / ".claude" / "agents").glob("lucy-*.md")),
+]
+
+
+def _command_names(paths: list[Path], prefixes: str) -> set[str]:
+    """First two words of every command a skill names, e.g. "lsd run" or "identify"."""
+    names = set()
+    pattern = re.compile(rf"\b(?:{prefixes}) ([a-z][a-z0-9-]*)(?: ([a-z0-9][a-z0-9-]*))?")
+    for path in paths:
+        for m in pattern.finditer(path.read_text()):
+            group = cli.commands.get(m.group(1))
+            if group is None:
+                continue
+            is_sub = isinstance(group, click.Group) and m.group(2) in group.commands
+            names.add(f"{m.group(1)} {m.group(2) if is_sub else ''}".strip())
+    return names
+
+
+@pytest.mark.skipif(not FRONTIER, reason="frontier skill not in this checkout")
+def test_same_tools_as_frontier_skill() -> None:
+    """The lean skill names only commands the frontier skill uses (docs/SKILLS.md, rule 1)."""
+    lean = _command_names([p for p in FILES if p.name != "CHANGELOG.md"], "ailsa")
+    frontier = _command_names(FRONTIER, "ailsa|lucy")
+    assert lean, "the lean skill names no ailsa command"
+    # a bare group name ("the `ailsa analyze ...` tools") counts if the frontier uses the group
+    missing = {n for n in lean - frontier if not any(f.startswith(n + " ") for f in frontier)}
+    assert not missing, f"not used by the frontier skill: {sorted(missing)}"
 
 
 def test_commands_exist() -> None:
     commands = _commands()
     assert commands, "the skill names no ailsa command"
     for argv in commands:
+        if any(w.startswith("<") for w in argv[1:2]):
+            continue  # a template such as "ailsa <command> --help"
         group: click.Command = cli
         words = argv[1:]
         while isinstance(group, click.Group) and words and words[0] in group.commands:
             group = group.commands[words.pop(0)]
         if isinstance(group, click.Group):
-            assert not words, f"unknown subcommand in: {' '.join(argv)}"
-            continue  # prose naming a command group, e.g. "the `ailsa case` commands"
+            options = {opt for p in group.params for opt in getattr(p, "opts", [])} | {"--help"}
+            assert all(w in options for w in words), f"unknown subcommand in: {' '.join(argv)}"
+            continue  # prose naming a command group, or a group option such as --version
         known = {opt for p in group.params for opt in getattr(p, "opts", [])}
         for word in words:
             if word.startswith("--"):

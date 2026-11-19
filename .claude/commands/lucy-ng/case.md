@@ -599,9 +599,11 @@ SendMessage(
    TaskCreate(
      subject="ranking-iteration-{current_iter:02d}",
      description="Rank LSD solutions from iteration {current_iter}.
+                  LSD input: analysis/iteration_{current_iter:02d}/compound.lsd
                   solutions.smi path: analysis/iteration_{current_iter:02d}/solutions.smi
                   Experimental 13C shifts: {shift_list}
-                  Run: lucy lsd rank analysis/iteration_{current_iter:02d}/solutions.smi --shifts '{shift_list}'
+                  Run (decides): lucy lsd rank --assigned analysis/iteration_{current_iter:02d}/compound.lsd
+                  Cross-check: lucy lsd rank analysis/iteration_{current_iter:02d}/solutions.smi --shifts '{shift_list}'
                   Assess chemical plausibility of top candidates.
                   Write analysis/final_results.md with full report.
                   Send [RANKING-COMPLETE] to coordinator.",
@@ -614,7 +616,7 @@ SendMessage(
    SendMessage(
      type="message",
      recipient="solution-analyst",
-     content="[BEGIN] ranking — rank solutions now. solutions.smi: analysis/iteration_{current_iter:02d}/solutions.smi ; experimental 13C: {shift_list}. Assess plausibility, write analysis/final_results.md, send [RANKING-COMPLETE].",
+     content="[BEGIN] ranking — rank solutions now. LSD input: analysis/iteration_{current_iter:02d}/compound.lsd (rank atom by atom with --assigned; this decides) ; solutions.smi: analysis/iteration_{current_iter:02d}/solutions.smi ; experimental 13C: {shift_list} (nearest-line cross-check). Assess plausibility, write analysis/final_results.md, send [RANKING-COMPLETE].",
      summary="Kick off ranking"
    )
    ```

@@ -7,19 +7,20 @@ command line. There are three skill states. One is frozen, two are maintained si
 |---|---|---|---|
 | **Paper skill** | the blind benchmark reported in the paper | git tags `paper-skill-v1`, `paper-skill-v2` | frozen, never edited |
 | **`ailsa`** (frontier skill) | Anthropic's frontier models in Claude Code: large context, an agent team | `.claude/commands/`, `.claude/agents/` (moves with the skill rebuild) | maintained, the standard skill |
-| **`ailsa-lite`** (lean skill) | small open-weight models (about 20–35 B parameters, 32–128 k context) in OpenCode or any harness that reads Agent Skills | `src/ailsa/skills/ailsa-lite/`, installed with `ailsa skill install` | maintained, new |
+| **`ailsa-lite`** (lean skill) | small open-weight models (about 20–35 B parameters, 64–128 k context) in OpenCode or any harness that reads Agent Skills: the same tools and rules as the frontier skill, condensed for one agent | `src/ailsa/skills/ailsa-lite/`, installed with `ailsa skill install` | maintained, new |
 
 ## Contents
 
 - [The paper skill](#the-paper-skill)
 - [Why two maintained skills](#why-two-maintained-skills)
-- [Rule 1: share code, not prose](#rule-1-share-code-not-prose)
+- [Rule 1: the same instruments, the agent decides](#rule-1-the-same-instruments-the-agent-decides)
 - [Rule 2: the command line is the contract](#rule-2-the-command-line-is-the-contract)
 - [Rule 3: a skill ships with the CLI it calls](#rule-3-a-skill-ships-with-the-cli-it-calls)
 - [Which skill does a change touch](#which-skill-does-a-change-touch)
 - [Checks on every change](#checks-on-every-change)
 - [Measuring both skills](#measuring-both-skills)
-- [The lean skill, version 0.1](#the-lean-skill-version-01)
+- [The lean skill](#the-lean-skill)
+- [Version 0.1, withdrawn](#version-01-withdrawn)
 
 ## The paper skill
 
@@ -47,26 +48,28 @@ The frontier skill spends context freely: about 75 000 tokens of instructions, a
 plus four specialists, long reasoning between tool calls. That suits Opus-class models and is
 the design the project wants to measure.
 
-A 27 B model at 4-bit quantisation in a 24 GB card cannot use that skill. Before the first
-spectrum is read, OpenCode's own prompt and one specialist file already take a large part of its
-context, and its weakest point is exactly what the frontier skill asks of the model most often:
-long, exact bookkeeping (atom indices, constraint inventories, LSD file syntax). The lean skill
-moves that bookkeeping into the command line and leaves the model the chemical judgement.
+A 27 B model at 4-bit quantisation in a 24 GB card cannot load that skill: its context is about
+64 000 tokens, of which OpenCode's own prompt takes about 10 000, and a run needs room for peak
+lists, LSD files and solver output.
 
-## Rule 1: share code, not prose
+The point of the project is to measure what language-model agents can do in CASE. The lean skill
+therefore asks the small model for the same work as the frontier skill asks of Opus: read the
+spectra, build the atom list, write the LSD input, judge the candidates. It differs only in how
+the instructions are packaged: one agent instead of a team, and reference files that the model
+loads when it needs them instead of everything at once.
 
-Everything deterministic lives in the `ailsa` package and is tested there: peak cleanup,
-matching 2D peaks to atoms, consistency checks, writing the LSD file, running the solver,
-ranking, identity lookup. Both skills call it.
+## Rule 1: the same instruments, the agent decides
 
-The two skills share **no** instruction text, and neither refers into the other. Each is written
-for its model class. A rule that both need is encoded once in the code where possible, so that
-neither skill has to state it. Example: "an OH proton used in an HMBC line needs its own HSQC
-line" is a sentence in the frontier skill and simply a property of `ailsa case solve`, which
-writes that line itself.
+Both skills use the same `ailsa` commands, and only as instruments: reading and peak picking,
+statistical hints, running LSD, ranking by predicted shifts, identity lookup. No command takes a
+decision that the evaluation is about: which atoms and multiplicities the data support, which
+correlations go into the solver, how the LSD file is written, which candidate is right. A
+command that did so would measure the script instead of the model.
 
-When a rule can only live in prose, it is written twice, in the words each model class needs,
-and the change log records that both copies exist.
+The lean skill's text is derived from the frontier skill: the same chemistry and the same rules,
+condensed. Every rule in the lean skill must have its source in the frontier skill. A chemistry
+change is made in the frontier skill first and then carried into the lean skill in the same
+commit; the change log says so.
 
 ## Rule 2: the command line is the contract
 
@@ -75,8 +78,8 @@ and the change log records that both copies exist.
 - Every JSON field a skill tells the model to read is covered by a test of that command.
 - An interface change to a command that a skill names is made in the same commit as the change
   to every skill that names it. The test above makes a forgotten skill fail.
-- The `ailsa case` commands are the lean skill's whole interface. The frontier skill may adopt
-  them (the planned script versions of the devil's-advocate checks are `ailsa case check`).
+- The lean skill names only commands that the frontier skill also uses. A test compares the two
+  sets.
 
 ## Rule 3: a skill ships with the CLI it calls
 
@@ -94,7 +97,7 @@ mechanism when it is rebuilt.
 |---|---|---|
 | Bug fix or new capability inside a command | gets it through the command | gets it through the command |
 | Change of a command's interface or JSON output | same commit | same commit |
-| Chemistry rule (e.g. when a heteroatom bond may be fixed) | encode it in the command if possible; otherwise write it for this skill | the same; record "applies to both" in the change log |
+| Chemistry rule (e.g. when a heteroatom bond may be fixed) | carried over from the frontier skill in the same commit | written here first; record "applies to both" in the change log |
 | Harness feature (agent teams, hooks, OpenCode configuration) | only this skill | only this skill |
 | Search strategy (e.g. HMBC in batches or all at once) | decided per skill, measured per skill | decided per skill, measured per skill |
 
@@ -107,8 +110,9 @@ Run by `pytest` (the answer scan only locally):
 
 - **Format:** `name` matches `^[a-z0-9]+(-[a-z0-9]+)*$` and the directory name; `description`
   at most 1 024 characters, third person, says what the skill does and when to use it.
-- **Size:** lean skill: `SKILL.md` at most 200 lines; everything a normal run loads at most about
-  6 000 tokens. Frontier skill: every file under 500 lines, a table of contents in every file
+- **Size:** lean skill: `SKILL.md` at most 200 lines; `SKILL.md` plus every reference file at
+  most about 20 000 tokens (Qwen tokenizer; 19 000 in version 0.2), so that all of it fits next to OpenCode's prompt and
+  a run's working context. Frontier skill: every file under 500 lines, a table of contents in every file
   over 100 lines.
 - **Hygiene:** no model IDs, no project history (phase numbers, dates, bug numbers), no dataset
   numbers, no dead file references, one name per role.
@@ -128,32 +132,30 @@ Run by `pytest` (the answer scan only locally):
 - A change is kept if rank-1 results do not get worse beyond run-to-run noise. On a sample of
   this size that is two or three datasets: a repeat of 15 datasets agreed on 11.
 
-## The lean skill, version 0.1
+## The lean skill
 
-**What the model does:** it reads short reports, makes the judgement calls, and chains a fixed
-sequence of commands. **What it never does:** write an LSD file, copy shift lists between
-commands, keep a constraint inventory, or spawn other agents.
+One agent, three steps, the frontier skill's tools:
 
-| Step | Command | Model's decision |
+| Step | What the model does | Reference file it loads |
 |---|---|---|
-| 1 | `ailsa case scan <dataset>` | which experiments to use, if there is more than one of a kind |
-| 2 | `ailsa case setup <dataset> --formula <MF>` | — |
-| 3 | `ailsa case check` | resolve every reported issue with `ailsa case edit` (missing or surplus carbons, multiplicities, hybridisation, heteroatom hydrogens, doubtful correlations) |
-| 4 | `ailsa case solve` | if there is no solution even after the solver may drop three correlations: find the contradiction (step 3 again) |
-| 5 | `ailsa case rank` | is the best candidate chemically plausible? |
-| 6 | `ailsa case report` | a two- to four-sentence assessment |
+| 1 | picks peaks, runs the statistical detection, writes the atom list (`analysis/setup.md`) | `nmr-analysis.md` |
+| 2 | writes the LSD file, checks it, runs LSD, adds HMBC correlations in batches, diagnoses failures | `lsd-input.md`, `checks-and-diagnosis.md` |
+| 3 | ranks the candidates, checks identities, writes `analysis/final_results.md` | `ranking.md` |
 
-The state of a run lives in `analysis/problem.json`: every atom, every correlation with the
-peak it came from, and every edit with its reason. The LSD file is generated from it for each
-solver run and is never edited by hand. That makes constraint loss between iterations impossible
-by construction, and it records for every constraint which observation it came from.
+What the frontier team spreads over five agents (coordinator, NMR chemist, LSD engineer, solution
+analyst, devil's advocate, with a diagnostic specialist on escalation), the lean agent does in
+turn; the devil's-advocate checks become a checklist it applies before every solver run. The
+state of a run lives in files the agent writes (`setup.md`, `iterations.md`, one `compound.lsd`
+per iteration), because a small model must not rely on what it remembers.
 
-**Deliberate differences from the frontier skill** (to be measured, not assumed):
+Left out on purpose: messages between agents, the progress log and dashboard, timing stamps,
+model-disclosure gates.
 
-- All trusted HMBC correlations go into the first solver run, and the solver may drop up to
-  three of them if no solution exists. The frontier skill adds three to five per iteration.
-- No subagents, no messages, no progress log written by the model. The commands write the log.
+## Version 0.1, withdrawn
 
-**Not in version 0.1:** several multiplicity models searched side by side when DEPT and edited
-HSQC are both missing; automatic search for the contradicting correlation; fragment search;
-NUS and JCAMP-DX input (use `ailsa nus` or `ailsa jcamp` first).
+Version 0.1 (commit `925bf89`) moved the agent's work into scripts (`ailsa case` commands that
+built the atom list and wrote the LSD file) and left the model six commands in a fixed order. On
+40 blind benchmark datasets, Qwen3.8-27B with that skill found 2 structures, exactly the two the
+commands found without any model. The scripts set the limit and the model could not contribute;
+such a skill measures the scripts, not the model. The `ailsa case` commands are no longer used by
+any skill.

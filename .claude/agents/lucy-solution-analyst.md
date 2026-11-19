@@ -60,27 +60,47 @@ Solutions are ranked by:
 
 ## 2. CLI Reference -- lucy lsd rank
 
-### Syntax
+### Atom-by-atom ranking (decides the ranking)
 
 ```bash
-lucy lsd rank <solutions.smi> --shifts "<comma_separated_shifts>"
+lucy lsd rank --assigned analysis/iteration_03/compound.lsd --format json
 ```
 
-**Example:**
+LSD numbers the atoms of every solution as in its input file, so each carbon's predicted shift is
+compared with the observed shift of that same atom. The tool reads the solutions from the `.sol`
+file next to the input and the observed shifts from `SHIX` lines or from the first number in each
+carbon's MULT comment (`MULT 1 C 2 0 ; 155.71 Cq`). No SMILES file and no `--shifts` are needed.
+For several multiplicity families, pass `--assigned` once per family's `compound.lsd`: one call
+ranks their union.
+
+**Output fields:** rank, smiles, inchikey, mae, within_tolerance, compared, max_error, worst_atom,
+atoms (per carbon: lsd_atom, observed, predicted, error = predicted - observed); plus `warnings`.
+
+**If it warns that `DUPL 1` is missing:** LSD kept only one, arbitrary atom assignment per
+structure, so a right structure may be judged by a wrong assignment. Report this to the
+coordinator; the lsd-engineer re-runs the iteration with `DUPL 1`.
+
+This mode separates regioisomers that the nearest-line mode confuses: there, a wrong structure
+borrows experimental lines that belong to other atoms. In a blind test it put the right
+structure first where the nearest-line mode had it third.
+
+### Nearest-line ranking (cross-check)
+
 ```bash
-lucy lsd rank analysis/iteration_03/solutions.smi --shifts "<comma_separated_experimental_shifts>"
+lucy lsd rank analysis/iteration_03/solutions.smi --shifts "<comma_separated_experimental_shifts>" --format json
 ```
 
-**JSON output:** `--format json`
+**Output fields:** rank, smiles, matched_count, mae, quality, deviations, has_aromatic_ring; plus
+`warnings` (the aromatic check of Section 4 uses them).
 
-**Output fields:** rank, smiles, matched_count, mae, quality, deviations
+- **matched_count = N/M:** predicted shifts within tolerance of an experimental line, out of M
+- **MAE:** mean distance from each predicted shift to the NEAREST experimental line, whatever atom
+  it belongs to
+- **quality:** from MAE alone
+- **deviations:** absolute errors sorted from smallest to largest, not per atom and without sign
 
-### Interpretation
-
-- **matched_count = N/M:** N experimental shifts matched within tolerance out of M total
-- **MAE:** Mean absolute error in ppm across all predicted shifts
-- **quality:** "excellent" / "good" / "fair" / "marginal" / "poor"
-- **deviations:** Per-atom shift differences (predicted - experimental)
+Report both rankings; where they disagree, the atom-by-atom ranking decides and the
+disagreement goes into the report.
 
 ## 3. CLI Reference -- lucy predict c13
 
@@ -292,7 +312,7 @@ Recommendation: <converge (stop) / continue (more HMBC) / escalate (problem dete
 
 1. Claim ranking task from TaskList
 2. Read solutions.smi path and experimental 13C shifts from task description (coordinator embeds the full shift list when creating the ranking task)
-3. Run ranking: `lucy lsd rank <solutions.smi> --shifts "<shifts>" --format json`. Parse JSON output: extract `warnings` array and each solution's `has_aromatic_ring` field for use in Check 6 plausibility assessment.
+3. Run ranking (Section 2): first `lucy lsd rank --assigned <compound.lsd> --format json` (one `--assigned` per family's `compound.lsd` when several were run); this order decides the ranking. Then the cross-check `lucy lsd rank <solutions.smi> --shifts "<shifts>" --format json`: extract its `warnings` array and each solution's `has_aromatic_ring` field for Check 6.
 4. For top 3-5 candidates: `lucy predict c13 "<SMILES>" --format json`
    4a. For each prediction result, count predicted shifts in 110-160 ppm range.
        Compare against experimental spectrum aromatic carbon count (from nmr-chemist's [SETUP-COMPLETE] "Aromatic expectation" field).

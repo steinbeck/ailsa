@@ -94,19 +94,24 @@ CASE_MD_PATH = ".claude/commands/lucy-ng/case.md"
 #: provenance was accepted deliberately (see `.planning/STATE.md`
 #: "Key Decisions (2026-08)"); this red guard was its earliest machine-readable
 #: trace and went unnoticed.
+#:
+#: 2026-11-19, approved by the user: the atom-by-atom ranking (`lsd rank --assigned`,
+#: `DUPL 1` in every LSD file, measured shift first in each carbon's MULT comment)
+#: changes `case.md`, the lsd-engineer, solution-analyst and devils-advocate files.
+#: The paper skill stays available unchanged under the tags `paper-skill-v1/v2`.
 EXPECTED_SHA256: dict[str, str] = {
-    CASE_MD_PATH: "8299791ead74294fa31424bae990de62d7bf73260d5dbdbe1e776539e7148d8b",
+    CASE_MD_PATH: "8c6946c0d3534c6ac18ec647f26454cb39d85751ad26762270f5fdb95c391e1f",
     ".claude/agents/lucy-nmr-chemist.md": (
         "c643b44d3e49bcd7eb0de0125fca051f9c59cf9b1ceff1906143d39d9bdca19e"
     ),
     ".claude/agents/lucy-lsd-engineer.md": (
-        "d482f7b4618f1f50a8febdfa09384a2160231a6a3e1bc743039bc42220d0a401"
+        "430f6e84116b6ce33ac44f901cff6e72051b24f8971dff6d27b6ea3ef443b0e7"
     ),
     ".claude/agents/lucy-solution-analyst.md": (
-        "8fd09a57e0826b3f0dcb574094491d60c1e3997fd44d09509eb7fa91fc5e96c8"
+        "cbe2e980a11c0b71b09e884325cd04f8de74684278e25bb26372dd012c6a0d6d"
     ),
     ".claude/agents/lucy-devils-advocate.md": (
-        "1745718828c147dd7d28a2c7c9f1c0a6d18f65f1adf06b98568daf09eaa86247"
+        "02be08ee672a3be894c0c5e992c8cfb50f55100dcdb1a9f202e5361c3aec2192"
     ),
     ".claude/agents/lucy-diagnostic.md": (
         "41cf15d781dde1a8daaf828ba6d296e61bd4eb0a663f42d4572278b8f49a07cb"

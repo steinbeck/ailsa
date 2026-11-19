@@ -199,6 +199,16 @@ Missing declarations abort the solver outright (`exit 255, error 250`) rather th
 
 For natural products, expect DEFF F1 "ring3" + DEFF F2 "ring4" + FEXP (native form) OR DEFF NOT C1CC1 + DEFF NOT C1CCC1 (legacy form). `grep -c "^DEFF F" compound.lsd` must be >= 2 (native) OR `grep -c "^DEFF NOT" compound.lsd` must be >= 2 (legacy). If neither condition holds: flag WARNING.
 
+### Ranking Prerequisites (WARNING)
+
+The atom-by-atom ranking (`lucy lsd rank --assigned`) needs two things in every file:
+- `DUPL 1` (and `MAXS 20000`): `grep -c "^DUPL 1" compound.lsd` must be 1. Without it LSD keeps
+  one arbitrary atom assignment per structure.
+- every carbon's MULT comment starts with its measured 13C shift:
+  `grep -E "^MULT +[0-9]+ +C " compound.lsd | grep -vcE ";[[:space:]]*-?[0-9]+(\.[0-9]+)?"` must be 0.
+
+If either fails: flag WARNING ("atom-by-atom ranking prerequisites missing").
+
 ### ELIM Usage
 
 - ELIM expected after all HMBC added and 0 plausible solutions remain. N=1 is normal when 4J is suspected. Normal to see elim_budget > 0 in later iterations.

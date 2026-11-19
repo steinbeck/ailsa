@@ -1,15 +1,16 @@
 # AILSA lite: structure elucidation with a small open-weight model
 
 `ailsa-lite` is the lean AILSA skill for models of about 20–35 B parameters running locally, for
-example in [OpenCode](https://opencode.ai) with llama.cpp. The full AILSA skill for frontier
-models (an agent team with about 75 000 tokens of instructions) does not fit such a model. The
-lean skill is about 1 000 tokens; the `ailsa case` commands do the bookkeeping that would
-otherwise fill the context. Why there are two skills, and how they are kept apart:
-[SKILLS.md](SKILLS.md).
+example in [OpenCode](https://opencode.ai) with llama.cpp. It asks the model for the same work as
+the full AILSA skill asks of a frontier model, with the same `ailsa` commands: read the spectra,
+build the atom list, write the input file for the LSD solver, judge the candidates. The full skill
+spreads this over an agent team and about 70 000 tokens of instructions; the lean skill is one
+agent with a short core instruction and reference files it reads when it needs them. Why there
+are two skills, and how they are kept apart: [SKILLS.md](SKILLS.md).
 
 ## Contents
 
-- [What the model does, and what the commands do](#what-the-model-does-and-what-the-commands-do)
+- [What the model does](#what-the-model-does)
 - [Install](#install)
 - [OpenCode with a local model](#opencode-with-a-local-model)
 - [Run](#run)
@@ -17,19 +18,16 @@ otherwise fill the context. Why there are two skills, and how they are kept apar
 - [Results](#results)
 - [Status](#status)
 
-## What the model does, and what the commands do
+## What the model does
 
-| Step | Command | Done by the command | Left to the model |
+| Step | The model | Commands it uses | Reference file |
 |---|---|---|---|
-| 1 | `ailsa case scan DATASET` | finds and classifies the experiments, checks LSD and the prediction database | stop if a tool is missing |
-| 2 | `ailsa case setup DATASET --formula MF` | picks peaks; removes solvent, noise and artefacts; builds the atoms (multiplicity, hybridisation, symmetry, heteroatoms) and the HMBC correlations | — |
-| 3 | `ailsa case check` / `ailsa case edit` | lists errors and every assumption it made, with the command that reverses it | fix errors; change an assumption only with evidence |
-| 4 | `ailsa case solve DATASET` | writes the LSD input, runs LSD, lets it ignore up to three correlations if nothing fits | react when no structure fits |
-| 5 | `ailsa case rank DATASET` | predicts 13C shifts for every candidate and compares them atom by atom | judge the result |
-| 6 | `ailsa case report DATASET --note "..."` | writes `analysis/final_results.md` | a short assessment |
+| 1 | picks peaks, decides multiplicities, hybridisation and heteroatoms, writes `analysis/setup.md` | `ailsa pick`, `ailsa detect`, `ailsa analyze` | `nmr-analysis.md` |
+| 2 | writes each LSD file, checks it, runs LSD, adds HMBC correlations in batches, diagnoses failures | `ailsa lsd run`, `ailsa lsd validate-inventory` | `lsd-input.md`, `checks-and-diagnosis.md` |
+| 3 | ranks the candidates, checks identities, writes `analysis/final_results.md` | `ailsa lsd rank`, `ailsa predict c13`, `ailsa identify` | `ranking.md` |
 
-All state is in `DATASET/analysis/problem.json`, including every edit and its reason. The LSD
-input files are generated for each run and never edited by hand.
+The run's state is in files the model writes: `analysis/setup.md`, `analysis/iterations.md` and
+one `analysis/iteration_NN/compound.lsd` per solver run.
 
 ## Install
 
@@ -106,22 +104,22 @@ For a benchmark the model must see nothing but the spectra and the formula:
 - `OPENCODE_DISABLE_CLAUDE_CODE=1` stops OpenCode from reading Claude Code files
   (`~/.claude/CLAUDE.md`, `.claude/skills`), which may carry notes from earlier work.
 - Keep `webfetch` and `websearch` denied (see the configuration above).
-- Grade from `analysis/ranking.json` (the ranked candidates as SMILES) or the table in
-  `analysis/final_results.md`.
+- Grade from `analysis/ranking_results.json` (the ranked candidates as SMILES, written by
+  `ailsa lsd rank --format json`) or the table in `analysis/final_results.md`.
 
 ## Results
 
 | File in `DATASET/analysis/` | Content |
 |---|---|
-| `final_results.md` | proposed structure, assessment, top candidates, assumptions and edits, solver runs |
-| `ranking.json` | the ranked candidates (SMILES, InChIKey, errors) |
-| `problem.json` | atoms, correlations with the peak each came from, every edit with its reason |
-| `runs/run_NN/` | LSD input, solver output and SMILES of each solver run |
+| `final_results.md` | proposed structure, assessment, top candidates, confidence |
+| `ranking_results.json` | the ranked candidates (SMILES, errors) from `ailsa lsd rank` |
+| `setup.md` | peaks, atoms with the evidence for each, correlations, open questions |
+| `iterations.md` | one entry per solver run: constraints added and removed, solution count |
+| `iteration_NN/` | the LSD file the model wrote, the solver output and the SMILES of each run |
 
 ## Status
 
-Version 0.1. Measured so far only on the development datasets: driven by the commands alone, and
-with a small Claude model following the skill. Not yet measured with an open-weight model. Known
-gaps: no search over several multiplicity models when DEPT and edited HSQC are both missing; no
-automatic search for a contradicting correlation; NUS and JCAMP-DX data must be converted first
-(`ailsa nus`, `ailsa jcamp`).
+Version 0.2: the same tools and rules as the full AILSA skill, the model does the work itself.
+Version 0.1 had moved that work into scripts; on 40 blind benchmark datasets the model then could
+add nothing to what the scripts found (see [SKILLS.md](SKILLS.md)). Version 0.2 is being measured
+on the same datasets. NUS and JCAMP-DX data must be converted first (`ailsa nus`, `ailsa jcamp`).

@@ -61,13 +61,29 @@ You are one of 4 specialists in a CASE team (+ orchestrator as coordinator). The
 ### Atom Definitions -- MULT
 
 ```
-MULT 1 C 2 0    ; carbon, sp2, 0H (quaternary)
-MULT 2 C 2 1    ; carbon, sp2, 1H (CH)
-MULT 3 C 3 3    ; carbon, sp3, 3H (CH3)
+MULT 1 C 2 0    ; 168.2 carbon, sp2, 0H (quaternary)
+MULT 2 C 2 1    ; 128.5 carbon, sp2, 1H (CH)
+MULT 3 C 3 3    ; 21.3 carbon, sp3, 3H (CH3)
 MULT 4 N 3 0    ; nitrogen, sp3, 0H
 MULT 5 O 2 0    ; oxygen, sp2, 0H (carbonyl)
 MULT 6 O 3 1    ; oxygen, sp3, 1H (hydroxyl)
 ```
+
+**SHIFT-IN-COMMENT RULE:** on every carbon's MULT line the comment starts with that carbon's
+measured 13C shift, as above. The atom-by-atom ranking (`lucy lsd rank --assigned`, run by the
+solution-analyst) reads it there.
+
+### Keep every atom assignment -- DUPL 1
+
+```
+DUPL 1          ; keep every atom assignment
+MAXS 20000      ; stop after 20000 solutions
+```
+
+Write both lines in every LSD file. Without `DUPL 1`, LSD keeps only one, arbitrary atom
+assignment per structure, and the atom-by-atom ranking may judge a right structure by a wrong
+assignment. `DUPL 1` can multiply the solution count; `MAXS` caps it. A count equal to the cap
+means the list is incomplete: add constraints or report it.
 
 ### Correlations -- HSQC and HMBC
 
@@ -266,6 +282,11 @@ Once each family that produced a tractable solution set has a `solutions.smi`:
    Pitfall 1) — duplicate SMILES across families would distort counts and rank. Canonicalize
    each SMILES and keep one copy per canonical form before ranking.
 3. Run ONE rank across the union:
+   ```bash
+   lucy lsd rank --assigned analysis/iteration_NN_<family1>/compound.lsd --assigned analysis/iteration_NN_<family2>/compound.lsd --format json
+   ```
+   This atom-by-atom ranking decides; it reads each family's `.sol` and deduplicates structures
+   itself. The nearest-line cross-check runs on the deduped union file:
    ```bash
    lucy lsd rank analysis/union_solutions.smi --shifts "<13C list>" --format json
    ```

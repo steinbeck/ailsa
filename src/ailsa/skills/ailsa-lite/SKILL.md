@@ -1,100 +1,126 @@
 ---
 name: ailsa-lite
-description: Determines the structure of an unknown organic compound from its NMR spectra and molecular formula with the ailsa command line and the LSD solver. Use when asked to elucidate, solve or identify a structure from a folder of Bruker NMR data (13C, HSQC, HMBC; DEPT, APT or COSY if present). Lean version for small models - one fixed sequence of commands, no subagents.
+description: Determines the structure of an unknown organic compound from its NMR spectra and molecular formula, working as a structure elucidation chemist with the ailsa command line and the LSD solver. Use when asked to elucidate, solve or identify a structure from a folder of Bruker NMR data (13C, HSQC, HMBC; DEPT, APT or COSY if present). Same tools and rules as the full AILSA skill, condensed for one agent with a small context window.
 metadata:
-  version: "0.1.0"
-  requires: "ailsa with the `ailsa case` commands; LSD and outlsd on PATH; the reference database"
+  version: "0.2.0"
+  requires: "ailsa (the same commands the full AILSA skill uses); LSD and outlsd on PATH; the reference database"
 ---
 
 # AILSA lite: a structure from NMR spectra
 
-You find the structure by running `ailsa case` commands in a fixed order. The commands do the
-bookkeeping: they pick the peaks, build the table of atoms, write the solver input, run the
-solver and rank the candidate structures. Your job is to read each report and make the few
-decisions the tools leave to you.
+You are a structure elucidation chemist working alone. You read the spectra, decide which atoms
+and correlations the data support, write the input file for the LSD solver yourself, judge what
+the solver returns, and report. The `ailsa` commands are your instruments: they pick peaks, run
+LSD, predict 13C shifts and look up identities. They never decide for you.
 
-## Rules
+This skill has the same tools and rules as the full AILSA skill, written for one agent. Its
+reference files carry the detail; read each one when the workflow below says so, not before.
 
-1. Run only the commands of this skill, in the shell. Every command ends with a line `NEXT:`
-   that shows the usual next command. Copy it exactly.
-2. Never write or edit files yourself. Change the problem only with
-   `ailsa case edit DATASET ... --reason "..."`. The reason names the observation behind it.
-3. Never name a compound from memory, and never search the internet for the data or the answer.
-   The report states the identity the tools derived.
-4. Use the dataset path exactly as the user gave it. Results go to `DATASET/analysis/`.
-5. A failing command prints `Error:`. Fix the cause and run it again. Never run the same
-   failing command more than twice.
+## Ground rules
 
-## Step 1: look at the data
+1. **Start from the spectra and the formula only.** No dereplication and no database search for
+   the answer before LSD has produced candidates. No web access.
+2. **Evidence for every claim.** Each atom property and each constraint must point to a peak, a
+   correlation or a tool output. Never name a compound from memory: names come only from
+   `ailsa identify` run on a SMILES.
+3. **State lives in files.** Keep `analysis/setup.md` (atoms and correlations),
+   `analysis/iterations.md` (one entry per solver run) and one `compound.lsd` per iteration.
+   Before writing a new LSD file, read the previous one; never rebuild it from memory.
+4. **Act, do not announce.** When you have said what you will do next, do it with a tool call in
+   the same turn. Never end your turn on a plan. The run is finished only when
+   `analysis/final_results.md` exists.
+5. **Keep tool output small.** Write long output to a file and read the part you need
+   (`| head -40`, `grep`, or `--format json` with a short `python3 -c` filter).
+6. **Never modify the spectra.** Work only inside `analysis/`.
 
-```
-ailsa case scan DATASET
-```
+## Before you start
 
-Check that it says `LSD solver: ok` and `13C prediction: ok`. If one says MISSING, stop and tell
-the user what is missing. Use the formula the user gave; otherwise the one the scan found.
-
-## Step 2: build the problem
-
-```
-ailsa case setup DATASET --formula FORMULA
-```
-
-The report has three parts: the atom table, ERRORS and TO VERIFY.
-
-## Step 3: check and fix
-
-- **ERRORS** must be fixed before the solver can run. For each one, read the matching section
-  of [references/fixing.md](references/fixing.md) and apply the edit it describes.
-- **TO VERIFY** lists setup's best guesses. Keep each one unless you can point to an
-  observation in the report that contradicts it. When in doubt, keep it.
-- After every edit the command prints the full check again. Continue until there are no ERRORS.
-
-Example of an edit:
-
-```
-ailsa case edit DATASET --mult 7=CH3 --reason "intense HSQC peak at 1.2 ppm, three protons"
+```bash
+ailsa --version
+ailsa lsd check                                   # LSD and outlsd must be available
+ailsa predict c13 "CCO" --format json | head -3   # the prediction database must work
+mkdir -p analysis
 ```
 
-## Step 4: solve
+Stop and report if a check fails. The molecular formula comes from the request; if it is not
+there, look for a small sidecar file in the dataset folder (`molecularformula.txt`,
+`molecular-formula.txt`, `formula.txt`) and say which file you used. Each experiment is a
+numbered Bruker folder; its type is in `acqus` (`##$PULPROG=`, `##$NUC1=`) and in
+`pdata/1/title`.
 
-```
-ailsa case solve DATASET
-```
+## Step 1: spectra to atoms
 
-- `-> N structure(s)` with N above 0: go to step 5.
-- `No structure fits`: read section "No structure" in
-  [references/fixing.md](references/fixing.md), make the edits it suggests, and solve again.
-  After three rounds without a structure, stop and report that the data gave no structure.
-- `limit reached`: the list of structures is incomplete. Rank it anyway and say so in the report.
-- `ERROR` from the solver: run `ailsa case check DATASET` and fix what it reports.
+**Read `references/nmr-analysis.md` now.** Then pick the peaks and run the statistical detection
+it describes (`ailsa pick 1d`, `ailsa pick hsqc`, `ailsa pick hmbc`, `ailsa detect ...`,
+`ailsa analyze ...`).
 
-## Step 5: rank
+Write `analysis/setup.md` with:
 
-```
-ailsa case rank DATASET
-```
+- formula, degree of unsaturation (DBE), experiments found and which one you used for what
+- the experimental 13C shift list, comma-separated (the ranking needs it later)
+- one row per carbon: shift, multiplicity (CH3, CH2, CH, C) with its evidence, hybridisation,
+  attached proton shift(s)
+- heteroatoms with their hydrogens and hybridisation; symmetry or equivalent carbons
+- HMBC correlations ranked by confidence (best first), COSY pairs
+- open questions: anything the data cannot decide (for example two multiplicity models)
 
-Rank 1 has the lowest MAE: the mean difference between predicted and observed 13C shifts,
-compared atom by atom. Read the result like this:
+Check before you move on: hydrogens on all atoms add up to the formula; the number of sp2 atoms
+is even; double bonds plus rings equal the DBE.
 
-| What you see for rank 1 | What it means |
+## Step 2: LSD iterations
+
+**Read `references/lsd-input.md` before writing the first file**, and
+`references/checks-and-diagnosis.md` part 1 before the first run.
+
+1. Iteration 1 in `analysis/iteration_01/compound.lsd`: every atom (MULT), every one-bond
+   correlation (HSQC), and only the first 3 to 5 most reliable HMBC correlations.
+2. Before every run, apply the checklist (part 1 of `checks-and-diagnosis.md`) to the file and
+   fix what fails.
+3. Run LSD with `ailsa lsd run` as `lsd-input.md` describes. Record in `analysis/iterations.md`:
+   file, solution count, constraints added and removed (with the reason), sp2 count, hydrogen
+   total, HMBC used out of available.
+4. Next iteration: copy the previous file into `iteration_NN+1/`, carry every constraint forward,
+   add the next 3 to 5 HMBC correlations. Remove a constraint only with a written reason.
+5. Stop iterating when there are 10 or fewer solutions, when no reliable correlation is left, or
+   after 10 iterations. Then go to step 3.
+
+When the solver returns no structure, or far too many, **read `checks-and-diagnosis.md` part 2**:
+
+| Pattern | What it means | What to do |
+|---|---|---|
+| 0 solutions | a wrong atom or a wrong correlation | follow part 2 in order; ELIM is the last resort |
+| 0 solutions three times in a row | a conflict entered with one batch | remove the last batch, confirm solutions return, re-add one correlation at a time |
+| more than 100 solutions, under 10 % fewer per iteration, three times | correlations add no new connections | choose correlations that join new fragments; add heteroatom constraints (part 2) |
+| ELIM would exceed 3 | never | at ELIM 3 without a plausible solution the data conflict: recheck atoms (step 1) |
+| many constraints added and removed without progress | churning | go back to the last good iteration and add correlations one batch at a time |
+
+**Ambiguous multiplicity.** If more than one multiplicity model fits the data, write each model
+in `setup.md`, run each in its own folder (`iteration_NN_<model>/`) and rank all their solutions
+together. Do not finish until every model you listed has been run.
+
+## Step 3: ranking and report
+
+**Read `references/ranking.md`.** Rank the solutions atom by atom with
+`ailsa lsd rank --assigned` (each carbon against its own measured shift, read from your MULT
+comments), judge the top candidates (shift agreement per atom, chemical plausibility), check
+identities with `ailsa identify`, and write `analysis/final_results.md`.
+
+If the best candidate deviates by more than 4 ppm on average with 20 or fewer solutions, or all
+top three candidates are chemically implausible, go back to step 1 once and re-examine the atom
+assumptions (multiplicities, hybridisation, heteroatom hydrogens). If that does not help, report
+honestly that the data did not lead to a reliable structure.
+
+## The tools
+
+| Command | Use |
 |---|---|
-| MAE below 2 ppm and a margin of 0.3 ppm or more to rank 2 | a strong result |
-| MAE below 2 ppm, margin below 0.3 ppm | rank 1 and 2 are both possible; name both in the note |
-| MAE 2 to 4 ppm | plausible but uncertain |
-| MAE above 4 ppm | probably wrong: go back to step 3 once and look for a wrong atom type |
-| one or two unexplained HMBC | normal: some correlations span four bonds |
-| more than three unexplained HMBC | doubtful: say so in the note |
+| `ailsa pick 1d` / `pick hsqc` / `pick hmbc` | peak lists |
+| `ailsa detect hybridisation` / `neighbours` / `hhb` / `aromatic-cosy` | statistical hints from shifts and formula |
+| `ailsa analyze symmetry` / `grouping` | equivalent carbons, signal groups |
+| `ailsa lsd run` / `lsd validate-inventory` / `lsd analyze` | run LSD, check the constraint inventory, check coupling path lengths |
+| `ailsa lsd rank --assigned` | rank LSD solutions atom by atom by predicted 13C shifts |
+| `ailsa predict c13` | predicted 13C shifts for one SMILES |
+| `ailsa identify` | identity of a SMILES (InChIKey, database name); gates a name |
+| `ailsa fragment search` / `fragment to-lsd` | optional: known substructures as LSD fragments |
 
-Report rank 1. Do not pick another candidate because it looks more familiar.
-
-## Step 6: report
-
-```
-ailsa case report DATASET --note "TEXT"
-```
-
-TEXT is two to four sentences: the structure in words (compound class, main groups), the
-evidence (MAE, margin to rank 2, unexplained HMBC) and what remains uncertain. Then answer the
-user with the SMILES of rank 1 and the path of `final_results.md`.
+Run `ailsa <command> --help` when you need an option the reference files do not show.
