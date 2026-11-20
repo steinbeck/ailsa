@@ -12,6 +12,12 @@ DEPT-edited experiments), render it with `BrukerReader.read_1d()` +
 matplotlib (Agg), and overlay the picked peaks from
 `analysis/peaks/carbon_signals.json`.
 
+Raw-data formats (2026-11-20): the manifest's `bruker_data_dir` may also
+point at a directory of JCAMP-DX `*.dx` files (no numbered experiment
+dirs). `_detect_raw_format()` picks the branch; the JCAMP selectors
+classify files from metadata only and decode the selected file lazily --
+see the "JCAMP-DX datasets" helper block below.
+
 Every route ALWAYS returns valid PNG bytes at HTTP 200 -- a real chart when
 data is available, or a well-formed "unavailable" placeholder chart on any
 failure (absent manifest, stale/unreadable raw path, no matching
@@ -41,7 +47,8 @@ from numpy.typing import NDArray
 
 from ailsa.models import Spectrum1D, Spectrum2D
 from ailsa.processing.peak_picker_2d import _compute_2d_noise_sigma
-from ailsa.readers.bruker import BrukerReader
+from ailsa.readers.bruker import BrukerReader, _detect_experiment_type
+from ailsa.readers.jcamp import JcampReader, _clean_nucleus_label, _read_metadata
 
 # Broad except tuple for JSON-parsing readers (mirrors tables.py's
 # _JSON_READ_ERRORS -- the narrower (FileNotFoundError, OSError) idiom used
@@ -245,6 +252,162 @@ def _selected_2d_pdata_path(bruker_data_dir: Path, experiment_type: str) -> Path
     exp_dir = min(candidates, key=lambda t: t[0])[1]
     data_file = exp_dir / "pdata" / "1" / "2rr"
     return data_file if data_file.exists() else exp_dir
+
+
+# ---------------------------------------------------------------------------
+# JCAMP-DX datasets (2026-11-20): a raw-data dir holding *.dx files instead
+# of numbered Bruker experiment dirs (e.g. the C20H32O2-jcamp run, whose
+# Spectra tabs stayed on the "No … experiment found" placeholder because the
+# Bruker selectors above never see a numbered dir). The Bruker selectors are
+# left untouched (frozen contracts); the JCAMP selectors below mirror them,
+# with one difference forced by cost: decoding a 2D .dx file takes seconds
+# (NTUPLES/DIFDUP assembly), so files are CLASSIFIED from metadata only
+# (`_read_metadata`, ~10-100 ms, cached per path/mtime/size) and the selected
+# file is decoded lazily -- for the 2D routes only on a PNG-cache miss
+# (`_select_source_2d_jcamp` + `_cached_or_render`).
+# ---------------------------------------------------------------------------
+
+_RAW_FORMAT_BRUKER = "bruker"
+_RAW_FORMAT_JCAMP = "jcamp"
+
+# (path, mtime, size) -> classification entry. The frontend polls every
+# spectra route repeatedly; metadata parsing is cheap but not free.
+_jcamp_class_cache: dict[tuple[str, float, int], dict[str, Any]] = {}
+
+
+def _detect_raw_format(data_dir: Path) -> str | None:
+    """Return "bruker" for numbered experiment dirs, "jcamp" for *.dx files, else None.
+
+    Bruker wins when both are present, so existing datasets keep their exact
+    behaviour. Never raises (unreadable/missing dir -> None).
+    """
+    try:
+        if not data_dir.is_dir():
+            return None
+        entries = list(data_dir.iterdir())
+    except OSError:
+        return None
+    if any(p.is_dir() and re.match(r"^\d+$", p.name) for p in entries):
+        return _RAW_FORMAT_BRUKER
+    if any(p.is_file() and p.suffix.lower() == ".dx" for p in entries):
+        return _RAW_FORMAT_JCAMP
+    return None
+
+
+def _classify_jcamp_file(path: Path) -> dict[str, Any] | None:
+    """Classify one .dx file from its metadata only -- no spectral decode.
+
+    Returns:
+        ``{"path", "ndim", "nucleus", "pulse_program", "experiment_type"}``:
+        `nucleus` is the plain observe nucleus ("13C", "1H") for 1D files;
+        `experiment_type` is HSQC/HMBC/COSY/... for 2D files, or None when
+        the pulse program is not recognised. None when the file cannot be
+        parsed as JCAMP-DX. Never raises.
+    """
+    try:
+        st = path.stat()
+    except OSError:
+        return None
+    key = (str(path), st.st_mtime, st.st_size)
+    cached = _jcamp_class_cache.get(key)
+    if cached is not None:
+        return cached
+    try:
+        inner = _read_metadata(path)
+    except Exception:  # noqa: BLE001 -- malformed/foreign .dx: skip it, never raise
+        return None
+
+    def _first(k: str) -> str:
+        v = inner.get(k)
+        return str(v[0]).strip() if v else ""
+
+    ndim = 2 if _first("NUMDIM") == "2" else 1
+    pulse_program = _first(".PULSESEQUENCE")
+    entry: dict[str, Any] = {
+        "path": path,
+        "ndim": ndim,
+        "nucleus": None,
+        "pulse_program": pulse_program,
+        "experiment_type": None,
+    }
+    if ndim == 1:
+        entry["nucleus"] = _clean_nucleus_label(_first(".OBSERVENUCLEUS")) or None
+    else:
+        # `.NUCLEUS` lists the dimensions in SYMBOL order (F1, F2): "13C, 1H"
+        # for an HSQC. The pulse program alone decides the common cases.
+        raw_nuclei = _first(".NUCLEUS")
+        nuclei = [_clean_nucleus_label(n) for n in raw_nuclei.split(",")] if raw_nuclei else []
+        f1 = nuclei[0] if len(nuclei) > 0 else ""
+        f2 = nuclei[1] if len(nuclei) > 1 else ""
+        if pulse_program:
+            try:
+                entry["experiment_type"] = _detect_experiment_type(pulse_program, f1, f2)
+            except ValueError:
+                entry["experiment_type"] = None  # e.g. an unrecognised homonuclear program
+    _jcamp_class_cache[key] = entry
+    return entry
+
+
+def _classify_jcamp_files(data_dir: Path) -> list[dict[str, Any]]:
+    """Classify every *.dx file in `data_dir` (suffix case-insensitive), sorted by name.
+
+    Returns an empty list on an unreadable directory -- never raises.
+    """
+    try:
+        files = sorted(
+            (p for p in data_dir.iterdir() if p.is_file() and p.suffix.lower() == ".dx"),
+            key=lambda p: p.name,
+        )
+    except OSError:
+        return []
+    entries: list[dict[str, Any]] = []
+    for path in files:
+        entry = _classify_jcamp_file(path)
+        if entry is not None:
+            entries.append(entry)
+    return entries
+
+
+def _select_experiment_jcamp(data_dir: Path, nucleus: str) -> Spectrum1D | None:
+    """JCAMP mirror of `_select_experiment`: first readable 1D file (by name) for `nucleus`.
+
+    DEPT-edited files are excluded via the pulse program, as in the Bruker
+    selector. Never raises.
+    """
+    for entry in _classify_jcamp_files(data_dir):
+        if entry["ndim"] != 1 or entry["nucleus"] != nucleus:
+            continue
+        if "dept" in str(entry["pulse_program"]).lower():
+            continue
+        try:
+            return JcampReader.read_1d(entry["path"])
+        except (FileNotFoundError, ValueError, OSError):
+            continue
+    return None
+
+
+def _select_source_2d_jcamp(data_dir: Path, experiment_type: str) -> Path | None:
+    """JCAMP mirror of `_selected_2d_pdata_path`: the first 2D .dx of `experiment_type`, undecoded.
+
+    The returned path doubles as the mtime source for the PNG cache key, so
+    the 2D routes decode the file only on a cache miss. Never raises.
+    """
+    for entry in _classify_jcamp_files(data_dir):
+        if entry["ndim"] == 2 and entry["experiment_type"] == experiment_type:
+            path: Path = entry["path"]
+            return path
+    return None
+
+
+def _select_experiment_2d_jcamp(data_dir: Path, experiment_type: str) -> Spectrum2D | None:
+    """JCAMP mirror of `_select_experiment_2d`: decode the selected 2D file. Never raises."""
+    source = _select_source_2d_jcamp(data_dir, experiment_type)
+    if source is None:
+        return None
+    try:
+        return JcampReader.read_2d(source)
+    except (FileNotFoundError, ValueError, OSError):
+        return None
 
 
 def _read_peaks(analysis_dir: Path) -> list[dict[str, Any]]:
@@ -762,7 +925,10 @@ def make_router(analysis_dir: Path) -> APIRouter:
             if not bruker_dir.is_dir():
                 return _render_placeholder_png(Figure, FigureCanvasAgg, _MSG_STALE_PATH)
 
-            spectrum = _select_experiment(bruker_dir, nucleus)
+            if _detect_raw_format(bruker_dir) == _RAW_FORMAT_JCAMP:
+                spectrum = _select_experiment_jcamp(bruker_dir, nucleus)
+            else:
+                spectrum = _select_experiment(bruker_dir, nucleus)
             if spectrum is None:
                 return _render_placeholder_png(Figure, FigureCanvasAgg, no_experiment_message)
 
@@ -789,6 +955,33 @@ def make_router(analysis_dir: Path) -> APIRouter:
         png_bytes = _render_nucleus("1H", _MSG_NO_PROTON)
         return Response(content=png_bytes, media_type="image/png")
 
+    def _render_2d_jcamp(data_dir: Path, experiment_type: str, no_experiment_message: str) -> bytes:
+        """JCAMP branch of `_render_2d` (called inside its never-500 guard).
+
+        Resolves the source .dx WITHOUT decoding it, so a cache hit costs a
+        metadata parse and a stat; the multi-second `JcampReader.read_2d`
+        runs only inside the render closure on a miss.
+        """
+        source = _select_source_2d_jcamp(data_dir, experiment_type)
+        if source is None:
+            return _render_placeholder_png(
+                Figure, FigureCanvasAgg, no_experiment_message, _FIGSIZE_2D
+            )
+        kind = experiment_type.lower()
+        peaks_path = analysis_dir / "peaks" / f"{kind}.json"
+        source_mtime = _source_mtime(source, peaks_path)
+        return _cached_or_render(
+            f"{analysis_dir}:{kind}",
+            source_mtime,
+            lambda: _render_2d_png(
+                Figure,
+                FigureCanvasAgg,
+                JcampReader.read_2d(source),
+                _read_peaks_2d(analysis_dir, kind),
+                experiment_type,
+            ),
+        )
+
     def _render_2d(experiment_type: str, no_experiment_message: str) -> bytes:
         """Render one 2D route's body; degrade to a placeholder on ANY failure.
 
@@ -813,6 +1006,9 @@ def make_router(analysis_dir: Path) -> APIRouter:
                 return _render_placeholder_png(
                     Figure, FigureCanvasAgg, _MSG_STALE_PATH, _FIGSIZE_2D
                 )
+
+            if _detect_raw_format(bruker_dir) == _RAW_FORMAT_JCAMP:
+                return _render_2d_jcamp(bruker_dir, experiment_type, no_experiment_message)
 
             spectrum = _select_experiment_2d(bruker_dir, experiment_type)
             if spectrum is None:

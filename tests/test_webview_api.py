@@ -2241,3 +2241,171 @@ class TestSpectraEndpoint2D:
             assert not (
                 stripped.startswith("import matplotlib") or stripped.startswith("from matplotlib")
             ), f"Found a matplotlib import before 'def make_router': {line!r}"
+
+
+# ---------------------------------------------------------------------------
+# JCAMP-DX raw data (Phase 95/96 follow-up, 2026-11-20): the spectra routes
+# must render a dataset that ships as *.dx files instead of numbered Bruker
+# experiment dirs. Root cause of the blank Spectra tabs on the C20H32O2-jcamp
+# run: _select_experiment/_select_experiment_2d only scan numbered Bruker
+# dirs, so a JCAMP folder always produced the "No … experiment found"
+# placeholder. Fixtures: the committed trimmed JCAMP set under
+# tests/fixtures/jcamp (full 1D 13C/1H, 16-row trimmed HSQC/HMBC/COSY/NOESY).
+# ---------------------------------------------------------------------------
+
+JCAMP_FIXTURE_DIR = Path(__file__).parent / "fixtures" / "jcamp"
+
+
+@pytest.fixture
+def spectra_jcamp_manifest_dir(tmp_path: Path) -> Path:
+    """analysis_dir whose manifest points at the committed JCAMP fixture directory."""
+    import json as _json
+
+    (tmp_path / ".run_manifest.json").write_text(
+        _json.dumps({"bruker_data_dir": str(JCAMP_FIXTURE_DIR), "formula": "C20H32O2"}),
+        encoding="utf-8",
+    )
+    return tmp_path
+
+
+class TestSpectraJcamp:
+    """The 1D/2D spectra routes render JCAMP-DX datasets (no numbered Bruker dirs)."""
+
+    @staticmethod
+    def _spectra_module():  # type: ignore[no-untyped-def]
+        try:
+            from ailsa.webview.routers import (
+                spectra,  # pyright: ignore[reportMissingModuleSource]
+            )
+        except ImportError:
+            pytest.skip("webview extra or spectra router not available")
+        return spectra
+
+    def test_detect_raw_format_prefers_bruker_then_jcamp(
+        self, synthetic_bruker_dir: Path, tmp_path: Path
+    ) -> None:
+        """Numbered Bruker dirs win; otherwise *.dx files mean JCAMP; else None."""
+        spectra = self._spectra_module()
+        assert spectra._detect_raw_format(synthetic_bruker_dir) == "bruker"
+        assert spectra._detect_raw_format(JCAMP_FIXTURE_DIR) == "jcamp"
+        empty = tmp_path / "empty"
+        empty.mkdir()
+        assert spectra._detect_raw_format(empty) is None
+        assert spectra._detect_raw_format(tmp_path / "missing") is None
+
+    def test_classify_jcamp_files_uses_metadata_only(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Classification (ndim, nucleus, experiment type) never decodes spectral data."""
+        spectra = self._spectra_module()
+        from ailsa.readers.jcamp import JcampReader
+
+        def _boom(path: str | Path) -> object:
+            raise AssertionError(f"full read must not run during classification: {path}")
+
+        monkeypatch.setattr(JcampReader, "read_1d", staticmethod(_boom))
+        monkeypatch.setattr(JcampReader, "read_2d", staticmethod(_boom))
+
+        entries = spectra._classify_jcamp_files(JCAMP_FIXTURE_DIR)
+        by_name = {e["path"].name: e for e in entries}
+        assert by_name["C20H32O2_13C.dx"]["ndim"] == 1
+        assert by_name["C20H32O2_13C.dx"]["nucleus"] == "13C"
+        assert by_name["C20H32O2_1H.dx"]["ndim"] == 1
+        assert by_name["C20H32O2_1H.dx"]["nucleus"] == "1H"
+        assert by_name["C20H32O2_HSQC_trimmed.dx"]["ndim"] == 2
+        assert by_name["C20H32O2_HSQC_trimmed.dx"]["experiment_type"] == "HSQC"
+        assert by_name["C20H32O2_HMBC_trimmed.dx"]["experiment_type"] == "HMBC"
+        assert by_name["C20H32O2_COSY_trimmed.dx"]["experiment_type"] == "COSY"
+
+    def test_select_experiment_jcamp_1d(self) -> None:
+        """1D selection returns the matching nucleus with a descending ppm scale."""
+        spectra = self._spectra_module()
+        carbon = spectra._select_experiment_jcamp(JCAMP_FIXTURE_DIR, "13C")
+        assert carbon is not None
+        assert carbon.nucleus == "13C"
+        assert float(carbon.ppm_scale[0]) > float(carbon.ppm_scale[-1])
+        proton = spectra._select_experiment_jcamp(JCAMP_FIXTURE_DIR, "1H")
+        assert proton is not None
+        assert proton.nucleus == "1H"
+        assert spectra._select_experiment_jcamp(JCAMP_FIXTURE_DIR, "31P") is None
+
+    def test_select_experiment_2d_jcamp(self) -> None:
+        """2D selection returns the matching experiment type; unknown types give None."""
+        spectra = self._spectra_module()
+        hsqc = spectra._select_experiment_2d_jcamp(JCAMP_FIXTURE_DIR, "HSQC")
+        assert hsqc is not None
+        assert hsqc.experiment_type == "HSQC"
+        assert hsqc.data.shape == (16, 2048)
+        assert spectra._select_experiment_2d_jcamp(JCAMP_FIXTURE_DIR, "TOCSY") is None
+        source = spectra._select_source_2d_jcamp(JCAMP_FIXTURE_DIR, "HMBC")
+        assert source is not None
+        assert source.name == "C20H32O2_HMBC_trimmed.dx"
+        assert spectra._select_source_2d_jcamp(JCAMP_FIXTURE_DIR, "TOCSY") is None
+
+    def test_carbon_and_proton_endpoints_render_jcamp_traces(
+        self, spectra_jcamp_manifest_dir: Path
+    ) -> None:
+        """1D carbon/proton routes on a JCAMP manifest render real traces, not placeholders."""
+        spectra = self._spectra_module()
+        from fastapi import FastAPI  # pyright: ignore[reportMissingModuleSource]
+        from fastapi.testclient import TestClient  # pyright: ignore[reportMissingModuleSource]
+        from matplotlib.backends.backend_agg import (
+            FigureCanvasAgg,  # pyright: ignore[reportMissingModuleSource]
+        )
+        from matplotlib.figure import Figure  # pyright: ignore[reportMissingModuleSource]
+
+        no_carbon = spectra._render_placeholder_png(Figure, FigureCanvasAgg, spectra._MSG_NO_CARBON)
+        # The placeholder render is deterministic -- otherwise the inequality below proves nothing.
+        assert no_carbon == spectra._render_placeholder_png(
+            Figure, FigureCanvasAgg, spectra._MSG_NO_CARBON
+        )
+        no_proton = spectra._render_placeholder_png(Figure, FigureCanvasAgg, spectra._MSG_NO_PROTON)
+
+        app = FastAPI()
+        app.include_router(spectra.make_router(spectra_jcamp_manifest_dir))
+        with TestClient(app) as client:
+            carbon = client.get("/api/spectra/1d/carbon")
+            assert carbon.status_code == 200
+            assert carbon.headers["content-type"] == "image/png"
+            assert carbon.content[:8] == b"\x89PNG\r\n\x1a\n"
+            assert carbon.content != no_carbon
+            proton = client.get("/api/spectra/1d/proton")
+            assert proton.status_code == 200
+            assert proton.content[:8] == b"\x89PNG\r\n\x1a\n"
+            assert proton.content != no_proton
+
+    def test_hsqc_endpoint_renders_jcamp_contour_and_reads_once(
+        self, spectra_jcamp_manifest_dir: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """2D HSQC route renders the JCAMP HSQC; only that .dx is decoded, and only once."""
+        spectra = self._spectra_module()
+        from fastapi import FastAPI  # pyright: ignore[reportMissingModuleSource]
+        from fastapi.testclient import TestClient  # pyright: ignore[reportMissingModuleSource]
+        from matplotlib.backends.backend_agg import (
+            FigureCanvasAgg,  # pyright: ignore[reportMissingModuleSource]
+        )
+        from matplotlib.figure import Figure  # pyright: ignore[reportMissingModuleSource]
+
+        from ailsa.readers.jcamp import JcampReader
+
+        placeholder = spectra._render_placeholder_png(
+            Figure, FigureCanvasAgg, spectra._MSG_NO_HSQC, spectra._FIGSIZE_2D
+        )
+        read_paths: list[Path] = []
+        original_read_2d = JcampReader.read_2d
+
+        def _spy_read_2d(path: str | Path) -> object:
+            read_paths.append(Path(path))
+            return original_read_2d(path)
+
+        monkeypatch.setattr(JcampReader, "read_2d", staticmethod(_spy_read_2d))
+        spectra._png_cache.clear()
+
+        app = FastAPI()
+        app.include_router(spectra.make_router(spectra_jcamp_manifest_dir))
+        with TestClient(app) as client:
+            first = client.get("/api/spectra/2d/hsqc")
+            second = client.get("/api/spectra/2d/hsqc?t=123")
+        assert first.status_code == 200
+        assert first.headers["content-type"] == "image/png"
+        assert first.content != placeholder
+        assert second.content == first.content
+        assert [p.name for p in read_paths] == ["C20H32O2_HSQC_trimmed.dx"]
