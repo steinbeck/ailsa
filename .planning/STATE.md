@@ -57,7 +57,13 @@ Last activity: 2026-11-19 -- frontier-skill LSD facts fixed and tested (6a80d9e)
       grouped HMBC carbon side only (116), HSQC/HMBC order only a convention. The devil's
       advocate had two contradictory fragment rules (DEFF/FEXP before MULT vs ring block after
       the correlations) and fragment greps that also matched F1/F2; both fixed. Lean skill 0.2.1.
-    - **Next:** (2) Qwen rerun of 0.2 on the 40
+    - **Qwen test CONCLUDED 2026-11-22 (user decision):** lean skill 0.2.1 on three simple dev cases
+      (CASE1-3), 6 h each, own GPU, 128k context, reply limit raised to 32k (the earlier "stops" were
+      replies cut at OpenCode's 16k output cap) and an automatic "Continue." resume: 0/3. Failure
+      analysis in the private notes. Verdict sent to the partner lab: the AILSA paper reports that a
+      locally installable open-weight model was tested and did not perform. Qwen servers on Sheldon
+      stopped. The rerun on the 40 blind datasets below is dropped.
+    - **Dropped:** (2) Qwen rerun of 0.2 on the 40
       blind datasets (setup on Sheldon `~/llm/`, private prep/grading in `~/case-eval/qwen-blind/` on
       the MBP2019): first copy the schema-7 DB to Sheldon (its DB is schema 3, `detect neighbours`
       fails), raise the time limit well above 2 h or disable Qwen's thinking mode (probe: about
