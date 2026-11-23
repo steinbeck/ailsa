@@ -69,9 +69,12 @@ Last activity: 2026-11-23 -- paper audit answers (leaks, log check); C20H32O2 co
       `todos/completed/2026-07-31-prov-01-*.md`. Also `de3f871`: CLI tests run on click 8.2+ (24
       JCAMP tests had been failing with a `mix_stderr` TypeError).
     - **Open decisions:**
-      (b) Web view shows a stale state after a run when the last iteration writes no `solutions.smi` and
-      the final `ranking_results.json` is hand-formatted (seen in the C20 run). Fix: always write the last
-      iteration's SMILES and the final ranking in the standard format. Recommended, small.
+      (b) ~~Web view stale-state fix~~ superseded 2026-11-23: the user decided to rebuild the web
+      interface from scratch. Six analyst reports + an independent review + SPEC draft 2 in
+      `.planning/research/webview-redesign/` (uncommitted: report 06 holds host and account details);
+      PDF `~/Downloads/AILSA-Web-Interface-Specification-Draft2.pdf`. Core finding: a CLI-written run
+      record (manifest, event log, declared result) must come first (R0a/R0b, with the skill rebuild).
+      22 owner decisions open in SPEC §13.
       (c) Figshare upload is Christoph's browser step; then the code URL update needs a push (public repo:
       ask).
     - **Traps that cost time:** zsh does not split `$var` in `for` loops (use bash or arrays); `pkill -f`
