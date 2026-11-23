@@ -169,5 +169,6 @@ confirmed classification as test data only.
 now verdict PARTIAL instead of being quarantined: no DEPT, so the gate cannot test them for
 cross-peaks at quaternary carbons. With the confirmed quaternaries supplied they FAIL correctly
 (224 hits around 35.23). The old quarantine was an accident of the wrong list. A
-compound-independent plausibility check (HSQC pick count against the 13C line count, or the
-formula-balance check proposed under JVAL-F2) would restore that protection.
+compound-independent plausibility check (HSQC pick count against the 13C line count) was offered
+and **declined by the user**: such simple logic is the agents' job, not hard-coded gate logic. The
+C20 run's NMR-chemist agent discarded the 10,687 picks on its own, with no rule telling it to.

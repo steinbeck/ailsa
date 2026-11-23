@@ -64,8 +64,8 @@ Last activity: 2026-11-23 -- paper audit answers (leaks, log check); C20H32O2 co
       are "not checkable" (verdict capped at PARTIAL); `ppm_calibration` uses the dataset's own 13C
       list with an offset scan. Side effect: on the real C20 JCAMP data the unusable automatic HSQC
       picks now verdict PARTIAL instead of being quarantined (that quarantine was an accident of the
-      wrong list). Follow-up candidate: a compound-independent plausibility check (pick count vs. 13C
-      lines, or the formula-balance check under JVAL-F2). Details in
+      wrong list). **User decision 2026-11-23: no hard-coded plausibility check** -- recognising an
+      absurd peak list is the agents' job (the C20 run's chemist did it unprompted). Details in
       `todos/completed/2026-07-31-prov-01-*.md`. Also `de3f871`: CLI tests run on click 8.2+ (24
       JCAMP tests had been failing with a `mix_stderr` TypeError).
     - **Open decisions:**
