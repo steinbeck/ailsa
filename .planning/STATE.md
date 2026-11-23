@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v11.0
 milestone_name: AILSA Rename
 status: executing
-last_updated: "2026-11-19T12:00:00.000Z"
-last_activity: 2026-11-19
+last_updated: "2026-11-23T09:00:00.000Z"
+last_activity: 2026-11-23
 progress:
   total_phases: 8
   completed_phases: 2
@@ -27,7 +27,51 @@ See: .planning/PROJECT.md (updated 2026-07-21)
 Phase: 105 (documentation-and-outside-face) — COMPLETE, verified 2026-10-14
 Plan: 10 of 10
 Status: Phase 105 verified (15/15 after closing the deck-PDF gap); pushed to GitHub `steinbeck/ailsa`
-Last activity: 2026-11-19 -- frontier-skill LSD facts fixed and tested (6a80d9e); lean skill 0.2.1
+Last activity: 2026-11-23 -- paper audit answers (leaks, log check); C20H32O2 confirmed by Nils; Qwen concluded
+
+**Resume here (2026-11-23):**
+
+0000. **Since 2026-11-19 (details in the private notes; identities never in this file).**
+    - **Qwen test concluded (2026-11-22, user decision), commit `cfe4c94` pushed.** Lean skill 0.2.1 on
+      CASE1-3, 6 h each: 0/3. The earlier "stops" were replies cut at OpenCode's 16k output cap; fixed in
+      the Sheldon harness (`~/llm/run_lite.sh` auto-"Continue.", `batch.sh` `LLM_OUTPUT`). Both Qwen
+      containers on Sheldon are stopped. Kuhn informed (mail sent by Christoph 2026-11-22): the paper
+      reports the negative open-weight result.
+    - **Paper audit answers written** to `~/Dropbox/develop/ailsa-paper/.planning/`:
+      `answers-from-lucy-ng-2026-11-22.md` (blindness audit, toolkit defects, LSD facts, Qwen,
+      availability) and `answers-from-lucy-ng-2026-11-22-logcheck.md` (31 runs of 30 exposed datasets).
+      Key results: two more title-field identity leaks (CASE104, CASE219; count nine non-blind);
+      conservative Opus-5 rank 1 166/242 = 68.6 %; CASE119 run swept the reference DB mid-run
+      (dereplication, flagged by its own coordinator); CASE121 reported a hand-built structure; the
+      transcript archive covers 169 runs = 163 datasets; in every benchmark toolkit state `pick hsqc`
+      omitted negative CH2 cross-peaks and `lsd run` turned "no solution" into a false ring-filter error.
+    - **C20H32O2 (Schlörer) is now solved and confirmed:** Nils confirmed on 2026-11-23 that structure A
+      of the JCAMP run (`<data>/active-lucy-ng-testprojects/C20H32O2-jcamp/`) is his structure. The
+      July hypothesis compiled into `src/ailsa/nus/qc.py` (`KNOWN_QUATERNARY_SHIFTS`,
+      `PROTONATED_REFERENCE`, `GUIDE_S10_C13`) is wrong in five places (PROV-01). Reply draft to Nils in
+      uni-jena Drafts.
+    - **External blind test (Jablonka group, SECS):** set 1 (10 small molecules), 1H round 7/10 right
+      skeleton at rank 1; 13C round sent 2026-11-19, no reply yet. Set 2 (10 larger, 17-22 heavy atoms)
+      ready in `~/Dropbox/Public/AILSA-Blindtest-NMR-2/`, not sent. Keys only on the MBP2019
+      (`~/case-eval/share-secs/`).
+    - **Figshare DB version 4 prepared, not uploaded:** zip + text in `~/Dropbox/AILSA-figshare-v4/`
+      (schema-7 DB; the public file is the 2026-01-17 version without detection statistics). After the
+      upload, `DATABASE_URL`/`DATABASE_SIZE_MB` in `src/ailsa/cli/database.py` must point to the new file.
+    - **Hygiene on Sheldon:** the NUTMEG answer tables (`~/nutmeg-validation-private/selection/`) were
+      deleted with the user's OK (copies on the Mac); the faulon-ng clone there is gone.
+    - **Open decisions:**
+      (a) `nus/qc.py` defaults: replace with the confirmed values (fast, stays dataset-specific) or remove
+      the compound-specific defaults and use the confirmed assignment only in tests (cleaner, checks then
+      need an external reference). Recommended: remove.
+      (b) Web view shows a stale state after a run when the last iteration writes no `solutions.smi` and
+      the final `ranking_results.json` is hand-formatted (seen in the C20 run). Fix: always write the last
+      iteration's SMILES and the final ranking in the standard format. Recommended, small.
+      (c) Figshare upload is Christoph's browser step; then the code URL update needs a push (public repo:
+      ask).
+    - **Traps that cost time:** zsh does not split `$var` in `for` loops (use bash or arrays); `pkill -f`
+      can match the calling ssh shell; `grep -r` over the binary NMR data runs >20 min on the MBP2019
+      (scan text files in Python instead); `LSD` without arguments waits on stdin; archived transcripts
+      sit in `/tmp/blindcase-*` folders, attribute them by CASE paths, not by working directory.
 
 **Resume here (2026-11-19):**
 
