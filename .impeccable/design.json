@@ -1,0 +1,639 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-23T14:19:11+00:00",
+  "title": "Design System: AILSA run viewer",
+  "extensions": {
+    "colorMeta": {
+      "pressed-leaf-olive": {
+        "role": "primary",
+        "displayName": "Pressed-Leaf Olive",
+        "canonical": "oklch(42% 0.072 128)",
+        "cssVar": "--olive",
+        "dark": "oklch(35% 0.06 130)",
+        "tonalRamp": [
+          "oklch(15% 0.041 128)",
+          "oklch(25% 0.048 128)",
+          "oklch(35% 0.056 128)",
+          "oklch(45% 0.064 128)",
+          "oklch(55% 0.072 128)",
+          "oklch(65% 0.064 128)",
+          "oklch(80% 0.052 128)",
+          "oklch(95% 0.041 128)"
+        ]
+      },
+      "olive-deep": {
+        "role": "primary",
+        "displayName": "Olive Deep",
+        "canonical": "oklch(32% 0.055 131)",
+        "cssVar": "--olive-deep",
+        "dark": "oklch(25% 0.04 135)",
+        "tonalRamp": [
+          "oklch(15% 0.031 131)",
+          "oklch(25% 0.037 131)",
+          "oklch(35% 0.043 131)",
+          "oklch(45% 0.049 131)",
+          "oklch(55% 0.055 131)",
+          "oklch(65% 0.049 131)",
+          "oklch(80% 0.04 131)",
+          "oklch(95% 0.031 131)"
+        ]
+      },
+      "olive-line": {
+        "role": "primary",
+        "displayName": "Olive Line",
+        "canonical": "oklch(46% 0.085 130)",
+        "cssVar": "--olive-line",
+        "dark": "oklch(76% 0.11 128)",
+        "tonalRamp": [
+          "oklch(15% 0.048 130)",
+          "oklch(25% 0.057 130)",
+          "oklch(35% 0.066 130)",
+          "oklch(45% 0.076 130)",
+          "oklch(55% 0.085 130)",
+          "oklch(65% 0.076 130)",
+          "oklch(80% 0.062 130)",
+          "oklch(95% 0.048 130)"
+        ]
+      },
+      "olive-tint": {
+        "role": "primary",
+        "displayName": "Olive Tint",
+        "canonical": "oklch(92.5% 0.035 125)",
+        "cssVar": "--olive-tint",
+        "dark": "oklch(31% 0.05 128)",
+        "tonalRamp": [
+          "oklch(15% 0.02 125)",
+          "oklch(25% 0.024 125)",
+          "oklch(35% 0.027 125)",
+          "oklch(45% 0.031 125)",
+          "oklch(55% 0.035 125)",
+          "oklch(65% 0.031 125)",
+          "oklch(80% 0.025 125)",
+          "oklch(95% 0.02 125)"
+        ]
+      },
+      "olive-ink": {
+        "role": "primary",
+        "displayName": "Olive Ink",
+        "canonical": "oklch(97% 0.016 115)",
+        "cssVar": "--olive-ink",
+        "dark": "oklch(95% 0.02 110)",
+        "tonalRamp": [
+          "oklch(15% 0.009 115)",
+          "oklch(25% 0.011 115)",
+          "oklch(35% 0.013 115)",
+          "oklch(45% 0.014 115)",
+          "oklch(55% 0.016 115)",
+          "oklch(65% 0.014 115)",
+          "oklch(80% 0.012 115)",
+          "oklch(95% 0.009 115)"
+        ]
+      },
+      "olive-ink-2": {
+        "role": "primary",
+        "displayName": "Olive Ink 2",
+        "canonical": "oklch(86% 0.04 120)",
+        "cssVar": "--olive-ink-2",
+        "dark": "oklch(82% 0.045 118)",
+        "tonalRamp": [
+          "oklch(15% 0.023 120)",
+          "oklch(25% 0.027 120)",
+          "oklch(35% 0.031 120)",
+          "oklch(45% 0.036 120)",
+          "oklch(55% 0.04 120)",
+          "oklch(65% 0.036 120)",
+          "oklch(80% 0.029 120)",
+          "oklch(95% 0.023 120)"
+        ]
+      },
+      "stamp-red": {
+        "role": "secondary",
+        "displayName": "Stamp Red",
+        "canonical": "oklch(49% 0.17 28)",
+        "cssVar": "--stamp",
+        "dark": "oklch(70% 0.15 28)",
+        "tonalRamp": [
+          "oklch(15% 0.096 28)",
+          "oklch(25% 0.114 28)",
+          "oklch(35% 0.133 28)",
+          "oklch(45% 0.151 28)",
+          "oklch(55% 0.17 28)",
+          "oklch(65% 0.151 28)",
+          "oklch(80% 0.124 28)",
+          "oklch(95% 0.096 28)"
+        ]
+      },
+      "stamp-tint": {
+        "role": "secondary",
+        "displayName": "Stamp Tint",
+        "canonical": "oklch(94% 0.03 28)",
+        "cssVar": "--stamp-tint",
+        "dark": "oklch(30% 0.06 28)",
+        "tonalRamp": [
+          "oklch(15% 0.017 28)",
+          "oklch(25% 0.02 28)",
+          "oklch(35% 0.023 28)",
+          "oklch(45% 0.027 28)",
+          "oklch(55% 0.03 28)",
+          "oklch(65% 0.027 28)",
+          "oklch(80% 0.022 28)",
+          "oklch(95% 0.017 28)"
+        ]
+      },
+      "iron-ochre": {
+        "role": "tertiary",
+        "displayName": "Iron Ochre",
+        "canonical": "oklch(48% 0.1 68)",
+        "cssVar": "--ochre",
+        "dark": "oklch(78% 0.12 76)",
+        "tonalRamp": [
+          "oklch(15% 0.056 68)",
+          "oklch(25% 0.067 68)",
+          "oklch(35% 0.078 68)",
+          "oklch(45% 0.089 68)",
+          "oklch(55% 0.1 68)",
+          "oklch(65% 0.089 68)",
+          "oklch(80% 0.073 68)",
+          "oklch(95% 0.056 68)"
+        ]
+      },
+      "ochre-tint": {
+        "role": "tertiary",
+        "displayName": "Ochre Tint",
+        "canonical": "oklch(94% 0.035 80)",
+        "cssVar": "--ochre-tint",
+        "dark": "oklch(30% 0.05 76)",
+        "tonalRamp": [
+          "oklch(15% 0.02 80)",
+          "oklch(25% 0.024 80)",
+          "oklch(35% 0.027 80)",
+          "oklch(45% 0.031 80)",
+          "oklch(55% 0.035 80)",
+          "oklch(65% 0.031 80)",
+          "oklch(80% 0.025 80)",
+          "oklch(95% 0.02 80)"
+        ]
+      },
+      "rag-paper": {
+        "role": "neutral",
+        "displayName": "Rag Paper",
+        "canonical": "oklch(97.6% 0.005 155)",
+        "cssVar": "--paper",
+        "dark": "oklch(18.5% 0.014 155)",
+        "tonalRamp": [
+          "oklch(15% 0.003 155)",
+          "oklch(25% 0.003 155)",
+          "oklch(35% 0.004 155)",
+          "oklch(45% 0.004 155)",
+          "oklch(55% 0.005 155)",
+          "oklch(65% 0.004 155)",
+          "oklch(80% 0.004 155)",
+          "oklch(95% 0.003 155)"
+        ]
+      },
+      "paper-sunk": {
+        "role": "neutral",
+        "displayName": "Paper Sunk",
+        "canonical": "oklch(94.4% 0.009 150)",
+        "cssVar": "--paper-sunk",
+        "dark": "oklch(22% 0.016 152)",
+        "tonalRamp": [
+          "oklch(15% 0.005 150)",
+          "oklch(25% 0.006 150)",
+          "oklch(35% 0.007 150)",
+          "oklch(45% 0.008 150)",
+          "oklch(55% 0.009 150)",
+          "oklch(65% 0.008 150)",
+          "oklch(80% 0.007 150)",
+          "oklch(95% 0.005 150)"
+        ]
+      },
+      "slip": {
+        "role": "neutral",
+        "displayName": "Slip",
+        "canonical": "oklch(99.4% 0.003 150)",
+        "cssVar": "--slip",
+        "dark": "oklch(24.5% 0.018 150)",
+        "tonalRamp": [
+          "oklch(15% 0.002 150)",
+          "oklch(25% 0.002 150)",
+          "oklch(35% 0.002 150)",
+          "oklch(45% 0.003 150)",
+          "oklch(55% 0.003 150)",
+          "oklch(65% 0.003 150)",
+          "oklch(80% 0.002 150)",
+          "oklch(95% 0.002 150)"
+        ]
+      },
+      "archival-ink": {
+        "role": "neutral",
+        "displayName": "Archival Ink",
+        "canonical": "oklch(24% 0.035 258)",
+        "cssVar": "--ink",
+        "dark": "oklch(93% 0.014 100)",
+        "tonalRamp": [
+          "oklch(15% 0.02 258)",
+          "oklch(25% 0.024 258)",
+          "oklch(35% 0.027 258)",
+          "oklch(45% 0.031 258)",
+          "oklch(55% 0.035 258)",
+          "oklch(65% 0.031 258)",
+          "oklch(80% 0.025 258)",
+          "oklch(95% 0.02 258)"
+        ]
+      },
+      "ink-2": {
+        "role": "neutral",
+        "displayName": "Ink 2",
+        "canonical": "oklch(41% 0.03 255)",
+        "cssVar": "--ink-2",
+        "dark": "oklch(81% 0.018 105)",
+        "tonalRamp": [
+          "oklch(15% 0.017 255)",
+          "oklch(25% 0.02 255)",
+          "oklch(35% 0.023 255)",
+          "oklch(45% 0.027 255)",
+          "oklch(55% 0.03 255)",
+          "oklch(65% 0.027 255)",
+          "oklch(80% 0.022 255)",
+          "oklch(95% 0.017 255)"
+        ]
+      },
+      "ink-3": {
+        "role": "neutral",
+        "displayName": "Ink 3",
+        "canonical": "oklch(54% 0.025 250)",
+        "cssVar": "--ink-3",
+        "dark": "oklch(68% 0.02 110)",
+        "tonalRamp": [
+          "oklch(15% 0.014 250)",
+          "oklch(25% 0.017 250)",
+          "oklch(35% 0.02 250)",
+          "oklch(45% 0.022 250)",
+          "oklch(55% 0.025 250)",
+          "oklch(65% 0.022 250)",
+          "oklch(80% 0.018 250)",
+          "oklch(95% 0.014 250)"
+        ]
+      },
+      "sepia-rule": {
+        "role": "neutral",
+        "displayName": "Sepia Rule",
+        "canonical": "oklch(84% 0.025 78)",
+        "cssVar": "--rule",
+        "dark": "oklch(36% 0.025 95)",
+        "tonalRamp": [
+          "oklch(15% 0.014 78)",
+          "oklch(25% 0.017 78)",
+          "oklch(35% 0.02 78)",
+          "oklch(45% 0.022 78)",
+          "oklch(55% 0.025 78)",
+          "oklch(65% 0.022 78)",
+          "oklch(80% 0.018 78)",
+          "oklch(95% 0.014 78)"
+        ]
+      },
+      "sepia-rule-strong": {
+        "role": "neutral",
+        "displayName": "Sepia Rule Strong",
+        "canonical": "oklch(66% 0.04 72)",
+        "cssVar": "--rule-strong",
+        "dark": "oklch(52% 0.035 88)",
+        "tonalRamp": [
+          "oklch(15% 0.023 72)",
+          "oklch(25% 0.027 72)",
+          "oklch(35% 0.031 72)",
+          "oklch(45% 0.036 72)",
+          "oklch(55% 0.04 72)",
+          "oklch(65% 0.036 72)",
+          "oklch(80% 0.029 72)",
+          "oklch(95% 0.023 72)"
+        ]
+      },
+      "contour-positive": {
+        "role": "neutral",
+        "displayName": "Contour Positive",
+        "canonical": "oklch(30% 0.035 258)",
+        "cssVar": "--pos",
+        "dark": "oklch(88% 0.016 100)",
+        "tonalRamp": [
+          "oklch(15% 0.02 258)",
+          "oklch(25% 0.024 258)",
+          "oklch(35% 0.027 258)",
+          "oklch(45% 0.031 258)",
+          "oklch(55% 0.035 258)",
+          "oklch(65% 0.031 258)",
+          "oklch(80% 0.025 258)",
+          "oklch(95% 0.02 258)"
+        ]
+      },
+      "contour-negative": {
+        "role": "neutral",
+        "displayName": "Contour Negative",
+        "canonical": "oklch(55% 0.07 62)",
+        "cssVar": "--neg",
+        "dark": "oklch(70% 0.065 72)",
+        "tonalRamp": [
+          "oklch(15% 0.039 62)",
+          "oklch(25% 0.047 62)",
+          "oklch(35% 0.055 62)",
+          "oklch(45% 0.062 62)",
+          "oklch(55% 0.07 62)",
+          "oklch(65% 0.062 62)",
+          "oklch(80% 0.051 62)",
+          "oklch(95% 0.039 62)"
+        ]
+      },
+      "neutral-mark": {
+        "role": "neutral",
+        "displayName": "Neutral Mark",
+        "canonical": "oklch(60% 0.01 250)",
+        "cssVar": "--neutral-mark",
+        "dark": "oklch(62% 0.012 110)",
+        "tonalRamp": [
+          "oklch(15% 0.006 250)",
+          "oklch(25% 0.007 250)",
+          "oklch(35% 0.008 250)",
+          "oklch(45% 0.009 250)",
+          "oklch(55% 0.01 250)",
+          "oklch(65% 0.009 250)",
+          "oklch(80% 0.007 250)",
+          "oklch(95% 0.006 250)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "The determination slip's h1, which is the result itself."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Expert section heads."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Chemist-view section heads."
+      },
+      "title-sm": {
+        "displayName": "Title Small",
+        "purpose": "Block and reason heads; the narrowing numbers."
+      },
+      "lede": {
+        "displayName": "Lede",
+        "purpose": "The slip's result sentence."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Running text with tabular figures."
+      },
+      "small": {
+        "displayName": "Small",
+        "purpose": "Captions, legends, register cells, chips, caveats."
+      },
+      "label": {
+        "displayName": "Typed Label",
+        "purpose": "Small-caps field labels beside or inside their field; register headers."
+      },
+      "mono": {
+        "displayName": "Mono",
+        "purpose": "Identifiers and readouts."
+      },
+      "attribution": {
+        "displayName": "Attribution",
+        "purpose": "The Det. line under the slip heading."
+      }
+    },
+    "shadows": [
+      {
+        "name": "popover",
+        "value": "0 2px 4px var(--shadow), 0 12px 30px -12px var(--shadow)",
+        "purpose": "Glossary popovers only; everything else is flat."
+      }
+    ],
+    "motion": [
+      {
+        "name": "control-ease",
+        "value": "160ms ease-out",
+        "purpose": "Background and border transitions on buttons."
+      },
+      {
+        "name": "breathe",
+        "value": "2.4s ease-in-out infinite, opacity to 0.35",
+        "purpose": "The run-state dot while a run is working."
+      },
+      {
+        "name": "reduced-motion",
+        "value": "animation and transition none",
+        "purpose": "Under prefers-reduced-motion."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "phone",
+        "value": "560px"
+      },
+      {
+        "name": "rail-strip",
+        "value": "760px"
+      },
+      {
+        "name": "twocol-container",
+        "value": "860px"
+      },
+      {
+        "name": "spectra-container",
+        "value": "900px"
+      },
+      {
+        "name": "chem-container",
+        "value": "920px"
+      },
+      {
+        "name": "max-content",
+        "value": "1440px"
+      }
+    ],
+    "themes": {
+      "dark": {
+        "name": "Specimen cabinet",
+        "selectors": [
+          ":root[data-theme=\"dark\"]",
+          "@media (prefers-color-scheme: dark) :root:not([data-theme=\"light\"])"
+        ],
+        "shadow": "oklch(0% 0 0 / 0.5)"
+      }
+    },
+    "lineForm": {
+      "used": "solid",
+      "heldBackOrOpen": "dashed",
+      "removed": "struck or crossed, kept readable in Ink 2",
+      "decisive": "doubled",
+      "errorBands": [
+        "plain",
+        "underlined",
+        "double-underlined plus bold"
+      ],
+      "timeline": {
+        "work": "filled olive tint",
+        "review": "open outline",
+        "overOneHour": "prints its duration"
+      },
+      "contours2D": {
+        "positive": "contour-positive, solid",
+        "negative": "contour-negative, dotted"
+      },
+      "longRange": "ink plus a 4J tag"
+    },
+    "provenance": {
+      "conceptSeed": "seed:46e6919c6c91e8b3",
+      "form": "Herbarium specimen sheet with determination slips"
+    }
+  },
+  "components": [
+    {
+      "name": "Button",
+      "kind": "button",
+      "refersTo": "button",
+      "description": "Default action: paper slip with a sepia border; olive tint on hover, dashed when disabled.",
+      "html": "<button class=\"ds-btn\">Export record</button> <button class=\"ds-btn\" disabled>Not available</button>",
+      "css": ".ds-btn{display:inline-flex;align-items:center;gap:8px;min-height:38px;padding:7px 14px;border-radius:5px;border:1px solid var(--rule-strong);background:var(--slip);color:var(--ink);font:600 0.9375rem var(--font-ui);cursor:pointer;transition:background-color 160ms ease-out,border-color 160ms ease-out}.ds-btn:hover:not(:disabled){border-color:var(--olive-line);background:var(--olive-tint)}.ds-btn:focus-visible{outline:2px solid var(--olive-line);outline-offset:2px}.ds-btn:disabled{color:var(--ink-3);border-style:dashed;cursor:not-allowed}"
+    },
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The one committed action on a surface, in pressed-leaf olive.",
+      "html": "<button class=\"ds-btn-primary\">Open the expert view</button>",
+      "css": ".ds-btn-primary{display:inline-flex;align-items:center;min-height:38px;padding:7px 14px;border-radius:5px;border:1px solid var(--olive);background:var(--olive);color:var(--olive-ink);font:600 0.9375rem var(--font-ui);cursor:pointer;transition:background-color 160ms ease-out}.ds-btn-primary:hover{background:var(--olive-deep)}.ds-btn-primary:focus-visible{outline:2px solid var(--olive-line);outline-offset:2px}"
+    },
+    {
+      "name": "Verdict Chips",
+      "kind": "chip",
+      "refersTo": "chip-ok",
+      "description": "Outline chips; state is carried by border form as well as colour. Red only on critical.",
+      "html": "<span class=\"ds-chip ok\">passed</span> <span class=\"ds-chip warn\">caution</span> <span class=\"ds-chip crit\">critical</span> <span class=\"ds-chip na\">not applicable</span> <span class=\"ds-chip unrec\">not recorded</span>",
+      "css": ".ds-chip{display:inline-flex;align-items:center;padding:2px 8px;border-radius:3px;border:1px solid var(--rule-strong);font:600 0.8125rem var(--font-ui);white-space:nowrap}.ds-chip.ok{color:var(--olive-line);border-color:var(--olive-line)}.ds-chip.warn{color:var(--ochre);border-color:var(--ochre)}.ds-chip.crit{color:var(--stamp);border-color:var(--stamp)}.ds-chip.na{color:var(--ink-2);border-style:dashed}.ds-chip.unrec{color:var(--ink-3);border-style:dotted;font-style:italic}"
+    },
+    {
+      "name": "Line-form glyphs",
+      "kind": "custom",
+      "refersTo": null,
+      "description": "State as line form: solid used, dashed held back, crossed removed, doubled decisive.",
+      "html": "<span class=\"ds-lf\"><svg viewBox=\"0 0 26 10\"><line x1=\"1\" y1=\"5\" x2=\"25\" y2=\"5\"/></svg>used</span> <span class=\"ds-lf\"><svg viewBox=\"0 0 26 10\"><line x1=\"1\" y1=\"5\" x2=\"25\" y2=\"5\" stroke-dasharray=\"4 3\"/></svg>held back</span> <span class=\"ds-lf\"><svg viewBox=\"0 0 26 10\"><line x1=\"1\" y1=\"5\" x2=\"25\" y2=\"5\"/><line x1=\"9\" y1=\"1\" x2=\"17\" y2=\"9\"/><line x1=\"17\" y1=\"1\" x2=\"9\" y2=\"9\"/></svg>removed</span> <span class=\"ds-lf\"><svg viewBox=\"0 0 26 10\"><line x1=\"1\" y1=\"3\" x2=\"25\" y2=\"3\"/><line x1=\"1\" y1=\"7\" x2=\"25\" y2=\"7\"/></svg>decisive</span>",
+      "css": ".ds-lf{display:inline-flex;align-items:center;gap:6px;white-space:nowrap;font:0.8125rem var(--font-ui);color:var(--ink)}.ds-lf svg{width:26px;height:10px;flex:none}.ds-lf svg line{stroke:currentColor;stroke-width:1.6}"
+    },
+    {
+      "name": "Determination slip",
+      "kind": "card",
+      "refersTo": "determination-slip",
+      "description": "The signature: heading is the result, a mono Det. line below, fields on sepia hairlines.",
+      "html": "<article class=\"ds-slip\"><h1>A plain-words determination</h1><p class=\"ds-det\"><span>Det. AILSA agents</span><span>constitution only</span></p><p class=\"ds-lede\">One sentence on what the spectra point to.</p><section class=\"ds-field\"><h2>How sure <a class=\"ds-why\" href=\"#\">why?</a></h2><p>The agents' own rating, attributed as theirs.</p></section></article>",
+      "css": ".ds-slip{background:var(--slip);border:1px solid var(--rule-strong);border-radius:3px;padding:22px 24px 18px;display:grid;gap:18px;color:var(--ink);font:0.9375rem/1.5 var(--font-ui);max-width:460px}.ds-slip h1{margin:0;font-size:1.95rem;font-weight:650;line-height:1.15;letter-spacing:-0.02em}.ds-det{margin:0;font:500 0.8125rem/1.45 var(--font-mono);color:var(--ink-2);display:flex;flex-wrap:wrap;gap:2px 12px}.ds-lede{margin:0;font-size:1.125rem;line-height:1.45}.ds-field{border-top:1px solid var(--rule);padding-top:12px}.ds-field h2{margin:0 0 6px;font-size:0.9375rem;font-weight:650;display:flex;justify-content:space-between}.ds-field p{margin:0}.ds-why{font-size:0.8125rem;font-weight:600;color:var(--olive-line);text-decoration-color:var(--rule-strong);text-underline-offset:0.2em}.ds-why:hover{text-decoration-color:currentColor}"
+    },
+    {
+      "name": "Accession label",
+      "kind": "card",
+      "refersTo": "accession-label",
+      "description": "Ruled key-value facts with typed small-caps labels beside each field.",
+      "html": "<div class=\"ds-acc\"><dl><dt>Spectra</dt><dd>1H, 13C, HSQC, HMBC</dd><dt>Data sent to</dt><dd>model provider</dd></dl></div>",
+      "css": ".ds-acc{border:1px solid var(--rule-strong);border-radius:3px;font:0.8125rem var(--font-ui);color:var(--ink)}.ds-acc dl{margin:0;display:grid;grid-template-columns:max-content 1fr}.ds-acc dt,.ds-acc dd{margin:0;padding:7px 14px;border-top:1px solid var(--rule)}.ds-acc dt:first-of-type,.ds-acc dd:first-of-type{border-top:0}.ds-acc dt{color:var(--ink-2);font-variant-caps:all-small-caps;letter-spacing:0.07em;font-weight:600}"
+    },
+    {
+      "name": "Register",
+      "kind": "custom",
+      "refersTo": "register-head",
+      "description": "Ledger table: sticky small-caps head, tabular numbers, selected rows olive tint, removed rows struck in Ink 2.",
+      "html": "<table class=\"ds-reg\"><thead><tr><th>Atom</th><th class=\"num\">Shift</th><th>Status</th></tr></thead><tbody><tr class=\"sel\"><th>C1</th><td class=\"num\">00.0</td><td>used</td></tr><tr class=\"struck\"><th>C2</th><td class=\"num\">00.0</td><td class=\"status\">removed</td></tr></tbody></table>",
+      "css": ".ds-reg{border-collapse:collapse;font:0.8125rem var(--font-ui);font-variant-numeric:tabular-nums;color:var(--ink);background:var(--slip);border:1px solid var(--rule)}.ds-reg th,.ds-reg td{padding:7px 10px;border-bottom:1px solid var(--rule);text-align:left}.ds-reg thead th{background:var(--paper-sunk);font-variant-caps:all-small-caps;letter-spacing:0.06em;font-weight:650;color:var(--ink-2)}.ds-reg .num{text-align:right}.ds-reg tr.sel>*{background:var(--olive-tint)}.ds-reg tr.struck>*:not(.status){text-decoration:line-through;text-decoration-color:var(--ink-2);color:var(--ink-2)}"
+    },
+    {
+      "name": "Expert rail",
+      "kind": "nav",
+      "refersTo": "rail",
+      "description": "Olive-deep section rail; the current item inverts. Becomes a horizontal sticky strip at phone width.",
+      "html": "<nav class=\"ds-rail\"><button aria-current=\"true\">Result</button><button>Spectra</button><button>Constraints</button></nav>",
+      "css": ".ds-rail{display:grid;gap:2px;width:220px;background:var(--olive-deep);border-radius:3px;padding:14px 8px}.ds-rail button{display:flex;align-items:center;text-align:left;border:0;background:transparent;color:var(--olive-ink-2);padding:9px 12px;border-radius:4px;min-height:40px;font:550 0.9375rem var(--font-ui);cursor:pointer}.ds-rail button:hover{background:oklch(100% 0 0 / 0.08);color:var(--olive-ink)}.ds-rail button:focus-visible{outline:2px solid var(--olive-line);outline-offset:2px}.ds-rail button[aria-current=true]{background:var(--olive-ink);color:var(--olive-deep);font-weight:650}"
+    },
+    {
+      "name": "Field",
+      "kind": "input",
+      "refersTo": "field",
+      "description": "Number or search input on slip with a sepia border.",
+      "html": "<input class=\"ds-field-in\" type=\"search\" placeholder=\"Filter atoms\">",
+      "css": ".ds-field-in{font:0.9375rem var(--font-ui);color:var(--ink);background:var(--slip);border:1px solid var(--rule-strong);border-radius:4px;padding:5px 8px;min-height:32px}.ds-field-in:focus-visible{outline:2px solid var(--olive-line);outline-offset:2px}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Herbarium Specimen Sheet",
+    "overview": "A run is a specimen sheet. The structure drawing lies in a double-ruled paper field like a pressed specimen; the declared result is a determination slip pinned beside it; run facts sit on a typed accession label. Nothing is ever erased. A rejected peak or a removed constraint stays on the sheet, struck through and readable, and a later confirmation arrives as a new slip on top, never mixed into the evidence. The system refuses the category default of a dark spectrum dashboard with tiles, gauges and neon traces.\n\nThe ground is cool rag paper, never cream; text and drawings are archival blue-black ink; hairlines are iron-gall sepia. Pressed-leaf olive is the one committed colour and carries the chrome (top bar, expert rail), selection and \"used\" evidence. Stamp red is reserved for critical verdicts. The night theme is a specimen cabinet: green-black ground, bone ink, the same roles. Density is that of a working document, Operate mode: one grotesque at a 1.2 scale, tabular figures everywhere, monospace only for attribution and identifiers.\n\nState is carried by line form, not hue. Every encoding of \"used, held back, removed, decisive\" reads correctly in greyscale, in forced colours and on paper.",
+    "keyCharacteristics": [
+      "Flat paper surfaces separated by sepia hairlines; one shadow in the whole system, on popovers.",
+      "One committed colour (olive); red is a stamp, used on critical chips only.",
+      "Line form grammar: solid used, dashed held back or open, struck removed, doubled decisive.",
+      "Small-caps tracked field labels, only beside or inside the field they name.",
+      "Two views, never shown together: a plain chemist view and a complete expert view."
+    ],
+    "rules": [
+      {
+        "name": "The Stamp Rule",
+        "body": "Stamp red appears only on critical verdict chips. Removed or struck items use Ink 2; long-range (four bonds or more) correlations use ink plus a \"4J\" tag. If red shows anywhere else, it is a defect.",
+        "section": "colors"
+      },
+      {
+        "name": "The One Leaf Rule",
+        "body": "Olive is the only committed colour. Ochre means caution, red means critical, everything else is ink on paper.",
+        "section": "colors"
+      },
+      {
+        "name": "The Greyscale Test",
+        "body": "Print the page in greyscale: every state must still read, because line form carries it and hue only reinforces it.",
+        "section": "colors"
+      },
+      {
+        "name": "The Typed Label Rule",
+        "body": "Small-caps tracked labels sit only beside or inside the field they name, like typed accession labels. Never above a heading as a category tag.",
+        "section": "typography"
+      },
+      {
+        "name": "The Determination Rule",
+        "body": "The slip's heading is the result in plain words. Attribution follows below it as one monospace \"Det.\" line (who determined it, scope); no label sits above the heading.",
+        "section": "typography"
+      },
+      {
+        "name": "The Small-Caps Symbol Rule",
+        "body": "Greek symbols inside small-caps headers opt out of case mapping, so δ never becomes Δ.",
+        "section": "typography"
+      },
+      {
+        "name": "The Two Views Rule",
+        "body": "Chemist and expert views are never shown together. One switch in the top bar and \"why?\" links move between them.",
+        "section": "layout"
+      },
+      {
+        "name": "The Paper Stack Rule",
+        "body": "A surface is lighter the closer it is to the reader: sunk, then paper, then slip. Nothing floats except the popover.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do carry every state by line form first: solid used, dashed held back or open, struck removed, doubled decisive.",
+      "Do keep struck items readable in Ink 2; nothing disappears, it cancels.",
+      "Do keep stamp red (stamp-red) on critical verdict chips only.",
+      "Do draw positive 2D contours in contour-positive and negative ones dotted in contour-negative; mark curated peaks in olive-line with a paper halo.",
+      "Do make the slip heading the determination itself, with the monospace \"Det.\" line below it.",
+      "Do give atom numbers and correlation arrows a paper halo or underlay so they read over each other.",
+      "Do pair every canvas with a table and every colour with a shape, line form or word.",
+      "Do keep the two views separate and link them with \"why?\"."
+    ],
+    "donts": [
+      "Don't use red for removed, struck or long-range items; use Ink 2, or ink with a \"4J\" tag.",
+      "Don't put a small-caps label or category tag above a heading; field labels live beside their fields.",
+      "Don't write solver notation in the chemist view; the narrowing is plain numbers.",
+      "Don't add shadows to cards, slips or registers; depth is paper tone and hairline.",
+      "Don't introduce a second committed colour, gradients, neon traces, gauges or tiles.",
+      "Don't use cream or warm grounds; the paper is cool grey-white.",
+      "Don't show the chemist and expert views side by side."
+    ]
+  }
+}

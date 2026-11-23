@@ -70,11 +70,17 @@ Last activity: 2026-11-23 -- paper audit answers (leaks, log check); C20H32O2 co
       JCAMP tests had been failing with a `mix_stderr` TypeError).
     - **Open decisions:**
       (b) ~~Web view stale-state fix~~ superseded 2026-11-23: the user decided to rebuild the web
-      interface from scratch. Six analyst reports + an independent review + SPEC draft 2 in
-      `.planning/research/webview-redesign/` (uncommitted: report 06 holds host and account details);
-      PDF `~/Downloads/AILSA-Web-Interface-Specification-Draft2.pdf`. Core finding: a CLI-written run
-      record (manifest, event log, declared result) must come first (R0a/R0b, with the skill rebuild).
-      22 owner decisions open in SPEC §13.
+      interface from scratch. Six analyst reports + an independent review + SPEC draft 2.2 in
+      `.planning/research/webview-redesign/` (local only: report 06 holds host and account details);
+      PDF `background/AILSA-Web-Interface-Specification-Draft2.2.pdf` (gitignored). Core finding: a
+      CLI-written run record (manifest, event log, declared result) must come first (R0a/R0b, with the
+      skill rebuild). 22 owner decisions open in SPEC §13.
+      Clickable prototype (same folder, `prototype/index.html`, local only because it embeds an
+      unpublished run): chemist and expert views, zoomable spectra, a replay of the run and a Team
+      section with every agent message. Design record committed: `PRODUCT.md`, `DESIGN.md`,
+      `.impeccable/`. Prototype lesson for R0a: a live view needs typed events (sender, receiver,
+      kind, time, one plain-language line); the progress log sufficed once, but it is prose and left
+      a 68-minute gap unrecorded.
       (c) Figshare upload is Christoph's browser step; then the code URL update needs a push (public repo:
       ask).
     - **Traps that cost time:** zsh does not split `$var` in `for` loops (use bash or arrays); `pkill -f`
