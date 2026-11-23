@@ -147,3 +147,27 @@ The word "ground truth" entered the code and the roadmap from an agent-authored 
 note and survived three phases of planning, research, verification and code review without
 anyone opening the source file. Provenance of a reference dataset must be checked at the
 point it is first cited, not assumed from its label.
+
+## Resolution (2026-11-23, `6e32c5a`)
+
+The experimentalist confirmed the C20H32O2 constitution on 2026-11-23. Against it the §8/§10
+hypothesis is wrong in five places: 36.23 and 37.86 are CH, 79.35 is an impurity, 51.63 and 35.23
+are quaternary. User decision the same day: remove the compound-specific defaults and keep the
+confirmed classification as test data only.
+
+- `GUIDE_S10_C13`, `DEFAULT_QUATERNARY_SHIFTS`, `KNOWN_QUATERNARY_SHIFTS` and
+  `PROTONATED_REFERENCE` are gone; `QcConfig.known_quaternary_shifts` defaults to `()`.
+- Without DEPT or an explicit list, `quaternary_exclusion` and `hsqc_coverage` report
+  `checkable=False`, which caps the verdict at PARTIAL (never PASS, never FAIL).
+- `ppm_calibration` compares with the dataset's own 1D 13C list, using an offset scan instead of
+  the nearest-neighbour mean (which missed 2-5 ppm offsets on a crowded real 13C list).
+- The post-processing F1-axis "calibration" (grid points vs. shifts, at most half a point
+  spacing) is gone; the sidecar records the raw axis with offset 0.
+- Confirmed classification: `tests/nus/conftest.py`; synthetic clean HSQC fixture rebuilt from it.
+
+**Consequence to know:** on the real C20H32O2 JCAMP data, the automatic HSQC picks (10,687, unusable)
+now verdict PARTIAL instead of being quarantined: no DEPT, so the gate cannot test them for
+cross-peaks at quaternary carbons. With the confirmed quaternaries supplied they FAIL correctly
+(224 hits around 35.23). The old quarantine was an accident of the wrong list. A
+compound-independent plausibility check (HSQC pick count against the 13C line count, or the
+formula-balance check proposed under JVAL-F2) would restore that protection.

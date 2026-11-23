@@ -59,10 +59,16 @@ Last activity: 2026-11-23 -- paper audit answers (leaks, log check); C20H32O2 co
       upload, `DATABASE_URL`/`DATABASE_SIZE_MB` in `src/ailsa/cli/database.py` must point to the new file.
     - **Hygiene on Sheldon:** the NUTMEG answer tables (`~/nutmeg-validation-private/selection/`) were
       deleted with the user's OK (copies on the Mac); the faulon-ng clone there is gone.
+    - **PROV-01 resolved (`6e32c5a`, user decision 2026-11-23: remove):** no compound-specific data
+      left in `nus/qc.py`/`postprocess.py`; without DEPT, `quaternary_exclusion` and `hsqc_coverage`
+      are "not checkable" (verdict capped at PARTIAL); `ppm_calibration` uses the dataset's own 13C
+      list with an offset scan. Side effect: on the real C20 JCAMP data the unusable automatic HSQC
+      picks now verdict PARTIAL instead of being quarantined (that quarantine was an accident of the
+      wrong list). Follow-up candidate: a compound-independent plausibility check (pick count vs. 13C
+      lines, or the formula-balance check under JVAL-F2). Details in
+      `todos/completed/2026-07-31-prov-01-*.md`. Also `de3f871`: CLI tests run on click 8.2+ (24
+      JCAMP tests had been failing with a `mix_stderr` TypeError).
     - **Open decisions:**
-      (a) `nus/qc.py` defaults: replace with the confirmed values (fast, stays dataset-specific) or remove
-      the compound-specific defaults and use the confirmed assignment only in tests (cleaner, checks then
-      need an external reference). Recommended: remove.
       (b) Web view shows a stale state after a run when the last iteration writes no `solutions.smi` and
       the final `ranking_results.json` is hand-formatted (seen in the C20 run). Fix: always write the last
       iteration's SMILES and the final ranking in the standard format. Recommended, small.
@@ -337,7 +343,7 @@ Items acknowledged and deferred at **v10.1 JCAMP-DX 2D Ingestion milestone close
 | JVAL-F3 | Re-export `exp7`/wide (`$SW=160.37`) from the raw `C20H32O2` Bruker tree as JCAMP-DX | tracked | Only `exp6`/narrow (`$SW=120.28`, window `[-10.14, 110.14]` ppm) was exported, so 142.00/135.86 ppm are physically absent. Completes §10 coverage but does **not** fix `quaternary_exclusion`, which sits inside exp6's own window. |
 | CR-02 | `lucy jcamp` purges the `--out` peak-list filenames *before* STEP 3 reads any input | **FIXED 2026-08-03** (`7dfe2ce`) | Real data-loss path: a run failing on malformed input exits non-zero, writes nothing, and still destroys pre-existing peak lists (same filenames/schema `lucy nus pipeline` writes). **Phase-102 defect** (`f6de196`), found by Phase 103's code review. Filed at the v10.1 close, **fixed 2026-08-03** in `7dfe2ce` (`fix(jcamp): stop destroying data the command did not write`) — outside any phase. |
 | CR-03 | `work_root = out_root.parent / "jcamp_ingest"` is unvalidated against `--out` | **FIXED 2026-08-03** (`7dfe2ce`) | On collision, `shutil.rmtree` deletes a caller-owned directory. **Phase-102 defect** (`f6de196`), found by Phase 103's code review. Filed at the v10.1 close, **fixed 2026-08-03** in `7dfe2ce` (`fix(jcamp): stop destroying data the command did not write`) — outside any phase. |
-| PROV-01 | `NUS-RECONSTRUCTION-GUIDE.md` §8/§10 is a prior agent's hypothesis about an UNSOLVED sample, but was labelled ground truth and compiled into `nus/qc.py` as a library default | **tracked; analysis CONCLUDED 2026-08-02, behaviour decisions still open** | Found after the v10.1 close, when the user confirmed no reference assignment exists for C20H32O2. Makes Phase 103's "17/20" a reproducibility figure, not chemical validation, and makes the `quaternary_exclusion` FAIL ambiguous. `cli/jcamp.py` reaches the default unconditionally without DEPT, so other compounds are graded against this sample's guesses. Labels corrected; behaviour questions open. See `todos/pending/2026-07-31-prov-01-*.md`. |
+| PROV-01 | `NUS-RECONSTRUCTION-GUIDE.md` §8/§10 is a prior agent's hypothesis about an UNSOLVED sample, but was labelled ground truth and compiled into `nus/qc.py` as a library default | **RESOLVED 2026-11-23 (`6e32c5a`)**: constitution confirmed by the experimentalist; compound-specific defaults removed, unchecked checks cap the verdict at PARTIAL | Found after the v10.1 close, when the user confirmed no reference assignment exists for C20H32O2. Makes Phase 103's "17/20" a reproducibility figure, not chemical validation, and makes the `quaternary_exclusion` FAIL ambiguous. `cli/jcamp.py` reaches the default unconditionally without DEPT, so other compounds are graded against this sample's guesses. Labels corrected; behaviour questions open. See `todos/pending/2026-07-31-prov-01-*.md`. |
 | todo | 2026-06-25-case4-azulene-regiochemistry-enumeration-gap | carried (from v9.1) | Still open; unrelated to the JCAMP scope. |
 | todo | 2026-06-30-ranking-tests-hardfail-without-hosegen | carried (from v9.1) | Still open; test-infra backlog, unrelated to the JCAMP scope. |
 
@@ -916,7 +922,7 @@ Decisions are logged in PROJECT.md Key Decisions table.
 ### Pending Todos
 
 - **[2026-06-25] CASE4 azulene-regiochemistry-enumeration gap** — carried seed; not in v10.1 scope. See `.planning/todos/pending/2026-06-25-case4-azulene-regiochemistry-enumeration-gap.md`.
-- **[2026-07-31] PROV-01 behaviour decision** — should `DEFAULT_QUATERNARY_SHIFTS` remain a library default at all? Options recorded in the todo (drop it / require an explicit per-sample override / warn loudly when used). Gates behaviour, so it is a user call, not an agent call. See `.planning/todos/pending/2026-07-31-prov-01-guide-hypothesis-treated-as-ground-truth.md`.
+- ✅ RESOLVED 2026-11-23 (`6e32c5a`, defaults removed). **[2026-07-31] PROV-01 behaviour decision** — should `DEFAULT_QUATERNARY_SHIFTS` remain a library default at all? Options recorded in the todo (drop it / require an explicit per-sample override / warn loudly when used). Gates behaviour, so it is a user call, not an agent call. See `.planning/todos/pending/2026-07-31-prov-01-guide-hypothesis-treated-as-ground-truth.md`.
 - **[2026-08-10] Spec `49057ef` awaits review** — budget-forced ranking for CASE runs, with its expected benefit downgraded after being verified negative.
 - **[2026-07-28] Infographic deck refresh** — `docs/infographics/` missed the v10.1 close (last touched 2026-07-09). CLAUDE.md names this recurring milestone-close maintenance; rebuild via `docs/infographics/build.py`, never `deck.html`.
 - **RECON-F1** — hmsIST/mddnmr fallback backend for in-lucy-ng NUS self-reconstruction (tracked from v10.0 close). Not in v10.1 scope (JCAMP ingestion is complementary, not the fallback itself), but noted as the natural next reconstruction-side step given `C20H32O2-jcamp` was itself produced by `mddnmr`.
@@ -1020,6 +1026,7 @@ to make launchd retry after `kickstart -k`.*
    subject of the next functional milestone, with the faulon-ng bridge as the first lead.
 
 6. Smaller items: the `top_smiles` regexp (`blind_case_run.sh:133`); why CASE67 ran 13.5 h
-   past a 3 h deadline; the `mix_stderr` test failure; PROV-01's behaviour decision;
+   past a 3 h deadline; ~~the `mix_stderr` test failure~~ (`de3f871`); ~~PROV-01's behaviour
+   decision~~ (`6e32c5a`);
    re-scoping JVAL-F2; spec `49057ef`; the stale infographic deck (folded into Phase 105);
    the P203 ingestion (CASE265 not blind); the scan-retry fix; tags `v4.0`/`v5.0`.
