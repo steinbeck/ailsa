@@ -38,16 +38,29 @@ _FIXTURE_NAMES = {"exp2_cosy", "exp3_hsqc", "exp4_hmbc"}
 _KNOWN_BAD_PEAKS_DIR = _NUS_FIXTURES_ROOT / "known_bad_peaks"
 _CLEAN_PEAKS_DIR = _NUS_FIXTURES_ROOT / "clean_peaks_synthetic"
 
-# The 5 13C shifts that NUS-RECONSTRUCTION-GUIDE.md §8/§10 *proposes* as
-# quaternary for C20H32O2, re-exported for QC-02/QC-01 tests -- a subset of
-# nus/postprocess.py's GUIDE_S10_C13 20-shift list.
-#
-# NOT confirmed (corrected 2026-07-31): the guide is a previous CASE agent's
-# working hypothesis about an UNSOLVED sample, and it hedges 37.86 and 79.35
-# in its own words. These tests therefore pin the gate's *mechanics* against a
-# fixed input set -- they do not assert that the classification is chemically
-# correct. See nus/postprocess.py::GUIDE_S10_C13 and tracked item PROV-01.
-KNOWN_QUATERNARY_SHIFTS = [142.00, 135.86, 79.35, 36.23, 37.86]
+# C20H32O2 carbon classification, CONFIRMED: the experimentalist confirmed the
+# constitution on 2026-11-23 (PROV-01). Shifts are the Bruker 1D 13C picks in
+# the fixtures (CDCl3); 22.63 is two CH2. 79.35 in the 1D list is an impurity,
+# not a carbon of the compound. Test data only -- `nus/qc.py` carries no
+# compound-specific reference (the July hypothesis it used to compile in had
+# 36.23/37.86/79.35 as quaternary and missed 51.63/35.23).
+C20H32O2_QUATERNARY_SHIFTS = [142.00, 135.86, 51.63, 35.23]
+C20H32O2_PROTONATED_SHIFTS = [
+    69.06, 67.06, 37.86, 37.19, 36.23, 34.21, 33.67, 30.66,
+    29.77, 27.93, 27.15, 25.96, 23.43, 22.63, 21.78,
+]
+
+
+@pytest.fixture
+def c20h32o2_quaternary_shifts() -> list[float]:
+    """The confirmed C20H32O2 quaternary 13C shifts (see constant above)."""
+    return list(C20H32O2_QUATERNARY_SHIFTS)
+
+
+@pytest.fixture
+def c20h32o2_protonated_shifts() -> list[float]:
+    """The confirmed C20H32O2 protonated 13C shifts (see constant above)."""
+    return list(C20H32O2_PROTONATED_SHIFTS)
 
 
 @pytest.fixture

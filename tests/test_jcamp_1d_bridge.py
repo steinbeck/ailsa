@@ -156,7 +156,8 @@ class TestJcamp1dBridgeQcDiscovery:
 
         assert len(ref.trusted_c13) > 0
         assert len(ref.trusted_h1) > 0
-        assert ref.classification_source != "insufficient_reference_data"
+        # No DEPT among the inputs and no compiled-in fallback (PROV-01).
+        assert ref.classification_source == "insufficient_reference_data"
 
     def test_glob_does_not_cross_match_1d_filenames(self, tmp_path: Path) -> None:
         from ailsa.nus.bridge import write_peak_json

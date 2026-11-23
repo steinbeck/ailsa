@@ -256,6 +256,11 @@ class QcCheckResult(BaseModel):
     `value`/`threshold` carry the computed metric and the threshold it was
     compared against, when the check produces a numeric metric (e.g.
     `ridge_fraction`); both are `None` for boolean-only checks.
+
+    `checkable` is `False` when the dataset itself supplies no reference
+    to check against (e.g. no DEPT for the quaternary classification). Such
+    a check has `passed=False` -- never a silent PASS -- but it is not a
+    violation: it caps the verdict at PARTIAL instead of forcing FAIL.
     """
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
@@ -266,6 +271,7 @@ class QcCheckResult(BaseModel):
     details: str = ""
     value: float | None = None
     threshold: float | None = None
+    checkable: bool = True
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to JSON-serializable dictionary."""
@@ -273,6 +279,7 @@ class QcCheckResult(BaseModel):
             "name": self.name,
             "passed": self.passed,
             "critical": self.critical,
+            "checkable": self.checkable,
             "details": self.details,
             "value": self.value,
             "threshold": self.threshold,
@@ -317,12 +324,16 @@ class QcReport(BaseModel):
         return cls(**data)
 
     def violated_checks(self) -> list[str]:
-        """Return names of all failed checks (critical and soft)."""
-        return [c.name for c in self.checks if not c.passed]
+        """Return names of all failed checks (critical and soft), excluding unchecked ones."""
+        return [c.name for c in self.checks if not c.passed and c.checkable]
 
     def critical_violations(self) -> list[str]:
         """Return names of failed checks in the critical tier only (D-02)."""
-        return [c.name for c in self.checks if not c.passed and c.critical]
+        return [c.name for c in self.checks if not c.passed and c.critical and c.checkable]
+
+    def unchecked_checks(self) -> list[str]:
+        """Return names of checks the dataset gave no reference for."""
+        return [c.name for c in self.checks if not c.checkable]
 
     def summary(self) -> str:
         """Return a human-readable summary of the QC report."""
@@ -332,6 +343,9 @@ class QcReport(BaseModel):
             violated = self.violated_checks()
             if violated:
                 lines.append(f"  Violated: {', '.join(violated)}")
+            unchecked = self.unchecked_checks()
+            if unchecked:
+                lines.append(f"  Not checkable: {', '.join(unchecked)}")
         if self.errors:
             lines.append(f"  Errors: {'; '.join(self.errors)}")
         return "\n".join(lines)

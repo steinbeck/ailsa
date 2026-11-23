@@ -391,9 +391,12 @@ def qc(
     else:
         click.echo(f"QC verdict: {report.verdict.value}")
         violated = report.violated_checks()
+        unchecked = report.unchecked_checks()
         if violated:
             click.echo(f"Violated checks: {', '.join(violated)}")
-        else:
+        if unchecked:
+            click.echo(f"Not checkable (no reference in the data): {', '.join(unchecked)}")
+        if not violated and not unchecked:
             click.echo("All checks passed.")
         if report.errors:
             click.echo(f"Errors: {'; '.join(report.errors)}")
@@ -540,7 +543,12 @@ def pipeline(
       the single pipeline-boundary barrier (D-07).
     """
     from ailsa.models.nus import QcVerdict
-    from ailsa.nus.bridge import bridge_peak_pick, build_spectrum2d, write_peak_json
+    from ailsa.nus.bridge import (
+        bridge_peak_pick,
+        build_spectrum2d,
+        partial_reasons,
+        write_peak_json,
+    )
     from ailsa.nus.params import read_nus_params
     from ailsa.nus.qc import run_qc_checks
     from ailsa.nus.runner import NusRunner
@@ -638,8 +646,7 @@ def pipeline(
         written.append(str(out_path))
         if report.verdict == QcVerdict.PARTIAL:
             click.echo(
-                f"QC verdict PARTIAL -- violated checks: "
-                f"{', '.join(report.violated_checks())}. Peaks written to {out_path}.",
+                f"QC verdict PARTIAL -- {partial_reasons(report)}. Peaks written to {out_path}.",
                 err=True,
             )
 

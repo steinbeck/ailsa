@@ -239,28 +239,14 @@ def jcamp(
     the output schema is identical across the NUS and JCAMP paths, so no
     duplicate `ailsa jcamp qc` subcommand exists (D-01).
 
-    Honest note (Pitfall 4, document-only): with no DEPT `.dx` file present
-    (the `C20H32O2-jcamp` case), `QcConfig.default()`'s
-    `known_quaternary_shifts` -- the five compiled-in Sec.8 shifts (142.00,
-    135.86, 79.35, 36.23, 37.86) -- is used unconditionally, so
-    `classification_source` will read `"override"`. This is inherited
-    `qc.py` behaviour, not a choice this command makes; no CLI flag here
-    disables it (`qc.py` was byte-protected during Phase 103).
-
-    PROVENANCE WARNING (added 2026-07-31, tracked as PROV-01): those five
-    shifts are **not** confirmed quaternaries and **not** ground truth. They
-    are a previous CASE agent's working hypothesis about C20H32O2 -- an
-    UNSOLVED sample with no human reference assignment -- and the source
-    hedges two of the five in its own text. Because the default applies
-    unconditionally, running this command on ANY other compound without a
-    DEPT file grades that compound's `quaternary_exclusion` check against
-    C20H32O2's guesses. Treat a `quaternary_exclusion` FAIL as "hypothesis
-    and data disagree, a human must decide", never as proof that the
-    spectra are bad. Full provenance: `nus/postprocess.py::GUIDE_S10_C13`.
+    With no DEPT `.dx` file present, the QC gate has no quaternary-carbon
+    classification: `quaternary_exclusion` and `hsqc_coverage` report "not
+    checkable", which caps the verdict at PARTIAL rather than failing it
+    (PROV-01, 2026-11-23).
     """
     from ailsa.models import Spectrum1D, Spectrum2D
     from ailsa.models.nus import QcVerdict
-    from ailsa.nus.bridge import bridge_peak_pick, write_peak_json
+    from ailsa.nus.bridge import bridge_peak_pick, partial_reasons, write_peak_json
     from ailsa.nus.qc import run_qc_checks
     from ailsa.processing.jcamp_1d_bridge import bridge_peak_pick_1d
     from ailsa.readers.jcamp import JcampReader
@@ -562,8 +548,7 @@ def jcamp(
             written.append(str(out_path))
         if report.verdict == QcVerdict.PARTIAL:
             click.echo(
-                f"QC verdict PARTIAL -- violated checks: "
-                f"{', '.join(report.violated_checks())}.",
+                f"QC verdict PARTIAL -- {partial_reasons(report)}.",
                 err=True,
             )
 

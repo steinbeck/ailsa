@@ -138,12 +138,23 @@ def _confidence_and_note(qc_report: QcReport | None, backend: str) -> tuple[str,
     if qc_report is None:
         return "pending_qc", f"reconstructed via {backend}; QC verdict not yet available"
     confidence = confidence_from_verdict(qc_report.verdict)
-    violated = qc_report.violated_checks()
     if qc_report.verdict == QcVerdict.PASS:
         note = f"reconstructed via {backend}; QC verdict PASS"
     else:
-        note = f"reconstructed via {backend}; QC verdict PARTIAL (violated: {', '.join(violated)})"
+        note = f"reconstructed via {backend}; QC verdict PARTIAL ({partial_reasons(qc_report)})"
     return confidence, note
+
+
+def partial_reasons(qc_report: QcReport) -> str:
+    """Name the violated and the not-checkable checks behind a PARTIAL verdict."""
+    reasons = []
+    violated = qc_report.violated_checks()
+    if violated:
+        reasons.append(f"violated: {', '.join(violated)}")
+    unchecked = qc_report.unchecked_checks()
+    if unchecked:
+        reasons.append(f"not checkable: {', '.join(unchecked)}")
+    return "; ".join(reasons)
 
 
 def _build_caveat(backend: str, qc_report: QcReport | None) -> str:
@@ -159,6 +170,9 @@ def _build_caveat(backend: str, qc_report: QcReport | None) -> str:
     caveat = f"Reconstructed via {backend}. QC verdict: {qc_report.verdict.value}."
     if violated:
         caveat += f" Violated checks: {', '.join(violated)}."
+    unchecked = qc_report.unchecked_checks()
+    if unchecked:
+        caveat += f" Not checkable (no reference in the data): {', '.join(unchecked)}."
     return caveat
 
 
@@ -175,16 +189,19 @@ def _reconstruction_metadata_block(
     if qc_report is not None:
         qc_verdict = qc_report.verdict.value
         violated_checks = qc_report.violated_checks()
+        unchecked_checks = qc_report.unchecked_checks()
         thresholds_used = dict(qc_report.thresholds_used)
     else:
         qc_verdict = "UNKNOWN"
         violated_checks = []
+        unchecked_checks = []
         thresholds_used = {}
     return {
         "backend": backend,
         "iterations": iterations,
         "qc_verdict": qc_verdict,
         "violated_checks": violated_checks,
+        "unchecked_checks": unchecked_checks,
         "thresholds_used": thresholds_used,
     }
 

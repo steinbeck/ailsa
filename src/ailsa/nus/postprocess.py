@@ -25,9 +25,9 @@ subprocess per pipeline stage" contract) with zero shell interpretation
 (never a shell-invocation flag, never string-interpolated user input --
 every value threaded into `argv` is a typed float/int or a resolved `Path`).
 
-Also provides the ppm-axis reversal + 1D-calibration cross-check helpers
-(pure arithmetic, no external tool) that `process_indirect()` uses to label
-its output axes.
+Also provides the ppm-axis reversal helpers that `process_indirect()` uses
+to label its output axes, and the 1D-calibration cross-check helpers that
+`nus/qc.py` uses (pure arithmetic, no external tool).
 """
 
 from __future__ import annotations
@@ -38,49 +38,6 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from ailsa.models.nus import NusAcquisitionParams
-
-#: 1D 13C shifts as listed in NUS-RECONSTRUCTION-GUIDE.md Sec.10.
-#:
-#: PROVENANCE -- READ BEFORE RELYING ON THESE (corrected 2026-07-31):
-#: these are NOT an independent reference assignment and NOT ground truth.
-#: Sec.10 is headed "Gesicherte Fakten aus dem ersten Lauf (aus den
-#: verlaesslichen 1D-Daten -- als Startpunkt)": it is the *working
-#: hypothesis* a previous CASE agent derived from this very sample's own 1D
-#: spectra during the failed 2026-07-09 run, written into that run's
-#: `analysis/` output directory. C20H32O2 (a Nils Schloerer test dataset) is
-#: UNSOLVED -- no human reference assignment exists for it.
-#:
-#: Consequence: comparing freshly picked 1D 13C shifts against this list is a
-#: *reproducibility* check (does our picker/ppm axis reproduce an earlier
-#: pick of the same file?), NOT a chemical validation. It still has real
-#: value for the ppm-axis question -- the earlier list came via the Bruker
-#: reader, so agreement cross-checks a second, independent reader path --
-#: but it cannot confirm that any assignment is correct.
-#:
-#: Sample-specific: these values describe C20H32O2 only. Do not treat them as
-#: a general default for other compounds. See tracked item PROV-01.
-GUIDE_S10_C13: list[float] = [
-    142.00,
-    135.86,
-    79.35,
-    69.06,
-    67.06,
-    51.63,
-    37.86,
-    37.19,
-    36.23,
-    35.23,
-    34.21,
-    33.67,
-    30.66,
-    29.77,
-    27.93,
-    27.15,
-    25.96,
-    23.43,
-    22.63,
-    21.78,
-]
 
 #: Default calibration-check tolerance, in ppm, for `check_calibration()`.
 DEFAULT_CALIBRATION_TOL = 0.5
@@ -204,9 +161,8 @@ def process_indirect(
     the final processed 2D spectrum. Runs AFTER
     `NmrPipeSmileBackend.reconstruct_indirect()` (SMILE), never before.
 
-    When `params` carries F1 SF/OFFSET/SW_h calibration fields, the reversed,
-    1D-calibrated ppm axis is computed (via `ppm_axis_for_dimension()` +
-    `calibrate_against_1d_reference()`) and written to a JSON sidecar
+    When `params` carries F1 SF/OFFSET/SW_h calibration fields, the reversed
+    ppm axis is computed (via `ppm_axis_for_dimension()`) and written to a JSON sidecar
     (`stage_dir/processed_ppm_axis.json`) alongside the binary spectrum --
     pure Python arithmetic, no external tool, kept per D-03's
     persistent-intermediates convention. Missing/`None` calibration fields
@@ -311,7 +267,16 @@ def _write_ppm_calibration_sidecar(
     params: NusAcquisitionParams | None,
     processed: Path | None = None,
 ) -> None:
-    """Best-effort ppm-axis reversal + 1D-calibration sidecar (RECON-02).
+    """Best-effort ppm-axis reversal sidecar (RECON-02).
+
+    `calibrated_ppm_axis` equals the raw axis and `calibration_offset_ppm`
+    is 0.0. Until 2026-11-23 the axis was "calibrated" against a compiled-in
+    C20H32O2 shift list by matching each shift to its nearest *axis point*;
+    that compares grid points, not peaks, so it could only ever shift the
+    axis by up to half a point spacing, whatever the spectrum (PROV-01).
+    The real calibration check is `nus/qc.py`'s `ppm_calibration`, which
+    compares picked HSQC peaks with the dataset's own 1D 13C list. The keys
+    are kept for `nus/bridge.py` and existing sidecars.
 
     Pure arithmetic (plus a header read), no external tool. Silently
     no-ops when `params` is `None` or its F1 SF/OFFSET/SW_h calibration
@@ -347,17 +312,14 @@ def _write_ppm_calibration_sidecar(
         sw_h=params.f1_sw_h,
         size=axis_size,
     )
-    calibrated_axis, offset_applied = calibrate_against_1d_reference(
-        axis, GUIDE_S10_C13
-    )
     sidecar = stage_dir / "processed_ppm_axis.json"
     sidecar.write_text(
         json.dumps(
             {
                 "raw_ppm_axis": axis,
-                "calibrated_ppm_axis": calibrated_axis,
-                "calibration_offset_ppm": offset_applied,
-                "reference_shifts": GUIDE_S10_C13,
+                "calibrated_ppm_axis": axis,
+                "calibration_offset_ppm": 0.0,
+                "reference_shifts": [],
                 "axis_size": axis_size,
                 "axis_size_source": size_source,
                 "intended_raw_grid_size": intended_size,
@@ -431,7 +393,7 @@ def calibrate_against_1d_reference(
         computed_axis: The reconstructed spectrum's raw ppm axis (e.g. from
             `ppm_axis_for_dimension()`).
         reference_shifts: Ground-truth 1D shifts to calibrate against
-            (e.g. `GUIDE_S10_C13`).
+            (the dataset's own picked 1D list).
         tol: Maximum ppm distance for a reference shift to be considered a
             match to a computed-axis point (default 5.0 ppm -- generous,
             since the *uncalibrated* axis may carry a real systematic
@@ -464,30 +426,75 @@ def calibrate_against_1d_reference(
 
 def check_calibration(
     observed_ppms: Sequence[float],
-    reference_ppms: Sequence[float] = tuple(GUIDE_S10_C13),
+    reference_ppms: Sequence[float],
     tol: float = DEFAULT_CALIBRATION_TOL,
 ) -> bool:
     """Flag whether a set of observed carbon shifts is well-calibrated.
 
-    A thin decision wrapper over `calibrate_against_1d_reference()`: returns
-    `False` (flagged) when the detected systematic offset exceeds `tol`
-    ppm, `True` otherwise. Intended as a post-reconstruction sanity check,
-    not a correction step -- `calibrate_against_1d_reference()` is what
-    actually corrects the axis.
+    Returns `False` (flagged) when the systematic offset of
+    `observed_ppms` against `reference_ppms` exceeds `tol` ppm, `True`
+    otherwise. A post-reconstruction sanity check, not a correction step.
+
+    The offset is found in two steps. First, trial offsets across
+    +/- max(10 * tol, 5) ppm (0.05 ppm steps) are scored by how many
+    observed shifts land within `tol` of a reference shift once the offset
+    is removed. Every trial within `tol` of the true offset scores alike, so
+    the estimate is the centre of the best-scoring run of trials (the run
+    nearest zero on ties). Second, the offset is refined as the median of
+    the observed-minus-reference differences of the shifts matched at that
+    offset. Pairing each
+    reference with its nearest observed shift instead (the method used
+    until 2026-11-23) aliases onto neighbouring lines in a crowded 13C
+    spectrum and missed 2-5 ppm offsets on real data.
 
     Args:
         observed_ppms: Reconstructed carbon shifts to check.
-        reference_ppms: Ground-truth 1D reference shifts (default
-            `GUIDE_S10_C13`).
+        reference_ppms: Ground-truth 1D reference shifts (the dataset's
+            own picked 1D 13C list).
         tol: Maximum acceptable systematic offset, in ppm, before flagging
-            (default `DEFAULT_CALIBRATION_TOL`).
+            (default `DEFAULT_CALIBRATION_TOL`); also the matching window.
 
     Returns:
         `True` if the systematic offset is within `tol` ppm (well
-        calibrated, or no reference match found to compare against),
-        `False` if a systematic offset beyond `tol` is detected.
+        calibrated, or nothing to compare), `False` if a systematic offset
+        beyond `tol` is detected.
     """
-    _calibrated, offset_applied = calibrate_against_1d_reference(
-        observed_ppms, reference_ppms, tol=max(tol * 10, 5.0)
-    )
-    return abs(offset_applied) <= tol
+    from bisect import bisect_left
+    from statistics import median
+
+    observed = list(observed_ppms)
+    reference = sorted(reference_ppms)
+    if not observed or not reference:
+        return True
+
+    def nearest(shift: float) -> float:
+        i = bisect_left(reference, shift)
+        candidates = reference[max(i - 1, 0) : i + 1]
+        return min(candidates, key=lambda r: abs(r - shift))
+
+    step = 0.05
+    n_steps = int(round(max(tol * 10, 5.0) / step))
+    trials = range(-n_steps, n_steps + 1)
+    counts = {
+        k: sum(1 for o in observed if abs(nearest(o - k * step) - (o - k * step)) <= tol)
+        for k in trials
+    }
+    best_count = max(counts.values())
+    if best_count == 0:
+        return True
+    runs: list[list[int]] = []
+    for k in trials:
+        if counts[k] == best_count:
+            if runs and runs[-1][-1] == k - 1:
+                runs[-1].append(k)
+            else:
+                runs.append([k])
+    centres = [(run[0] + run[-1]) / 2 * step for run in runs]
+    best_offset = min(centres, key=abs)
+
+    deltas = [
+        o - nearest(o - best_offset)
+        for o in observed
+        if abs(nearest(o - best_offset) - (o - best_offset)) <= tol
+    ]
+    return abs(median(deltas)) <= tol

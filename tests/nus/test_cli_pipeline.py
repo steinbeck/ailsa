@@ -36,10 +36,10 @@ def test_qc_command_json_format(known_bad_peaks_dir) -> None:
     assert payload["verdict"] == "FAIL"
 
 
-def test_qc_command_passes_on_clean_fixture(clean_peaks_dir) -> None:
-    """`ailsa nus qc <peaks-dir> --format json` exits 0 and reports PASS on
-    the hand-authored synthetic-clean fixture -- the QC-02 PASS-side proof
-    exercised via the CLI, not just `run_qc_checks()` directly.
+def test_qc_command_on_clean_fixture_without_dept(clean_peaks_dir) -> None:
+    """`ailsa nus qc <peaks-dir> --format json` exits 0 on the synthetic-clean
+    fixture. It has no DEPT, so the classification-dependent checks are not
+    checkable and the verdict is PARTIAL, with no violated check (PROV-01).
     """
     from click.testing import CliRunner
 
@@ -48,8 +48,11 @@ def test_qc_command_passes_on_clean_fixture(clean_peaks_dir) -> None:
     runner = CliRunner()
     result = runner.invoke(nus, ["qc", str(clean_peaks_dir), "--format", "json"])
     assert result.exit_code == 0, result.output
-    payload = json.loads(result.output)
-    assert payload["verdict"] == "PASS"
+    payload = json.loads(result.stdout)
+    assert payload["verdict"] == "PARTIAL"
+    unchecked = {c["name"] for c in payload["checks"] if not c["checkable"]}
+    assert unchecked == {"quaternary_exclusion", "hsqc_coverage"}
+    assert all(c["passed"] for c in payload["checks"] if c["checkable"])
 
 
 def test_qc_command_text_format_reports_verdict(known_bad_peaks_dir) -> None:
@@ -83,10 +86,10 @@ def test_qc_command_help_lists_threshold_flags() -> None:
 
 def test_qc_command_threshold_override_changes_verdict(known_bad_peaks_dir) -> None:
     """An explicit `--coverage-floor 0.0` override must thread through to
-    `QcConfig` (D-04) -- loosening the HSQC-coverage floor should not, by
-    itself, flip the known-bad fixture's independently-critical
-    quaternary-exclusion/signal-to-ridge violations, but it does change
-    the hsqc_coverage check's own `passed` value in the report.
+    `QcConfig` (D-04) and show up as the hsqc_coverage threshold. The
+    fixture has no DEPT, so the coverage check itself is not checkable;
+    loosening its floor must not flip the independently-critical
+    signal-to-ridge violation.
     """
     from click.testing import CliRunner
 
@@ -97,11 +100,11 @@ def test_qc_command_threshold_override_changes_verdict(known_bad_peaks_dir) -> N
         nus,
         ["qc", str(known_bad_peaks_dir), "--coverage-floor", "0.0", "--format", "json"],
     )
-    payload = json.loads(result.output)
+    payload = json.loads(result.stdout)
     coverage_check = next(c for c in payload["checks"] if c["name"] == "hsqc_coverage")
-    assert coverage_check["passed"] is True
     assert coverage_check["threshold"] == 0.0
-    # Still FAIL overall -- quaternary_exclusion/signal_to_ridge remain critical violations.
+    assert coverage_check["checkable"] is False
+    # Still FAIL overall -- signal_to_ridge remains a critical violation.
     assert payload["verdict"] == "FAIL"
 
 

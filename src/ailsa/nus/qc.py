@@ -18,10 +18,14 @@ in `cli/nus.py::pipeline`.
 
 Protonated-vs-quaternary classification uses an honest three-tier
 resolution (`QcReferenceData.resolve`, D-03): a picked DEPT/edited
-experiment if present, otherwise an explicit override
-(`QcConfig.known_quaternary_shifts`), otherwise
-`"insufficient_reference_data"` -- never a silent PASS on missing
-reference data (T-99-03). `detection.detect_hybridisation()` is
+experiment if present, otherwise an explicit caller-supplied override
+(`QcConfig.known_quaternary_shifts`, empty by default), otherwise
+`"insufficient_reference_data"`. In that last case the two checks that
+need the classification report "not checkable" (`checkable=False`): never a
+silent PASS on missing reference data (T-99-03), but not a FAIL either --
+the verdict is capped at PARTIAL. The module carries no compound-specific
+reference data; every reference comes from the dataset's own 1D lists or
+from the caller (PROV-01). `detection.detect_hybridisation()` is
 deliberately NOT used here: it returns only sp3/sp2/sp1 hybridisation
 fractions, with no hydrogen-count field, so it cannot distinguish a
 protonated carbon from a quaternary one (RESEARCH.md Pitfall 1).
@@ -39,53 +43,16 @@ from typing import Any
 from ailsa.models.nus import QcCheckResult, QcReport, QcVerdict
 from ailsa.nus.postprocess import (
     DEFAULT_CALIBRATION_TOL,
-    GUIDE_S10_C13,
     check_calibration,
 )
 
-#: 5 13C shifts that NUS-RECONSTRUCTION-GUIDE.md Sec.8/Sec.10 *proposes* as
-#: quaternary for C20H32O2 -- a subset of `GUIDE_S10_C13`. This is the D-03
-#: tier-2 "explicit override" default; `QcConfig.known_quaternary_shifts` is
-#: overridable via config/CLI.
-#:
-#: NOT CONFIRMED -- corrected 2026-07-31. An earlier revision of this comment
-#: called these "the 5 confirmed-quaternary shifts". They are not confirmed:
-#: they come from a previous CASE agent's working hypothesis about an
-#: UNSOLVED sample (see `GUIDE_S10_C13` in `postprocess.py` for the full
-#: provenance), and that source hedges two of these five in its own words:
-#:   - 37.86 -- "evtl. ein angularer C10 (~37.86, MEDIUM)"; Sec.8 lists it as
-#:     "37.86-Kandidat"
-#:   - 79.35 -- "...ODER 4 Carbon-Ringe + Diol (falls 79.35 doch Rauschen)"
-#:
-#: Consequence for `check_quaternary_exclusion`: a FAIL against these shifts
-#: is evidence that the *hypothesis* and the data disagree. It does not by
-#: itself establish that the picked peak is an artifact -- the hypothesis
-#: being wrong (e.g. 37.86 simply is not quaternary) produces exactly the
-#: same FAIL. Read such a verdict as "needs a human decision", not as
-#: "reconstruction is bad".
-#:
-#: Sample-specific: applying this default to any compound other than
-#: C20H32O2 grades that compound against an unrelated sample's guesses.
-#: `cli/jcamp.py` currently reaches this default unconditionally when no DEPT
-#: file is present. See tracked item PROV-01.
-DEFAULT_QUATERNARY_SHIFTS: tuple[float, ...] = (142.00, 135.86, 79.35, 36.23, 37.86)
-
-#: Re-exported flat list form for convenience (tests/conftest.py mirrors
-#: this constant independently as `KNOWN_QUATERNARY_SHIFTS`).
-KNOWN_QUATERNARY_SHIFTS: list[float] = list(DEFAULT_QUATERNARY_SHIFTS)
-
-#: The 15 carbons the Sec.10 hypothesis implies are protonated --
-#: `GUIDE_S10_C13` minus the 5 proposed quaternaries (RESEARCH.md Pitfall 3).
-#: Inherits `DEFAULT_QUATERNARY_SHIFTS`' provenance caveat above: this is a
-#: derived hypothesis, not a verified set. Used only as a last-resort
-#: fallback when no trusted 1D reference file is available at all; the
-#: normal path derives the protonated set from the actual 1D peak lists
-#: read from `<peaks-dir>` (D-03 -- no re-derivation from the guide).
-PROTONATED_REFERENCE: list[float] = [
-    shift
-    for shift in GUIDE_S10_C13
-    if all(abs(shift - quaternary) > 0.01 for quaternary in DEFAULT_QUATERNARY_SHIFTS)
-]
+# PROV-01 (resolved 2026-11-23): this module used to compile in a C20H32O2
+# shift list (five "quaternary" shifts, a derived protonated list, and the
+# calibration reference) taken from a CASE agent's July hypothesis. The
+# experimentalist confirmed the constitution on 2026-11-23 and the
+# hypothesis was wrong in five places, and the defaults applied to every
+# compound without a DEPT. They are gone; the confirmed C20H32O2
+# classification lives in tests/nus/conftest.py as test data only.
 
 #: D-02's critical/soft check-name partition, driving `aggregate_verdict()`.
 CRITICAL_CHECKS = frozenset(
@@ -112,7 +79,9 @@ class QcConfig:
     hsqc_coverage_floor: float = 0.8
     edited_sign_tol: float = 0.5
     cosy_symmetry_floor: float = 0.5
-    known_quaternary_shifts: tuple[float, ...] = DEFAULT_QUATERNARY_SHIFTS
+    #: Tier-2 override for datasets without a DEPT. Empty by default: only a
+    #: caller who actually knows the quaternary carbons should set it.
+    known_quaternary_shifts: tuple[float, ...] = ()
 
     @classmethod
     def default(cls) -> QcConfig:
@@ -312,9 +281,10 @@ def check_quaternary_exclusion(
     """Critical: no HSQC 1-bond correlation within tolerance of a known-quaternary shift.
 
     If `ref.quaternary_shifts` is `None` (tier-3, no reference available at
-    all), this returns `passed=False` with an `"insufficient_reference_data"`
-    detail -- per D-03/T-99-03 this must never silently PASS just because
-    the reference was missing.
+    all), this returns `passed=False, checkable=False` with an
+    `"insufficient_reference_data"` detail -- per D-03/T-99-03 this must
+    never silently PASS just because the reference was missing, and it must
+    not FAIL a reconstruction for a reference the dataset does not have.
     """
     config = config or QcConfig.default()
     if ref.quaternary_shifts is None:
@@ -322,6 +292,7 @@ def check_quaternary_exclusion(
             name="quaternary_exclusion",
             passed=False,
             critical=True,
+            checkable=False,
             details="insufficient_reference_data: no DEPT/override quaternary reference available",
         )
     quaternary_shifts = ref.quaternary_shifts
@@ -362,22 +333,25 @@ def quaternary_exclusion(
 
 
 def check_ppm_calibration(
-    hsqc_peaks: Sequence[dict[str, Any]], config: QcConfig | None = None
+    hsqc_peaks: Sequence[dict[str, Any]], ref: QcReferenceData, config: QcConfig | None = None
 ) -> QcCheckResult:
-    """Critical: reuse `nus/postprocess.py::check_calibration()` (Don't Hand-Roll)."""
+    """Critical: reuse `nus/postprocess.py::check_calibration()` (Don't Hand-Roll).
+
+    The reference is the dataset's own trusted 1D 13C list (`ref.trusted_c13`).
+    """
     config = config or QcConfig.default()
     shifts = [peak["c13_ppm"] for peak in hsqc_peaks]
-    return qc_check_ppm_calibration(shifts, tol=config.c13_tol)
+    return qc_check_ppm_calibration(shifts, ref.trusted_c13, tol=config.c13_tol)
 
 
 def qc_check_ppm_calibration(
-    hsqc_c13_shifts: Sequence[float], tol: float = DEFAULT_CALIBRATION_TOL
+    hsqc_c13_shifts: Sequence[float],
+    reference_c13_shifts: Sequence[float],
+    tol: float = DEFAULT_CALIBRATION_TOL,
 ) -> QcCheckResult:
-    """Standalone wrapper: reuses `check_calibration()` against `GUIDE_S10_C13`.
+    """Standalone wrapper: reuses `check_calibration()` against a 1D 13C list.
 
-    Note the reference list is a C20H32O2-specific hypothesis, not ground
-    truth -- see `GUIDE_S10_C13`'s provenance note. On another compound this
-    check compares against an unrelated sample's shifts (tracked: PROV-01).
+    Without a 1D 13C reference the check is not checkable (`checkable=False`).
     """
     if not hsqc_c13_shifts:
         return QcCheckResult(
@@ -387,9 +361,20 @@ def qc_check_ppm_calibration(
             details="insufficient_reference_data: no HSQC shifts to calibrate",
             threshold=tol,
         )
-    passed = check_calibration(hsqc_c13_shifts, GUIDE_S10_C13, tol=tol)
+    if not reference_c13_shifts:
+        return QcCheckResult(
+            name="ppm_calibration",
+            passed=False,
+            critical=True,
+            checkable=False,
+            details="insufficient_reference_data: no trusted 1D 13C list to calibrate against",
+            threshold=tol,
+        )
+    passed = check_calibration(hsqc_c13_shifts, reference_c13_shifts, tol=tol)
     details = (
-        "well-calibrated against GUIDE_S10_C13" if passed else "systematic offset exceeds tolerance"
+        "well-calibrated against the 1D 13C list"
+        if passed
+        else "systematic offset exceeds tolerance"
     )
     return QcCheckResult(
         name="ppm_calibration", passed=passed, critical=True, details=details, threshold=tol
@@ -505,29 +490,32 @@ def check_hsqc_coverage(
 
     Protonated candidates are derived from the trusted 1D shifts read from
     `<peaks-dir>` (D-03), deduplicated (`_dedupe_shifts`) and filtered
-    against `ref.quaternary_shifts`. Falls back to the hardcoded
-    `PROTONATED_REFERENCE` only when no trusted 1D file was found at all.
-    Tier-3 (`ref.quaternary_shifts is None`) reports `"insufficient_reference_data"`
-    rather than a fabricated coverage number.
+    against `ref.quaternary_shifts`. Without a quaternary classification
+    (tier-3) or without a trusted 1D 13C list, the check reports
+    `"insufficient_reference_data"` with `checkable=False` rather than a
+    fabricated coverage number.
     """
     config = config or QcConfig.default()
-    if ref.quaternary_shifts is None:
+    if ref.quaternary_shifts is None or not ref.trusted_c13:
+        missing = (
+            "no prot/quaternary reference available"
+            if ref.quaternary_shifts is None
+            else "no trusted 1D 13C list"
+        )
         return QcCheckResult(
             name="hsqc_coverage",
             passed=False,
             critical=True,
-            details="insufficient_reference_data: no prot/quaternary reference available",
+            checkable=False,
+            details=f"insufficient_reference_data: {missing}",
             threshold=config.hsqc_coverage_floor,
         )
-    if ref.trusted_c13:
-        candidates = [
-            shift
-            for shift in ref.trusted_c13
-            if all(abs(shift - quaternary) > config.c13_tol for quaternary in ref.quaternary_shifts)
-        ]
-        protonated = _dedupe_shifts(candidates, config.c13_tol)
-    else:
-        protonated = list(PROTONATED_REFERENCE)
+    candidates = [
+        shift
+        for shift in ref.trusted_c13
+        if all(abs(shift - quaternary) > config.c13_tol for quaternary in ref.quaternary_shifts)
+    ]
+    protonated = _dedupe_shifts(candidates, config.c13_tol)
     return _hsqc_coverage(hsqc_peaks, protonated, config.hsqc_coverage_floor, config.c13_tol)
 
 
@@ -635,10 +623,12 @@ def aggregate_verdict(checks: Sequence[QcCheckResult]) -> QcVerdict:
 
     The single auditable aggregation point -- driven off each
     `QcCheckResult.critical` flag, consistent with `CRITICAL_CHECKS`/`SOFT_CHECKS`.
+    A not-checkable check (`checkable=False`) never forces FAIL but always
+    blocks PASS.
     """
-    if any(not check.passed and check.critical for check in checks):
+    if any(not check.passed and check.critical and check.checkable for check in checks):
         return QcVerdict.FAIL
-    if any(not check.passed and not check.critical for check in checks):
+    if any(not check.passed for check in checks):
         return QcVerdict.PARTIAL
     return QcVerdict.PASS
 
@@ -683,7 +673,7 @@ def run_qc_checks(peaks_dir: Path | str, config: QcConfig | None = None) -> QcRe
     else:
         checks_hsqc_dependent = [
             check_quaternary_exclusion(hsqc, ref, config),
-            check_ppm_calibration(hsqc, config),
+            check_ppm_calibration(hsqc, ref, config),
             check_hsqc_coverage(hsqc, ref, config),
         ]
         edited_sign_check = check_edited_sign_consistency(hsqc, config)

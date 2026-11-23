@@ -334,11 +334,9 @@ class TestJcampEndToEnd:
         ref = QcReferenceData.resolve(written_dir)
         assert ref.trusted_c13
         assert ref.trusted_h1
-        # INHERITED byte-unchanged-qc.py behaviour (102-RESEARCH.md Pitfall
-        # 4), NOT a choice this phase makes: with no DEPT `.dx` file present,
-        # `QcConfig.default()`'s five compiled-in Sec.8 quaternary shifts are
-        # used unconditionally as the tier-2 override.
-        assert ref.classification_source == "override"
+        # No DEPT `.dx` file present and no compiled-in fallback (PROV-01,
+        # 2026-11-23): the quaternary classification is honestly missing.
+        assert ref.classification_source == "insufficient_reference_data"
 
     def test_explicit_file_list_mode(self, tmp_path: Path) -> None:
         """D-01: an explicit file list (not a directory) is a supported input mode."""
@@ -393,14 +391,17 @@ class TestJcampEndToEnd:
     def test_observed_trimmed_fixture_verdict(self, tmp_path: Path) -> None:
         """Observed (not invented) verdict for the six committed fixtures.
 
-        RUN FIRST, then assert what was actually seen: the trimmed HSQC
-        fixture covers only 16 F1 rows (~1.3 ppm of 13C), so it cannot reach
-        the 0.8 `hsqc_coverage` floor against the whole-file 1D 13C
-        reference (45 real picked 13C shifts) -- a FAIL verdict is the
-        expected, honest outcome of testing on a deliberately small fixture,
-        not a defect. Verified live 2026-07-25: `hsqc_coverage` reports
-        "2/21 protonated carbons covered (10%)", `ppm_calibration` and
-        `signal_to_ridge` also fail critically. Driving the REAL
+        RUN FIRST, then assert what was actually seen: the trimmed fixtures
+        cover only 16 F1 rows per 2D file (~1.3 ppm of 13C in the HSQC) -- a
+        FAIL verdict is the expected, honest outcome of testing on a
+        deliberately small fixture, not a defect. Verified live 2026-11-23:
+        `ppm_calibration` ("systematic offset exceeds tolerance" -- a 1.3 ppm
+        HSQC window cannot be aligned to the 45 picked 1D 13C shifts) and
+        `signal_to_ridge` (ridge_fraction 0.73 along COSY h1a) fail
+        critically; with no DEPT, `quaternary_exclusion` and `hsqc_coverage`
+        are not checkable (PROV-01; until then `hsqc_coverage` failed with
+        "2/21 protonated carbons covered" against the compiled-in
+        C20H32O2 hypothesis). Driving the REAL
         2048x2048 `C20H32O2-jcamp` dataset to a green Sec.8 verdict is
         Phase 103 / JVAL (D-05) -- explicitly NOT this phase's bar.
         """
@@ -415,8 +416,13 @@ class TestJcampEndToEnd:
             "this test's assertion AND the comment above with the new "
             "observed reason; do not silently flip the expectation"
         )
-        failed_checks = {c["name"] for c in data["report"]["checks"] if not c["passed"]}
-        assert "hsqc_coverage" in failed_checks
+        checks = data["report"]["checks"]
+        critical_violations = {
+            c["name"] for c in checks if not c["passed"] and c["critical"] and c["checkable"]
+        }
+        assert critical_violations == {"ppm_calibration", "signal_to_ridge"}
+        unchecked = {c["name"] for c in checks if not c["checkable"]}
+        assert unchecked == {"quaternary_exclusion", "hsqc_coverage"}
 
 
 class TestJcampStaleStateCleared:

@@ -21,34 +21,59 @@ class TestQuaternaryExclusion:
     known_quaternary_shifts, tol=0.5) -> QcCheckResult`.
     """
 
-    def test_clean_passes(self, clean_peaks_dir) -> None:
+    def test_clean_passes(self, clean_peaks_dir, c20h32o2_quaternary_shifts) -> None:
         """Implementing plan: Plan 02 (`ailsa.nus.qc.quaternary_exclusion`)."""
         import json
 
         from ailsa.nus.qc import quaternary_exclusion
 
         peaks = json.loads((clean_peaks_dir / "HSQC_exp3.json").read_text())["cross_peaks"]
-        result = quaternary_exclusion(peaks, [142.00, 135.86, 79.35, 36.23, 37.86])
+        result = quaternary_exclusion(peaks, c20h32o2_quaternary_shifts)
         assert result.passed is True
 
-    def test_violation_trips(self, known_bad_peaks_dir) -> None:
-        """Implementing plan: Plan 02 (`ailsa.nus.qc.quaternary_exclusion`)."""
+    def test_violation_trips(self, known_bad_peaks_dir, c20h32o2_quaternary_shifts) -> None:
+        """The July home-IST HSQC has cross-peaks at the quaternary carbons
+        51.63 and 35.23 (confirmed 2026-11-23)."""
         import json
 
         from ailsa.nus.qc import quaternary_exclusion
 
         peaks = json.loads((known_bad_peaks_dir / "HSQC_exp3.json").read_text())["cross_peaks"]
-        result = quaternary_exclusion(peaks, [142.00, 135.86, 79.35, 36.23, 37.86])
+        result = quaternary_exclusion(peaks, c20h32o2_quaternary_shifts)
         assert result.passed is False
+        assert "51.63" in result.details
+        assert "35.23" in result.details
+
+    def test_no_classification_is_not_checkable(self, clean_peaks_dir) -> None:
+        """Without DEPT or an explicit list the check is unchecked, not failed."""
+        import json
+
+        from ailsa.nus.qc import QcReferenceData, check_quaternary_exclusion
+
+        peaks = json.loads((clean_peaks_dir / "HSQC_exp3.json").read_text())["cross_peaks"]
+        ref = QcReferenceData(
+            trusted_c13=[], trusted_h1=[], quaternary_shifts=None,
+            classification_source="insufficient_reference_data",
+        )
+        result = check_quaternary_exclusion(peaks, ref)
+        assert result.passed is False
+        assert result.checkable is False
 
 
 class TestPpmCalibration:
     """Critical check: reuse `nus/postprocess.py::check_calibration()`
-    against `GUIDE_S10_C13` (Don't Hand-Roll -- do not reimplement).
+    against the dataset's own 1D 13C list (Don't Hand-Roll -- do not reimplement).
 
     Intended callable: `ailsa.nus.qc.qc_check_ppm_calibration(hsqc_c13_shifts,
-    tol=DEFAULT_CALIBRATION_TOL) -> QcCheckResult`.
+    reference_c13_shifts, tol=DEFAULT_CALIBRATION_TOL) -> QcCheckResult`.
     """
+
+    @staticmethod
+    def _trusted_c13(peaks_dir) -> list[float]:
+        import json
+
+        data = json.loads((peaks_dir / "13C_exp7_wide.json").read_text())
+        return [p["ppm"] for p in data["peaks"]]
 
     def test_clean_passes(self, clean_peaks_dir) -> None:
         """Implementing plan: Plan 02 (`ailsa.nus.qc.qc_check_ppm_calibration`)."""
@@ -58,7 +83,7 @@ class TestPpmCalibration:
 
         peaks = json.loads((clean_peaks_dir / "HSQC_exp3.json").read_text())["cross_peaks"]
         shifts = [p["c13_ppm"] for p in peaks]
-        result = qc_check_ppm_calibration(shifts)
+        result = qc_check_ppm_calibration(shifts, self._trusted_c13(clean_peaks_dir))
         assert result.passed is True
 
     def test_violation_trips(self, known_bad_peaks_dir) -> None:
@@ -69,8 +94,25 @@ class TestPpmCalibration:
 
         peaks = json.loads((known_bad_peaks_dir / "HSQC_exp3.json").read_text())["cross_peaks"]
         shifts = [p["c13_ppm"] + 5.0 for p in peaks]  # simulate a gross offset
-        result = qc_check_ppm_calibration(shifts)
+        result = qc_check_ppm_calibration(shifts, self._trusted_c13(known_bad_peaks_dir))
         assert result.passed is False
+
+    def test_offset_is_measured_against_the_given_list(self) -> None:
+        """The reference is the caller's list, not a compiled-in one: a 2 ppm
+        offset is caught against the matching 13C list."""
+        from ailsa.nus.qc import qc_check_ppm_calibration
+
+        reference = [128.4, 77.0, 55.1, 40.2, 21.3]
+        assert qc_check_ppm_calibration(reference, reference).passed is True
+        shifted = [s + 2.0 for s in reference]
+        assert qc_check_ppm_calibration(shifted, reference).passed is False
+
+    def test_no_1d_reference_is_not_checkable(self) -> None:
+        from ailsa.nus.qc import qc_check_ppm_calibration
+
+        result = qc_check_ppm_calibration([30.0, 40.0], [])
+        assert result.passed is False
+        assert result.checkable is False
 
 
 class TestSignalToRidge:
@@ -114,19 +156,16 @@ class TestHsqcCoverage:
     protonated_reference_shifts, floor=0.8) -> QcCheckResult`.
     """
 
-    def test_clean_passes(self, clean_peaks_dir) -> None:
+    def test_clean_passes(self, clean_peaks_dir, c20h32o2_protonated_shifts) -> None:
         """Implementing plan: Plan 02 (`ailsa.nus.qc.hsqc_coverage`)."""
         import json
 
         from ailsa.nus.qc import hsqc_coverage
 
         peaks = json.loads((clean_peaks_dir / "HSQC_exp3.json").read_text())["cross_peaks"]
-        protonated = [
-            69.06, 67.06, 51.63, 37.19, 35.23, 34.21, 33.67,
-            30.66, 29.77, 27.93, 27.15, 25.96, 23.43, 22.63, 21.78,
-        ]
-        result = hsqc_coverage(peaks, protonated)
+        result = hsqc_coverage(peaks, c20h32o2_protonated_shifts)
         assert result.passed is True
+        assert result.value == 1.0
 
     def test_violation_trips(self, known_bad_peaks_dir) -> None:
         """Implementing plan: Plan 02 (`ailsa.nus.qc.hsqc_coverage`)."""
