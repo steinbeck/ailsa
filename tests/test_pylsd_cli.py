@@ -199,8 +199,8 @@ class TestPylsdRunCLI:
             MockOrch.return_value.run.return_value = mock_orch_result
             MockMerger.return_value.merge.return_value = mock_merge_result
 
-            # Use mix_stderr=False so stderr (warnings) don't corrupt stdout JSON
-            runner = CliRunner(mix_stderr=False)
+            # Parse result.stdout so stderr (warnings) don't corrupt the JSON
+            runner = CliRunner()
             result = runner.invoke(
                 pylsd,
                 ["run", str(lsd_file), "--shifts", "25.0", "--format", "json"],
@@ -210,7 +210,7 @@ class TestPylsdRunCLI:
         assert result.exit_code == 0, (
             f"Expected exit 0, got {result.exit_code}. Output: {result.output}"
         )
-        data = json.loads(result.output)
+        data = json.loads(result.stdout)
         assert "permutations" in data, f"Missing 'permutations' key. Data: {data}"
         assert "merged_count" in data, f"Missing 'merged_count' key. Data: {data}"
         assert "ranked_solutions" in data, f"Missing 'ranked_solutions' key. Data: {data}"
@@ -438,7 +438,7 @@ class TestRankingIntegration:
             MockOrch.return_value.run.return_value = mock_orch_result
             MockMerger.return_value.merge.return_value = mock_merge_result
 
-            runner = CliRunner(mix_stderr=False)
+            runner = CliRunner()
             result = runner.invoke(
                 pylsd,
                 ["run", str(lsd_file), "--shifts", "25.0", "--format", "json"],
@@ -454,7 +454,7 @@ class TestRankingIntegration:
         )
 
         # stdout must be exactly one parseable JSON document (not two concatenated)
-        data = json.loads(result.output)
+        data = json.loads(result.stdout)
         assert "permutations" in data
         assert "ranked_solutions" in data
 

@@ -112,7 +112,7 @@ class TestDereplicateC13:
     )
     def test_dereplicate_uses_sqlite_database(self) -> None:
         """Test that SQLite database is used when present."""
-        runner = CliRunner(mix_stderr=False)
+        runner = CliRunner()
         result = runner.invoke(
             dereplicate,
             ["c13", "data/Ibuprofen/2", "C13H18O2"],
@@ -128,7 +128,7 @@ class TestDereplicateC13:
     )
     def test_dereplicate_explicit_database_flag(self) -> None:
         """Test explicit --database flag with SQLite database."""
-        runner = CliRunner(mix_stderr=False)
+        runner = CliRunner()
         result = runner.invoke(
             dereplicate,
             ["c13", "data/Ibuprofen/2", "C13H18O2", "--database", "data/reference/compounds.db"],
@@ -143,7 +143,7 @@ class TestDereplicateC13:
     )
     def test_dereplicate_explicit_sd_file(self) -> None:
         """Test explicit --database flag with SD file."""
-        runner = CliRunner(mix_stderr=False)
+        runner = CliRunner()
         result = runner.invoke(
             dereplicate,
             [

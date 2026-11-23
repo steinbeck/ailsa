@@ -24,7 +24,8 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Chemistry",
 ]
 dependencies = [
-    "click>=8.0",
+    # 8.2 removed CliRunner(mix_stderr=...); the CLI tests read result.stdout/stderr separately.
+    "click>=8.2",
     "jsonschema>=4.18.0",
     # nmrglue 0.12 (PyPI, 2026-08) is the first release that is NumPy-2 compatible;
     # PyPI rejects direct-URL dependencies, so a plain version specifier is required.

@@ -170,7 +170,7 @@ class TestJcampUnexpectedReadResultType:
             staticmethod(lambda path: _NotASpectrum()),
         )
 
-        runner = CliRunner(mix_stderr=False)
+        runner = CliRunner()
         result = runner.invoke(jcamp, [str(tmp_path)])
         assert isinstance(result.exception, TypeError), result.exception
         assert "Unexpected JcampReader.read() result type" in str(result.exception)
@@ -215,16 +215,16 @@ class TestJcampEndToEnd:
     """FIXTURE-COVERED (real committed data, 16 F1 rows per 2D file, whole
     real 1D files) -- no test-double substitution anywhere in this class.
 
-    `CliRunner(mix_stderr=False)` is used throughout (rather than the
-    default `mix_stderr=True`) so `json.loads(result.output)` is robust to
+    JSON is parsed from `result.stdout` (never `result.output`, which
+    interleaves stderr since click 8.2) so `json.loads(result.stdout)` is robust to
     nmrglue's `UserWarning: JCAMP-DX key without value: $RELAX` (emitted via
     `warnings.warn`, not `click.echo`), which Python's default "once per
     call-site" warning filter only shows the FIRST time that exact
     source line fires in a given interpreter session -- an ordering-
     dependent leak into stdout that would otherwise make JSON parsing flaky
     when this test file is run in isolation (verified empirically:
-    `warnings.warn` output lands on stderr and is only mixed into
-    `result.output` when `mix_stderr=True`).
+    `warnings.warn` output lands on stderr and is mixed into
+    `result.output`, never into `result.stdout`).
     """
 
     def test_directory_run_write_boundary_invariant(self, tmp_path: Path) -> None:
@@ -233,7 +233,7 @@ class TestJcampEndToEnd:
         exactly one way or the other -- never a traceback, never both.
         """
         _copy_fixtures(tmp_path)
-        runner = CliRunner(mix_stderr=False)
+        runner = CliRunner()
         result = runner.invoke(jcamp, [str(tmp_path)])
 
         assert result.exception is None or isinstance(result.exception, SystemExit), (
@@ -261,9 +261,9 @@ class TestJcampEndToEnd:
     def test_noesy_is_skipped_not_failed(self, tmp_path: Path) -> None:
         """D-06: NOESY is a non-fatal skip, distinct from a read/pick failure."""
         _copy_fixtures(tmp_path)
-        runner = CliRunner(mix_stderr=False)
+        runner = CliRunner()
         result = runner.invoke(jcamp, [str(tmp_path), "--format", "json"])
-        data = json.loads(result.output)
+        data = json.loads(result.stdout)
 
         noesy_skips = [e for e in data["skipped"] if e["file"] == "C20H32O2_NOESY_trimmed.dx"]
         assert len(noesy_skips) == 1
@@ -275,9 +275,9 @@ class TestJcampEndToEnd:
         fixed in Plan 01) and both 1D files decoded without raising.
         """
         _copy_fixtures(tmp_path)
-        runner = CliRunner(mix_stderr=False)
+        runner = CliRunner()
         result = runner.invoke(jcamp, [str(tmp_path), "--format", "json"])
-        data = json.loads(result.output)
+        data = json.loads(result.stdout)
         assert data["failed"] == []
 
     def test_edited_hsqc_sign_survives_round_trip(self, tmp_path: Path) -> None:
@@ -294,7 +294,7 @@ class TestJcampEndToEnd:
         exact 70/45 split, to stay robust to minor picker changes.
         """
         _copy_fixtures(tmp_path)
-        runner = CliRunner(mix_stderr=False)
+        runner = CliRunner()
         runner.invoke(jcamp, [str(tmp_path)])
 
         hsqc_path = _find_json(tmp_path / "analysis", "HSQC.json")
@@ -308,7 +308,7 @@ class TestJcampEndToEnd:
     def test_qc_verdict_is_embedded_in_peak_json(self, tmp_path: Path) -> None:
         """JCLI-02: the unchanged QC gate's verdict reaches the peak JSON."""
         _copy_fixtures(tmp_path)
-        runner = CliRunner(mix_stderr=False)
+        runner = CliRunner()
         runner.invoke(jcamp, [str(tmp_path)])
 
         hsqc_path = _find_json(tmp_path / "analysis", "HSQC.json")
@@ -326,7 +326,7 @@ class TestJcampEndToEnd:
         from ailsa.nus.qc import QcReferenceData
 
         _copy_fixtures(tmp_path)
-        runner = CliRunner(mix_stderr=False)
+        runner = CliRunner()
         runner.invoke(jcamp, [str(tmp_path)])
 
         hsqc_path = _find_json(tmp_path / "analysis", "HSQC.json")
@@ -348,9 +348,9 @@ class TestJcampEndToEnd:
             str(tmp_path / "C20H32O2_1H.dx"),
             str(tmp_path / "C20H32O2_13C.dx"),
         ]
-        runner = CliRunner(mix_stderr=False)
+        runner = CliRunner()
         result = runner.invoke(jcamp, [*files, "--format", "json"])
-        data = json.loads(result.output)
+        data = json.loads(result.stdout)
         assert data["verdict"] in ("PASS", "PARTIAL", "FAIL")
         # Written relative to <parent-of-first-file>/analysis/nmr_peaks, per
         # the same D-07 branch invariant as the directory-mode test.
@@ -363,9 +363,9 @@ class TestJcampEndToEnd:
         """
         _copy_fixtures(tmp_path)
         custom = tmp_path / "custom"
-        runner = CliRunner(mix_stderr=False)
+        runner = CliRunner()
         result = runner.invoke(jcamp, [str(tmp_path), "--out", str(custom), "--format", "json"])
-        data = json.loads(result.output)
+        data = json.loads(result.stdout)
 
         assert not (tmp_path / "analysis").exists()
         if data["verdict"] == "FAIL":
@@ -376,9 +376,9 @@ class TestJcampEndToEnd:
     def test_format_json_shape(self, tmp_path: Path) -> None:
         """The `--format json` output parses and carries the documented shape."""
         _copy_fixtures(tmp_path)
-        runner = CliRunner(mix_stderr=False)
+        runner = CliRunner()
         result = runner.invoke(jcamp, [str(tmp_path), "--format", "json"])
-        data = json.loads(result.output)
+        data = json.loads(result.stdout)
         assert set(data.keys()) == {
             "verdict",
             "out_dir",
@@ -405,9 +405,9 @@ class TestJcampEndToEnd:
         Phase 103 / JVAL (D-05) -- explicitly NOT this phase's bar.
         """
         _copy_fixtures(tmp_path)
-        runner = CliRunner(mix_stderr=False)
+        runner = CliRunner()
         result = runner.invoke(jcamp, [str(tmp_path), "--format", "json"])
-        data = json.loads(result.output)
+        data = json.loads(result.stdout)
 
         assert data["verdict"] == "FAIL", (
             "observed verdict changed from the recorded baseline (FAIL) -- "
@@ -434,7 +434,7 @@ class TestJcampStaleStateCleared:
         `run_qc_checks()` glob.
         """
         _copy_fixtures(tmp_path)
-        runner = CliRunner(mix_stderr=False)
+        runner = CliRunner()
         runner.invoke(jcamp, [str(tmp_path)])
 
         staged_dir = tmp_path / "analysis" / "jcamp_ingest" / "staged"
@@ -442,7 +442,7 @@ class TestJcampStaleStateCleared:
 
         (tmp_path / "C20H32O2_COSY_trimmed.dx").unlink()
         result = runner.invoke(jcamp, [str(tmp_path), "--format", "json"])
-        data = json.loads(result.output)
+        data = json.loads(result.stdout)
 
         # The removed file must never be re-staged, and no stale COSY
         # artifact from run 1 may remain in the staged directory that
@@ -486,7 +486,7 @@ class TestJcampStaleStateCleared:
             )
 
         _copy_fixtures(tmp_path)
-        runner = CliRunner(mix_stderr=False)
+        runner = CliRunner()
 
         monkeypatch.setattr("ailsa.nus.qc.run_qc_checks", fake_pass)
         result_pass = runner.invoke(jcamp, [str(tmp_path)])
@@ -571,7 +571,7 @@ class TestJcampQcDiscrimination:
         monkeypatch.setattr("ailsa.nus.qc.run_qc_checks", fake_run_qc_checks)
 
         _copy_fixtures(tmp_path)
-        runner = CliRunner(mix_stderr=False)
+        runner = CliRunner()
         result = runner.invoke(jcamp, [str(tmp_path), "--format", "json"])
 
         assert result.exit_code == 0, result.output
@@ -601,7 +601,7 @@ class TestJcampQcDiscrimination:
         monkeypatch.setattr("ailsa.nus.qc.run_qc_checks", fake_run_qc_checks)
 
         _copy_fixtures(tmp_path)
-        runner = CliRunner(mix_stderr=False)
+        runner = CliRunner()
         result = runner.invoke(jcamp, [str(tmp_path), "--format", "json"])
 
         assert result.exit_code == 0, result.output
@@ -635,7 +635,7 @@ class TestJcampQcDiscrimination:
         monkeypatch.setattr("ailsa.nus.qc.run_qc_checks", fake_run_qc_checks)
 
         _copy_fixtures(tmp_path)
-        runner = CliRunner(mix_stderr=False)
+        runner = CliRunner()
         result = runner.invoke(jcamp, [str(tmp_path), "--format", "json"])
 
         assert result.exit_code != 0
@@ -668,11 +668,11 @@ class TestJcampQcDiscrimination:
         _copy_fixtures(tmp_path)
         (tmp_path / "broken.dx").write_text("not a jcamp file\njust some text\n")
 
-        runner = CliRunner(mix_stderr=False)
+        runner = CliRunner()
         result = runner.invoke(jcamp, [str(tmp_path), "--format", "json"])
 
         assert result.exit_code != 0
-        data = json.loads(result.output)
+        data = json.loads(result.stdout)
         assert data["verdict"] == "PASS"
         failed_names = {e["file"] for e in data["failed"]}
         assert "broken.dx" in failed_names
@@ -755,7 +755,7 @@ class TestJcampKnobOptions:
         """The plain `--snr-floor 5.0` form behaves exactly as before D-04."""
         calls_2d, calls_1d = self._spy_bridges(monkeypatch)
         _copy_fixtures(tmp_path)
-        runner = CliRunner(mix_stderr=False)
+        runner = CliRunner()
         runner.invoke(jcamp, [str(tmp_path), "--snr-floor", "5.0"])
 
         assert calls_2d, "no 2D bridge calls recorded"
@@ -772,7 +772,7 @@ class TestJcampKnobOptions:
         """Omitting `--snr-floor` entirely still yields 5.0 everywhere."""
         calls_2d, _calls_1d = self._spy_bridges(monkeypatch)
         _copy_fixtures(tmp_path)
-        runner = CliRunner(mix_stderr=False)
+        runner = CliRunner()
         runner.invoke(jcamp, [str(tmp_path)])
 
         assert calls_2d
@@ -796,7 +796,7 @@ class TestJcampKnobOptions:
         """
         calls_2d, _calls_1d = self._spy_bridges(monkeypatch)
         _copy_fixtures(tmp_path)
-        runner = CliRunner(mix_stderr=False)
+        runner = CliRunner()
         runner.invoke(
             jcamp,
             [
@@ -831,7 +831,7 @@ class TestJcampKnobOptions:
         """
         calls_2d, calls_1d = self._spy_bridges(monkeypatch)
         _copy_fixtures(tmp_path)
-        runner = CliRunner(mix_stderr=False)
+        runner = CliRunner()
         result = runner.invoke(
             jcamp,
             [
@@ -845,7 +845,7 @@ class TestJcampKnobOptions:
             ],
         )
         # click.BadParameter's usage error would land on stderr, not
-        # result.output (stdout only under mix_stderr=False) -- assert on
+        # result.stdout -- assert on
         # the real channel it would appear on so a false rejection actually
         # fails this test.
         assert "unrecognized key" not in result.stderr
@@ -863,7 +863,7 @@ class TestJcampKnobOptions:
         everyone else 5.0 (keyed always beats bare)."""
         calls_2d, _calls_1d = self._spy_bridges(monkeypatch)
         _copy_fixtures(tmp_path)
-        runner = CliRunner(mix_stderr=False)
+        runner = CliRunner()
         runner.invoke(
             jcamp,
             [str(tmp_path), "--snr-floor", "5.0", "--snr-floor", "hsqc=4000"],
@@ -934,7 +934,7 @@ class TestJcampKnobOptions:
         snr-floor unchanged."""
         calls_2d, _calls_1d = self._spy_bridges(monkeypatch)
         _copy_fixtures(tmp_path)
-        runner = CliRunner(mix_stderr=False)
+        runner = CliRunner()
         result = runner.invoke(
             jcamp,
             [str(tmp_path), "--threshold", "hsqc=0.02", "--snr-floor", "5.0"],
@@ -963,7 +963,7 @@ class TestJcampKnobOptions:
         monkeypatch.setattr(qc_mod, "run_qc_checks", spy_run_qc_checks)
 
         _copy_fixtures(tmp_path)
-        runner = CliRunner(mix_stderr=False)
+        runner = CliRunner()
         runner.invoke(
             jcamp,
             [
