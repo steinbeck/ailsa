@@ -160,3 +160,14 @@ def build_inventory(dataset: Path, *, blind: bool, fingerprint: str) -> dict[str
         "jcamp_files": _jcamp_files(dataset),
         "unreadable": sum(1 for e in entries if not e["readable"]),
     }
+
+
+def scanned_payload(inventory: dict[str, Any]) -> dict[str, Any]:
+    """Payload of the ``spectra.scanned`` event for an inventory (one form for every writer)."""
+    return {
+        "experiments": [
+            {"id": e.get("id"), "kind": e.get("kind"), "readable": bool(e.get("readable"))}
+            for e in inventory["experiments"]
+        ],
+        "unreadable": inventory["unreadable"],
+    }

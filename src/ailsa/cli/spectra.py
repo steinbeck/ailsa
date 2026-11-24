@@ -21,7 +21,7 @@ def _inventory_for_run(run_dir: Path, dataset: Path) -> dict[str, Any]:
     """Latest registered inventory of the run, or a fresh one that is registered first."""
     from ailsa.record.artefacts import find_artefacts, register_artefact
     from ailsa.record.fingerprint import dataset_fingerprint
-    from ailsa.record.inventory import build_inventory
+    from ailsa.record.inventory import build_inventory, scanned_payload
     from ailsa.record.log import read_events
 
     events = read_events(run_dir)["events"]
@@ -40,10 +40,7 @@ def _inventory_for_run(run_dir: Path, dataset: Path) -> dict[str, Any]:
         rel_path="spectra/inventory.json",
         data=json.dumps(inventory, indent=2, sort_keys=True).encode("utf-8"),
         event_type="spectra.scanned",
-        payload={
-            "experiments": len(inventory["experiments"]),
-            "unreadable": inventory["unreadable"],
-        },
+        payload=scanned_payload(inventory),  # same list form as ailsa run init writes
         actor={"kind": "tool", "name": "ailsa spectra export"},
     )
     return inventory

@@ -322,6 +322,31 @@ def test_command_run_option(
     assert (new_run[1] / "spectra" / "1" / "vendor" / "view.json").is_file()
 
 
+def test_command_registers_inventory_in_list_form(
+    tmp_path: Path, new_run: tuple[str, Path]
+) -> None:
+    """CR-07: the inventory spectra export registers has the event form ailsa run init writes."""
+    from click.testing import CliRunner
+
+    from ailsa.cli.spectra import spectra
+    from ailsa.record.fold import rebuild_manifest
+    from ailsa.record.log import read_events
+
+    ds = _dataset(tmp_path)
+    res = CliRunner().invoke(
+        spectra, ["export", str(ds), "--run", str(new_run[1]), "--experiment", "1"]
+    )
+    assert res.exit_code == 0, res.output
+    events = read_events(new_run[1])["events"]
+    (scan,) = [e for e in events if e["type"] == "spectra.scanned"]
+    exps = scan["payload"]["experiments"]
+    assert isinstance(exps, list) and exps
+    assert set(exps[0]) == {"id", "kind", "readable"}
+    manifest = rebuild_manifest(new_run[1])
+    assert "exp:1" in manifest["experiments"]
+    assert not [w for w in manifest["warnings"] if w.startswith("record_anomaly")]
+
+
 def test_command_needs_run_or_out(tmp_path: Path, workspace: Path) -> None:
     from click.testing import CliRunner
 

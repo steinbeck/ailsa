@@ -62,6 +62,19 @@ def _payload(ev: dict[str, Any]) -> dict[str, Any]:
     return cast("dict[str, Any]", p) if isinstance(p, dict) else {}
 
 
+def _int(value: Any) -> int:
+    return value if isinstance(value, int) and not isinstance(value, bool) else 0
+
+
+def _list(value: Any, what: str) -> list[Any]:
+    """A list field of an event; absent is empty, any other type is an anomaly (raised)."""
+    if value is None:
+        return []
+    if not isinstance(value, list):
+        raise TypeError(f"{what} is a {type(value).__name__}, not a list")
+    return value
+
+
 def _iteration(m: dict[str, Any], name: Any) -> dict[str, Any]:
     it: dict[str, Any] = m["iterations"].setdefault(
         str(name),
@@ -98,7 +111,7 @@ def _h_env(m: dict[str, Any], ev: dict[str, Any], s: dict[str, Any]) -> None:
 
 
 def _h_scan(m: dict[str, Any], ev: dict[str, Any], s: dict[str, Any]) -> None:
-    for item in _payload(ev).get("experiments") or []:
+    for item in _list(_payload(ev).get("experiments"), "experiments"):
         if isinstance(item, dict):
             key = _exp(item.get("experiment", item.get("id", "?")))
             entry = m["experiments"].setdefault(key, {"used_by": []})
@@ -137,7 +150,7 @@ def _h_lsd_input(m: dict[str, Any], ev: dict[str, Any], s: dict[str, Any]) -> No
     it["purpose"] = p.get("purpose")
     it["parent"] = p.get("parent")
     it["path"] = p.get("path")
-    s["last_input_seq"] = ev.get("seq", 0)
+    s["last_input_seq"] = _int(ev.get("seq"))
 
 
 def _h_solver_started(m: dict[str, Any], ev: dict[str, Any], s: dict[str, Any]) -> None:
@@ -154,7 +167,7 @@ def _h_solver_finished(m: dict[str, Any], ev: dict[str, Any], s: dict[str, Any])
     it["partial_count"] = p.get("partial_count")
     start = s["open_solver"].pop(name, None)
     m["spans"]["solver"].append(_span(name, start, ev.get("utc")))
-    s["last_solver_seq"] = ev.get("seq", 0)
+    s["last_solver_seq"] = _int(ev.get("seq"))
 
 
 def _h_ranking(m: dict[str, Any], ev: dict[str, Any], s: dict[str, Any]) -> None:
@@ -276,7 +289,7 @@ def _span(name: str, start: str | None, end: str | None) -> dict[str, Any]:
 
 
 def _index_artefacts(m: dict[str, Any], ev: dict[str, Any]) -> None:
-    for art in ev.get("artefacts") or []:
+    for art in _list(ev.get("artefacts"), "artefacts"):
         if not isinstance(art, dict) or "id" not in art:
             continue
         m["artefacts"][str(art["id"])] = {
@@ -305,6 +318,7 @@ def fold(
     heartbeat: dict[str, Any] | None = None,
     now: str | datetime | None = None,
 ) -> dict[str, Any]:
+    events = [ev for ev in events if isinstance(ev, dict)]
     m: dict[str, Any] = {
         "schema": "ailsa.run-manifest",
         "schema_version": "1",
@@ -356,7 +370,8 @@ def fold(
     finished_seen = False
 
     for ev in events:
-        etype = ev.get("type")
+        raw_type = ev.get("type")
+        etype = raw_type if isinstance(raw_type, str) else None
         post_finish = finished_seen
         raw_actor = ev.get("actor")
         actor: dict[str, Any] = raw_actor if isinstance(raw_actor, dict) else {}
@@ -368,10 +383,17 @@ def fold(
             end_ev = ev
         if etype == "run.finished":
             finished_seen = True
-        _index_artefacts(m, ev)
-        handler = HANDLERS.get(str(etype))
-        if handler is not None and not (post_finish and etype == "prompt.submitted"):
-            handler(m, ev, s)
+        try:
+            _index_artefacts(m, ev)
+            handler = HANDLERS.get(etype or "")
+            if handler is not None and not (post_finish and etype == "prompt.submitted"):
+                handler(m, ev, s)
+        except (TypeError, ValueError, AttributeError, KeyError) as exc:
+            # D-09: a record of unexpected shape is shown with a warning, never a crash.
+            m["warnings"].append(
+                f"record_anomaly: event {ev.get('seq')} ({etype}) not fully read: "
+                f"{type(exc).__name__}: {exc}"[:300]
+            )
 
     writer = m["writer_host"]
     if writer:
@@ -389,7 +411,7 @@ def fold(
     declared_seq = final["declared_seq"] if final else None
     valid = bool(final) and not final["withdrawn"]
     later = max(s["last_input_seq"], s["last_solver_seq"])
-    stale = valid and later > (declared_seq or 0)
+    stale = valid and later > _int(declared_seq)
     m["final"] = {
         "declared_seq": declared_seq,
         "outcome": final["outcome"] if final else None,
@@ -404,7 +426,7 @@ def fold(
 
     last_event_utc = events[-1].get("utc") if events else None
     hb_utc = heartbeat.get("utc") if isinstance(heartbeat, dict) else None
-    last_activity = max([u for u in (last_event_utc, hb_utc) if u], default=None)
+    last_activity = max([str(u) for u in (last_event_utc, hb_utc) if u], default=None)
     inferred = False
     reason: str | None = None
     if valid and not stale:

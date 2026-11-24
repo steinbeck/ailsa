@@ -501,20 +501,16 @@ def init_run(
     # 7. Inventory.
     def inventory() -> None:
         from ailsa.record.artefacts import register_artefact
-        from ailsa.record.inventory import build_inventory
+        from ailsa.record.inventory import build_inventory, scanned_payload
 
         inv = build_inventory(ds, blind=bool(blind and not overridden), fingerprint=fingerprint)
-        experiments = [
-            {"id": e.get("id"), "kind": e.get("kind"), "readable": bool(e.get("readable"))}
-            for e in inv["experiments"]
-        ]
         register_artefact(
             run_dir,
             kind="experiment-inventory",
             rel_path="spectra/inventory.json",
             data=(json.dumps(inv, sort_keys=True, indent=2) + "\n").encode("utf-8"),
             event_type="spectra.scanned",
-            payload={"experiments": experiments, "unreadable": inv["unreadable"]},
+            payload=scanned_payload(inv),
             actor=_TOOL,
         )
 

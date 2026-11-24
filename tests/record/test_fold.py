@@ -180,6 +180,40 @@ def test_events_after_finish_change_no_classification(tmp_path: Path) -> None:
     assert after["status"]["state"] == before["status"]["state"]
 
 
+def test_unexpected_payload_types_are_anomalies_not_crashes(tmp_path: Path) -> None:
+    """CR-07: fold skips an event of unexpected shape with a warning; readers keep working."""
+    from click.testing import CliRunner
+
+    from ailsa.cli.run import run as run_cli
+    from ailsa.record.render import render_run
+
+    run = build_fixture_record(tmp_path / "odd")
+    tool = {"kind": "tool", "name": "t"}
+    append_event(run, "spectra.scanned", {"experiments": 3, "unreadable": 0}, actor=tool)
+    append_event(run, "note.added", {"text": "x", "sender": "t"}, actor=tool, utc=12345)  # type: ignore[arg-type]
+    m = _fold(run, heartbeat={"utc": 7})
+    anomalies = [w for w in m["warnings"] if w.startswith("record_anomaly:")]
+    assert len(anomalies) == 1 and "spectra.scanned" in anomalies[0]
+    assert "experiments is a int, not a list" in anomalies[0]
+    assert m["experiments"]["exp:1"]["kind"] == "13C"  # the well-formed scan still counts
+    assert m["status"]["state"] == "result_declared"
+    rebuild_manifest(run, now=NOW)
+    render_run(run)
+    res = CliRunner().invoke(run_cli, ["status", "--run", str(run)])
+    assert res.exit_code == 0, res.output
+
+
+def test_non_dict_events_and_artefacts_are_skipped() -> None:
+    events = [
+        "not an event",
+        {"seq": 1, "type": ["odd"], "payload": {}},
+        {"seq": 2, "type": "note.added", "payload": {}, "artefacts": 5},
+    ]
+    m = fold(events, {"clean": False}, now=NOW)  # type: ignore[arg-type]
+    assert m["notes"] == 0  # the event with the odd artefacts field was not fully read
+    assert any("artefacts is a int" in w for w in m["warnings"])
+
+
 def test_unknown_types_ignored() -> None:
     m = fold([{"seq": 1, "type": "future.thing", "payload": {}}], {"clean": True}, now=NOW)
     assert m["status"]["state"] in ("running", "no_heartbeat")
