@@ -387,11 +387,11 @@ Plans:
 - [x] 106.1-06-PLAN.md — typed models and committed JSON Schemas for events, artefacts, declaration, manifest
 - [x] 106.1-07-PLAN.md — manifest reducer and Markdown renderings (state, staleness, "not recorded", break marking)
 - [x] 106.1-08-PLAN.md — dataset fingerprint and prior-run scan, environment probe, experiment inventory
-- [ ] 106.1-09-PLAN.md — Claude Code hook, hook settings install, transcript copy, model reports
-- [ ] 106.1-10-PLAN.md — spectra view products (`ailsa spectra export`)
-- [ ] 106.1-11-PLAN.md — peak-pick and identity artefacts; NUS/JCAMP outputs out of the dataset
-- [ ] 106.1-12-PLAN.md — batch recording commands (`ailsa peaks decide`, `ailsa model import`)
-- [ ] 106.1-13-PLAN.md — solver outcome enum, iteration registration, `ailsa lsd import`
+- [x] 106.1-09-PLAN.md — Claude Code hook, hook settings install, transcript copy, model reports
+- [x] 106.1-10-PLAN.md — spectra view products (`ailsa spectra export`)
+- [x] 106.1-11-PLAN.md — peak-pick and identity artefacts; NUS/JCAMP outputs out of the dataset
+- [x] 106.1-12-PLAN.md — batch recording commands (`ailsa peaks decide`, `ailsa model import`)
+- [x] 106.1-13-PLAN.md — solver outcome enum, iteration registration, `ailsa lsd import`
 - [ ] 106.1-14-PLAN.md — `ailsa run init|note|status|verify|render|index`
 - [ ] 106.1-15-PLAN.md — ranking artefact with atom map and prediction basis; correlation analysis with ELIM drops
 - [ ] 106.1-16-PLAN.md — remote solves (`ailsa lsd run --host`) and the real vitus-to-Sheldon check (D-14)
