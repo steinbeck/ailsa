@@ -151,7 +151,7 @@ def _entry_from_log(run_dir: Path, run_id: str) -> dict[str, Any]:
     }
 
 
-def _read_index(workspace: Path) -> list[dict[str, Any]]:
+def read_index(workspace: Path) -> list[dict[str, Any]]:
     try:
         data = json.loads((workspace / INDEX).read_text(encoding="utf-8"))
     except (OSError, ValueError):
@@ -168,7 +168,7 @@ def _write_index(workspace: Path, runs: list[dict[str, Any]]) -> None:
 
 
 def _put_entry(workspace: Path, entry: dict[str, Any]) -> None:
-    runs = [r for r in _read_index(workspace) if r.get("run_id") != entry["run_id"]]
+    runs = [r for r in read_index(workspace) if r.get("run_id") != entry["run_id"]]
     runs.append(entry)
     _write_index(workspace, runs)
 
