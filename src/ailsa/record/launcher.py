@@ -21,7 +21,7 @@ from pathlib import Path
 from typing import Any
 
 from ailsa.record.events import AGENT_DIR, ARGV_ITEM_CAP, HOOKS_SETTINGS
-from ailsa.record.fsutil import atomic_write_json
+from ailsa.record.fsutil import atomic_write_json, scrub_home
 from ailsa.record.log import append_event
 
 SKILL_NAME = "ailsa-lite"
@@ -483,7 +483,7 @@ def _launch(
                 "attempt": 1,
                 "harness": prepared["harness"],
                 "time_limit_s": limit,
-                "argv": [a[:ARGV_ITEM_CAP] for a in argv],
+                "argv": [scrub_home(a)[:ARGV_ITEM_CAP] for a in argv],
             },
             actor=_ACTOR,
             fsync=True,

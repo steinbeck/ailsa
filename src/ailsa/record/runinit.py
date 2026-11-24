@@ -19,7 +19,7 @@ from pathlib import Path
 from typing import Any
 
 from ailsa.record.events import AGENT_DIR, FINISHED, INDEX, MARKER, RUN_CLASSES, WEB_TOOLS
-from ailsa.record.fsutil import atomic_write_json
+from ailsa.record.fsutil import atomic_write_json, home_relative, scrub_home
 from ailsa.record.log import append_event, first_event, read_events
 from ailsa.record.workspace import (
     create_run_dir,
@@ -381,7 +381,9 @@ def init_run(
         not_blind_reason = NOT_BLIND_REASON if overridden else None
         run_id, run_dir = create_run_dir(root, run_label, now)
         dataset_info = {
-            "path": str(ds),
+            # No user name in the record (WR-13): home-relative, and only the folder name in
+            # a public-class record, which is meant to be shared.
+            "path": ds.name if run_class == "public" else home_relative(ds),
             "label": run_label,
             "format": _dataset_format(ds),
             "fingerprint": fingerprint,
@@ -393,7 +395,7 @@ def init_run(
             "source": (BLIND_WITHHELD if source else None) if blind else source,
             "licence": (BLIND_WITHHELD if licence else None) if blind else licence,
         }
-        recorded_args = scrub_blind_args(args) if blind else list(args)
+        recorded_args = [scrub_home(a) for a in (scrub_blind_args(args) if blind else args)]
         append_event(
             run_dir,
             "run.created",
@@ -405,7 +407,7 @@ def init_run(
                     "skill_version": skill_version,
                     "mode": mode,
                     "harness": harness,
-                    "prompt": prompt,
+                    "prompt": scrub_home(prompt) if prompt else prompt,
                     "args": recorded_args,
                     "options": {
                         "blind": bool(blind),

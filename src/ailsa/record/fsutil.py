@@ -66,6 +66,35 @@ def sha256_file(path: str | os.PathLike[str], chunk: int = 1 << 20) -> str:
     return h.hexdigest()
 
 
+def _home() -> str | None:
+    try:
+        home = str(Path.home())
+    except RuntimeError:
+        return None
+    return home.rstrip("/") or None
+
+
+def home_relative(path: str | os.PathLike[str]) -> str:
+    """``~/...`` for a path under the home folder, so no user name goes into a record."""
+    text = str(path)
+    home = _home()
+    if home is None:
+        return text
+    if text == home:
+        return "~"
+    if text.startswith(home + "/"):
+        return "~" + text[len(home) :]
+    return text
+
+
+def scrub_home(text: str) -> str:
+    """Replace the home folder prefix wherever it occurs in a recorded string with ``~``."""
+    home = _home()
+    if home is None or not isinstance(text, str):
+        return text
+    return text.replace(home + "/", "~/")
+
+
 def is_regular_file_no_symlink(path: str | os.PathLike[str]) -> bool:
     try:
         st = os.lstat(path)

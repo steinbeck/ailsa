@@ -72,6 +72,19 @@ def test_init_creates_run(workspace: Path, tmp_path: Path) -> None:
     assert scanned["experiments"][0]["id"] and "readable" in scanned["experiments"][0]
 
 
+def test_dataset_path_carries_no_home_folder(
+    workspace: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """WR-13: home-relative dataset path; a public record names only the folder."""
+    monkeypatch.setenv("HOME", str(tmp_path))
+    ds = _dataset(tmp_path / "data")
+    internal = _created(_init(ds, args=[str(ds), "--prompt", f"look at {ds}"])["run_dir"])
+    assert internal["dataset"]["path"] == "~/data/example"
+    assert internal["request"]["args"] == ["~/data/example", "--prompt", "look at ~/data/example"]
+    public = _created(_init(ds, run_class="public")["run_dir"])
+    assert public["dataset"]["path"] == "example"
+
+
 def test_run_folder_outside_dataset_and_dataset_unchanged(workspace: Path, tmp_path: Path) -> None:
     ds = _dataset(tmp_path)
     before = dataset_fingerprint(ds)

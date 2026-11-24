@@ -25,6 +25,29 @@ def test_probe_lsd_shim_nonzero_exit(shim_path: Path) -> None:
     assert len(out["sha256"]) == 64
 
 
+def test_env_records_no_hostname_or_home_path(
+    shim_path: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """WR-13: host alias instead of the hostname, home-relative binary and database paths."""
+    import json
+
+    monkeypatch.setenv("HOME", str(tmp_path))
+    config = tmp_path / "config.json"
+    config.write_text(json.dumps({"host_alias": "box"}))
+    monkeypatch.setenv("AILSA_CONFIG", str(config))
+    monkeypatch.setenv("XDG_CACHE_HOME", str(tmp_path / "cache"))
+    make_shim(shim_path, "LSD", "#!/bin/sh\necho 'LSD-3.4.9'\nexit 1\n")
+    db = tmp_path / "data" / "x.db"
+    db.parent.mkdir()
+    _tiny_db(db)
+    monkeypatch.setattr(env, "resolve_database_path", lambda: db)
+    out = env.probe_environment(mode="headless", harness="other")
+    assert out["host"]["node"] == "box"
+    assert out["lsd"]["path"] == "~/bin/LSD"
+    assert out["database"]["path"] == "~/data/x.db"
+    assert str(tmp_path) not in json.dumps(out)
+
+
 def test_probe_lsd_missing(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     empty = tmp_path / "empty"
     empty.mkdir()

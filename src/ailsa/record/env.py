@@ -11,7 +11,6 @@ import os
 import platform
 import re
 import shutil
-import socket
 import sqlite3
 import subprocess
 import sys
@@ -20,7 +19,8 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
-from ailsa.record.fsutil import sha256_file
+from ailsa.record.fsutil import home_relative, sha256_file
+from ailsa.record.workspace import host_alias
 
 DATABASE_DOI = "10.6084/m9.figshare.31073554"
 _BANNER = re.compile(r"LSD-(\d+(?:\.\d+){1,2})")
@@ -69,7 +69,8 @@ def probe_binary(
         digest: str | None = sha256_file(found)
     except OSError:
         digest = None
-    return {"path": found, "version": version, "sha256": digest}
+    # Home-relative: the record carries no user name (WR-13).
+    return {"path": home_relative(found), "version": version, "sha256": digest}
 
 
 def probe_lsd(path: str | os.PathLike[str] | None = None) -> dict[str, Any]:
@@ -154,7 +155,7 @@ def database_info(path: Path | None) -> dict[str, Any]:
     if path is None or not Path(path).is_file():
         return info
     path = Path(path)
-    info["path"] = str(path)
+    info["path"] = home_relative(path)
     info["sha256"] = _cached_sha256(path)
     conn = sqlite3.connect(f"file:{path}?mode=ro", uri=True, timeout=5)
     try:
@@ -266,7 +267,8 @@ def probe_environment(
         "host": {
             "system": platform.system(),
             "machine": platform.machine(),
-            "node": socket.gethostname().split(".")[0],
+            # The configurable alias every event carries, never the raw hostname (WR-13).
+            "node": host_alias(),
         },
         "python": sys.version.split()[0],
     }
