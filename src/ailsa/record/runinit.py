@@ -240,6 +240,7 @@ def _start_views(dataset: Path, run_dir: Path, environ: Mapping[str, str]) -> in
         proc = subprocess.Popen(
             [
                 sys.executable,
+                "-I",  # never import modules from the inherited working folder
                 "-m",
                 "ailsa.cli",
                 "spectra",

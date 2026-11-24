@@ -35,7 +35,7 @@ def test_build_settings_shape():
     assert h == {
         "type": "command",
         "command": PY,
-        "args": ["-m", "ailsa.record.hook"],
+        "args": ["-I", "-m", "ailsa.record.hook"],  # -I: cwd never on sys.path (CR-01)
         "timeout": 10,
     }
     assert "autoMemoryEnabled" not in s

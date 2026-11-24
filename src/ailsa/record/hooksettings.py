@@ -40,7 +40,13 @@ HOOK_EVENTS: list[tuple[str, str | None, dict[str, Any]]] = [
 
 
 def handler(python_exe: str, **options: Any) -> dict[str, Any]:
-    out: dict[str, Any] = {"type": "command", "command": python_exe, "args": ["-m", MODULE]}
+    # -I (isolated mode): Claude Code runs hooks in the session's folder, and plain ``-m`` would
+    # put that folder first on sys.path, so a planted json.py there would run on every event.
+    out: dict[str, Any] = {
+        "type": "command",
+        "command": python_exe,
+        "args": ["-I", "-m", MODULE],
+    }
     out.update(options)
     return out
 

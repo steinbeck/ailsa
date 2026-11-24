@@ -13,6 +13,7 @@ import pytest
 
 from ailsa.record.events import COMMAND_CAP, HEARTBEAT, HOOK_ERRORS, TEXT_CAP
 from ailsa.record.hook import map_hook_event
+from ailsa.record.hooksettings import handler
 from ailsa.record.log import read_events
 
 FIX = Path(__file__).parent / "fixtures" / "hooks"
@@ -28,6 +29,7 @@ def run_hook(
     tmp_path: Path,
     *args: str,
     extra_env: dict[str, str] | None = None,
+    cwd: Path | None = None,
 ) -> subprocess.CompletedProcess[str]:
     env = {k: v for k, v in os.environ.items() if not k.startswith(("AILSA_", "CLAUDE_CODE"))}
     env["AILSA_WORKSPACE"] = str(tmp_path / "ws")
@@ -37,13 +39,14 @@ def run_hook(
         env["AILSA_RUN_DIR"] = str(run_dir)
     env.update(extra_env or {})
     text = payload if isinstance(payload, str) else json.dumps(payload)
+    hook = handler(sys.executable)  # the exact command the settings install
     return subprocess.run(
-        [sys.executable, "-m", "ailsa.record.hook", *args],
+        [hook["command"], *hook["args"], *args],
         input=text,
         capture_output=True,
         text=True,
         env=env,
-        cwd=tmp_path,
+        cwd=cwd or tmp_path,
         timeout=30,
     )
 
@@ -285,3 +288,16 @@ def test_start_time_and_imports(tmp_path):
 def test_never_stdout(new_run, tmp_path, name):
     _, run = new_run
     assert run_hook(load(name), run, tmp_path).stdout == ""
+
+
+def test_planted_module_in_working_folder_is_not_imported(new_run, tmp_path):
+    """CR-01: the hook command never puts the session's folder on sys.path."""
+    _, run = new_run
+    project = tmp_path / "project"
+    project.mkdir()
+    marker = tmp_path / "planted-module-ran"
+    (project / "json.py").write_text(f"open({str(marker)!r}, 'w').close()\n", encoding="utf-8")
+    r = run_hook(load("stop"), run, tmp_path, cwd=project)
+    assert r.returncode == 0
+    assert not marker.exists()
+    assert len(events_of(run, "agent.turn_ended")) == 1

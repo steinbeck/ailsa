@@ -266,8 +266,16 @@ def test_index_updated_and_rebuilt(workspace: Path, tmp_path: Path) -> None:
     assert (workspace / "runs.json").is_file()
 
 
-def test_view_export_child_finishes_and_leaves_events(workspace: Path, tmp_path: Path) -> None:
+def test_view_export_child_finishes_and_leaves_events(
+    workspace: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     ds = _dataset(tmp_path)
+    # CR-01: the child inherits the caller's working folder; a module planted there must not run.
+    project = tmp_path / "project"
+    project.mkdir()
+    marker = tmp_path / "planted-module-ran"
+    (project / "json.py").write_text(f"open({str(marker)!r}, 'w').close()\n", encoding="utf-8")
+    monkeypatch.chdir(project)
     res = init_run(ds, views=True)
     pid = res["views_pid"]
     assert isinstance(pid, int)
@@ -292,4 +300,5 @@ def test_view_export_child_finishes_and_leaves_events(workspace: Path, tmp_path:
             os.kill(pid, signal.SIGKILL)
         except ProcessLookupError:
             pass
+    assert not marker.exists()
     assert "spectrum.processed" in _types(res["run_dir"])
