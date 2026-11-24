@@ -130,6 +130,18 @@ def test_error_outcome(fake: Path, work: Path) -> None:
     assert res.outcome == "error" and "420" in (res.error_line or "")
 
 
+def test_remote_error_leaves_no_earlier_outputs(fake: Path, work: Path) -> None:
+    """CR-02: local files of an earlier solve are neither read nor kept after a new solve."""
+    (work / "compound.sol").write_text("old\n")
+    (work / "solutions.smi").write_text("CCO\n")
+    (work / "solncounter").write_text("5\n")
+    install_fake_lsd(fake / "bin", "error", code=420)
+    res = solve_remote("fakehost", work / "compound.lsd", work, timeout_s=30)
+    assert res.outcome == "error" and res.count == 0
+    for name in ("compound.sol", "solutions.smi", "solncounter"):
+        assert not (work / name).exists(), name
+
+
 def test_fetch_failure_keeps_scratch(fake: Path, work: Path, monkeypatch) -> None:
     def boom(*a, **k):
         raise remote.RemoteError("bad archive")
@@ -254,3 +266,17 @@ def test_run_host_unreachable_records_not_run(run_env) -> None:
     fin = next(e for e in _events(run_dir) if e["type"] == "solver.finished")["payload"]
     assert fin["outcome"] == "not_run" and fin["host"] == "unreachable"
     assert fin["error_line"] == "cannot reach host unreachable"
+
+
+def test_run_host_unreachable_records_no_earlier_outputs(run_env) -> None:
+    """CR-02: a solve that never ran must not register files an earlier solve left behind."""
+    run_dir, it = run_env
+    (it / "compound.sol").write_text("old\n")
+    (it / "solutions.smi").write_text("CCO\n")
+    res = _lsd_run("compound.lsd", "--host", "unreachable")
+    assert res.exit_code == 1
+    folder = run_dir / "iterations" / "it01"
+    assert not (folder / "compound.sol").exists()
+    assert not (folder / "solutions.smi").exists()
+    conv = next(e for e in _events(run_dir) if e["type"] == "solutions.converted")["payload"]
+    assert conv["status"] == "not_run"

@@ -2,8 +2,9 @@
 
 A result is declared, never inferred. A declaration of an outcome that needs a ranking is only
 accepted against a ranking that ``ailsa lsd rank`` wrote (a ``ranking.computed`` event whose
-sha256 still equals the file on disk), whose inputs are registered, and that no later solve has
-made stale. Anything else leaves the run in ``stopped_before_result``.
+sha256 still equals the file on disk), whose inputs are registered, whose solutions files are
+the recorded output of a solve that found solutions, and that no later solve has made stale.
+Anything else leaves the run in ``stopped_before_result``.
 """
 
 from __future__ import annotations
@@ -91,6 +92,67 @@ def _ranking_artefact(ev: dict[str, Any]) -> dict[str, Any]:
     raise FinalizeRefused(NOT_BY_TOOL)
 
 
+# Solve outcomes whose solutions a ranking may be built on ("timeout": the partial set LSD
+# wrote before its time limit; the iteration keeps that outcome in the record).
+_RANKABLE_OUTCOMES = frozenset({"solutions", "limit_reached", "timeout"})
+
+
+def _solve_result(
+    events: list[dict[str, Any]], iteration: str, ranking_event: dict[str, Any]
+) -> tuple[str | None, dict[str, str]]:
+    """Outcome of an iteration's solve and the result files the tool recorded (path -> sha)."""
+    outcome: str | None = None
+    files: dict[str, str] = {}
+    for ev in events:
+        if ev is ranking_event:
+            break
+        pl = _payload(ev)
+        if pl.get("iteration") != iteration:
+            continue
+        if ev.get("type") == "solver.finished":
+            outcome = str(pl.get("outcome"))
+        elif ev.get("type") == "solutions.converted":
+            for art in ev.get("artefacts") or []:
+                if isinstance(art, dict) and art.get("path") and art.get("sha256"):
+                    files[str(art["path"])] = str(art["sha256"])
+    return outcome, files
+
+
+def _check_solution_file(
+    events: list[dict[str, Any]],
+    item: dict[str, Any],
+    iteration: str,
+    ranking_event: dict[str, Any],
+) -> None:
+    """Refuse a ranking input that is not the recorded output of a solve that found solutions."""
+    outcome, recorded = _solve_result(events, iteration, ranking_event)
+    if outcome is None:
+        raise FinalizeRefused(
+            f"iteration {iteration} has no recorded solve result: run ailsa lsd run "
+            "(or ailsa lsd import), then ailsa lsd rank"
+        )
+    if outcome not in _RANKABLE_OUTCOMES:
+        raise FinalizeRefused(
+            f"iteration {iteration} produced no solutions (outcome {outcome}): "
+            "a ranking cannot be built on it"
+        )
+    prefix = f"iterations/{iteration}/"
+    if "sol_sha256" in item:
+        given = item.get("sol_sha256")
+        expected = {s for p, s in recorded.items() if p.startswith(prefix) and p.endswith(".sol")}
+    elif "smiles_sha256" in item:
+        given = item.get("smiles_sha256")
+        sha = recorded.get(prefix + "solutions.smi")
+        expected = {sha} if sha else set()
+    else:
+        return
+    if not given or given not in expected:
+        raise FinalizeRefused(
+            f"ranking is stale: its solutions file is not the one recorded for {iteration}; "
+            "re-run ailsa lsd run, then ailsa lsd rank"
+        )
+
+
 def check_ranking(
     events: list[dict[str, Any]], run_dir: str | os.PathLike[str], ranking_event: dict[str, Any]
 ) -> dict[str, Any]:
@@ -134,6 +196,7 @@ def check_ranking(
                 raise FinalizeRefused("ranking is stale: re-run ailsa lsd rank")
         if latest_sha is not None and item.get("lsd_sha256") and latest_sha != item["lsd_sha256"]:
             raise FinalizeRefused("ranking is stale: re-run ailsa lsd rank")
+        _check_solution_file(events, item, str(iteration), ranking_event)
     try:
         parsed = json.loads(target.read_text(encoding="utf-8"))
     except ValueError:

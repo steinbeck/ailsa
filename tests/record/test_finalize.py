@@ -19,6 +19,7 @@ from ._fixture_record import RANKING, build_fixture_record
 
 TOOL = {"kind": "tool", "name": "ailsa"}
 LSD_SHA = "a" * 64
+SOL_SHA = "b" * 64
 
 
 def _invoke(args: list[str]) -> Any:
@@ -33,7 +34,14 @@ def _types(run_dir: Path) -> list[str]:
     return [e["type"] for e in _events(run_dir)]
 
 
-def _solve(run_dir: Path, iteration: str = "it01", sha: str = LSD_SHA) -> None:
+def _solve(
+    run_dir: Path,
+    iteration: str = "it01",
+    sha: str = LSD_SHA,
+    *,
+    sol_sha: str | None = SOL_SHA,
+    outcome: str = "solutions",
+) -> None:
     append_event(
         run_dir,
         "lsd.input.registered",
@@ -43,8 +51,27 @@ def _solve(run_dir: Path, iteration: str = "it01", sha: str = LSD_SHA) -> None:
     append_event(
         run_dir,
         "solver.finished",
-        {"iteration": iteration, "outcome": "solutions", "count": 2},
+        {"iteration": iteration, "outcome": outcome, "count": 2},
         actor=TOOL,
+    )
+    recorded = []
+    if sol_sha is not None:
+        recorded.append(
+            {
+                "id": f"art:solver-file:{iteration}",
+                "kind": "solver-file",
+                "path": f"iterations/{iteration}/compound.sol",
+                "sha256": sol_sha,
+                "bytes": 10,
+                "supersedes": None,
+            }
+        )
+    append_event(
+        run_dir,
+        "solutions.converted",
+        {"iteration": iteration, "count": 2, "status": "converted"},
+        actor=TOOL,
+        artefacts=recorded,
     )
 
 
@@ -55,7 +82,7 @@ def _rank(
     data = {**RANKING, "ranking_id": rk}
     blob = (json.dumps(data, sort_keys=True, indent=2) + "\n").encode()
     if inputs is None:
-        inputs = [{"iteration": "it01", "lsd_sha256": LSD_SHA, "sol_sha256": "b" * 64}]
+        inputs = [{"iteration": "it01", "lsd_sha256": LSD_SHA, "sol_sha256": SOL_SHA}]
     return register_artefact(
         run_dir,
         kind="ranking",
@@ -178,6 +205,66 @@ def test_stale_by_changed_input(active: Path) -> None:
     )
     res = _invoke(["finalize", "--outcome", "inconclusive"])
     assert res.exit_code == 1 and "stale" in res.stderr
+
+
+def _fresh_active(new_run, monkeypatch) -> Path:
+    _, run_dir = new_run
+    monkeypatch.setenv("AILSA_RUN_DIR", str(run_dir))
+    return run_dir
+
+
+def test_ranking_on_other_solutions_file_refused(new_run, monkeypatch) -> None:
+    """CR-02: a ranking whose .sol is not the iteration's recorded solver output is stale."""
+    run_dir = _fresh_active(new_run, monkeypatch)
+    _solve(run_dir, sol_sha="e" * 64)
+    _rank(run_dir)  # ranking input carries SOL_SHA, the recorded output has "e"*64
+    res = _invoke(["finalize", "--outcome", "inconclusive"])
+    assert res.exit_code == 1
+    assert "solutions file is not the one recorded for it01" in res.stderr
+
+
+def test_ranking_on_solve_without_recorded_solutions_refused(new_run, monkeypatch) -> None:
+    run_dir = _fresh_active(new_run, monkeypatch)
+    _solve(run_dir, sol_sha=None)
+    _rank(run_dir)
+    res = _invoke(["finalize", "--outcome", "inconclusive"])
+    assert res.exit_code == 1 and "not the one recorded for it01" in res.stderr
+
+
+@pytest.mark.parametrize("outcome", ["error", "no_solution", "not_run"])
+def test_ranking_on_failed_solve_refused(new_run, monkeypatch, outcome: str) -> None:
+    run_dir = _fresh_active(new_run, monkeypatch)
+    _solve(run_dir, outcome=outcome)
+    _rank(run_dir)
+    res = _invoke(["finalize", "--outcome", "inconclusive"])
+    assert res.exit_code == 1 and f"produced no solutions (outcome {outcome})" in res.stderr
+
+
+def test_nearest_line_ranking_checks_smiles_hash(new_run, monkeypatch) -> None:
+    run_dir = _fresh_active(new_run, monkeypatch)
+    _solve(run_dir)
+    append_event(
+        run_dir,
+        "solutions.converted",
+        {"iteration": "it01", "count": 2, "status": "converted"},
+        actor=TOOL,
+        artefacts=[
+            {
+                "id": "art:solver-file:9",
+                "kind": "solver-file",
+                "path": "iterations/it01/solutions.smi",
+                "sha256": "f" * 64,
+                "bytes": 8,
+                "supersedes": None,
+            }
+        ],
+    )
+    _rank(run_dir, inputs=[{"iteration": "it01", "smiles_sha256": "0" * 64}])
+    res = _invoke(["finalize", "--outcome", "inconclusive"])
+    assert res.exit_code == 1 and "not the one recorded for it01" in res.stderr
+    _rank(run_dir, 2, inputs=[{"iteration": "it01", "smiles_sha256": "f" * 64}])
+    res = _invoke(["finalize", "--outcome", "inconclusive"])
+    assert res.exit_code == 0, res.output
 
 
 def test_unregistered_input_iteration(new_run, monkeypatch) -> None:

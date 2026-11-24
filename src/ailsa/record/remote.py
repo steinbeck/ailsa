@@ -511,6 +511,11 @@ def solve_remote(
     elapsed = time.monotonic() - t0
 
     names = [f"{stem}.sol", *_FETCH_OTHER]
+    # Local files of an earlier solve must never be read or recorded as this solve's result:
+    # only what this solve fetches below may be there afterwards.
+    from ailsa.lsd.runner import clear_solver_outputs
+
+    clear_solver_outputs(out_dir, stem, extra=tuple(_FETCH_OTHER))
     fetch = (
         f"cd {shlex.quote(scratch)} || exit 1\n"
         'files=""\n'

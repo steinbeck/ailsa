@@ -12,7 +12,7 @@ import difflib
 import json
 import os
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -42,6 +42,9 @@ class SolverRecord:
     input_name: str
     input_rel: str
     lsd_sha256: str
+    # Result files already in the output folder before the solve: absolute path -> stat
+    # signature. A file still carrying its old signature afterwards is not this solve's output.
+    prior_outputs: dict[str, tuple[int, int, int]] = field(default_factory=dict)
 
     @property
     def iteration_dir(self) -> Path:
@@ -89,6 +92,26 @@ def _input_path_label(run_dir: Path, input_file: Path) -> str:
         return input_file.name
 
 
+def _signature(path: Path) -> tuple[int, int, int] | None:
+    try:
+        st = path.stat()
+    except OSError:
+        return None
+    return (st.st_ino, st.st_size, st.st_mtime_ns)
+
+
+def _snapshot_outputs(output_dir: Path, stem: str) -> dict[str, tuple[int, int, int]]:
+    from ailsa.lsd.runner import result_file_names
+
+    found: dict[str, tuple[int, int, int]] = {}
+    for name in result_file_names(stem):
+        path = output_dir / name
+        sig = _signature(path)
+        if sig is not None:
+            found[str(path.absolute())] = sig
+    return found
+
+
 def _unified_diff(old: str, new: str, old_name: str, new_name: str) -> str | None:
     text = "".join(
         difflib.unified_diff(
@@ -111,13 +134,19 @@ def begin_solver_run(
     timeout_s: int | None = None,
     remote: bool = False,
     provenance: str = "run",
+    output_dir: str | os.PathLike[str] | None = None,
 ) -> SolverRecord:
-    """Register the input and ``solver.started`` before the solver runs."""
+    """Register the input and ``solver.started`` before the solver runs.
+
+    ``output_dir`` is the folder the solver will write into; result files already there are
+    noted so ``finish_solver_run`` never records them as this solve's output.
+    """
     if purpose not in ITERATION_PURPOSES:
         raise ValueError(f"unknown iteration purpose: {purpose}")
     run_dir = Path(run.run_dir)
     src = Path(input_file)
     text = src.read_text(encoding="utf-8", errors="replace")
+    prior = _snapshot_outputs(Path(output_dir), src.stem) if output_dir is not None else {}
     where = host or host_alias()
     with log_session(run_dir) as lg:
         if lg.finished():
@@ -188,6 +217,7 @@ def begin_solver_run(
         input_name=src.name,
         input_rel=rel,
         lsd_sha256=sha,
+        prior_outputs=prior,
     )
 
 
@@ -195,10 +225,16 @@ def _file_info(run_dir: Path, rel: str, blob: bytes) -> dict[str, Any]:
     return {"path": rel, "sha256": sha256_bytes(blob), "bytes": len(blob)}
 
 
+def _left_over(record: SolverRecord, src: Path) -> bool:
+    """True if ``src`` is a result file of an earlier solve that this solve did not rewrite."""
+    before = record.prior_outputs.get(str(src.absolute()))
+    return before is not None and _signature(src) == before
+
+
 def _copy_if_present(
     record: SolverRecord, src: Path, name: str, files: dict[str, Any], key: str
 ) -> None:
-    if not src.is_file() or src.is_symlink():
+    if not src.is_file() or src.is_symlink() or _left_over(record, src):
         return
     try:
         rel, sha, size = copy_into_run(

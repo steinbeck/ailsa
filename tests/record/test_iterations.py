@@ -128,6 +128,26 @@ def test_purpose_and_unknown_parent(run_env, monkeypatch) -> None:
     assert len(_events(run_dir)) == before
 
 
+def test_failed_resolve_never_inherits_earlier_outputs(run_env, tmp_path, monkeypatch) -> None:
+    """CR-02: a re-solve that fails in the same folder records none of the earlier files."""
+    run_dir, it = run_env
+    monkeypatch.chdir(it)
+    assert _invoke("compound.lsd").exit_code == 0
+    assert (it / "compound.sol").is_file() and (it / "solutions.smi").is_file()
+    (it / "compound.lsd").write_text(LSD_TEXT + "BOND 1 2\n")
+    install_fake_lsd(tmp_path / "bin", "error", code=420)
+    _invoke("compound.lsd")
+    for name in ("compound.sol", "solutions.smi", "solncounter"):
+        assert not (it / name).exists(), name
+        assert not (run_dir / "iterations" / "it02" / name).exists(), name
+    events = _events(run_dir)
+    fin = [e for e in events if e["type"] == "solver.finished"][-1]["payload"]
+    assert fin["iteration"] == "it02" and fin["outcome"] == "error"
+    assert fin["smiles_absent_reason"] == "error"
+    conv = [e for e in events if e["type"] == "solutions.converted"][-1]["payload"]
+    assert conv["iteration"] == "it02" and conv["status"] != "converted"
+
+
 def test_timeout_message_and_partial_count(run_env, tmp_path, monkeypatch) -> None:
     run_dir, it = run_env
     install_fake_lsd(tmp_path / "bin", "sleep", seconds=10, partial=12)

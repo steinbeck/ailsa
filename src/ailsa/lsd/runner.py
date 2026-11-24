@@ -99,6 +99,24 @@ _TIME_STOP = re.compile(
 )
 
 
+RESULT_FILES = ("solutions.smi", "solncounter")
+
+
+def result_file_names(stem: str) -> tuple[str, ...]:
+    """Files one solve leaves behind as its result: ``<stem>.sol`` plus RESULT_FILES."""
+    return (f"{stem}.sol", *RESULT_FILES)
+
+
+def clear_solver_outputs(folder: Path | str, stem: str, extra: tuple[str, ...] = ()) -> None:
+    """Remove an earlier solve's result files so they can never pose as the next solve's.
+
+    A re-solve in the same folder that fails (input error, no solution, time stop) would
+    otherwise leave the previous ``.sol``, ``solutions.smi`` and ``solncounter`` in place.
+    """
+    for name in (*result_file_names(stem), *extra):
+        (Path(folder) / name).unlink(missing_ok=True)
+
+
 def read_solncounter(run_dir: Path | str) -> int | None:
     """Solutions LSD had written when it stopped, from its ``solncounter`` file."""
     try:
@@ -372,8 +390,8 @@ class LSDRunner:
             # Copy bundled ring3/ring4 filter files so DEFF F1 "ring3" / DEFF F2 "ring4" resolve.
             # Unconditional - matches write_file() behavior; idempotent if already present.
             LSDInputGenerator._write_filter_files(output_dir)
-            # A stale counter from an earlier run must not pose as this run's partial count.
-            (output_dir / "solncounter").unlink(missing_ok=True)
+            # Result files of an earlier solve here must not pose as this solve's result.
+            clear_solver_outputs(output_dir, input_file.stem)
             proc = subprocess.run(
                 [str(self.lsd_path), lsd_input_name],
                 capture_output=True,

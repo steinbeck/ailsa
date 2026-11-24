@@ -48,6 +48,7 @@ def _begin_record(
     parent: str | None,
     timeout: int,
     host: str | None = None,
+    output_dir: str | None = None,
 ) -> tuple[object | None, object | None]:
     """Register the input in the active run, if any. Returns (record, run)."""
     from ailsa.record.resolve import current_run_for_tool
@@ -66,6 +67,7 @@ def _begin_record(
             timeout_s=timeout,
             host=host,
             remote=host is not None,
+            output_dir=Path(output_dir) if output_dir else Path(input_file).parent,
         )
     except ValueError as exc:
         if parent is not None and "parent" in str(exc):
@@ -263,7 +265,7 @@ def lsd_run(
         click.echo("Error: LSD is not installed or not in PATH", err=True)
         raise SystemExit(1)
 
-    record, _run = _begin_record(input_file, purpose, parent, timeout, host)
+    record, _run = _begin_record(input_file, purpose, parent, timeout, host, output_dir)
 
     if host is not None:
         result, remote = _solve_on_host(
