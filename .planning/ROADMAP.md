@@ -223,7 +223,8 @@ prose: `docs/SKILLS.md`. Inserted as Phase 105.1. Background research:
 - [x] **Phase 105: Documentation and outside face** — README, `docs/`, CLAUDE.md, the figshare record and the infographic deck under the new name; LSD and Nuzillard credited up front (completed 2026-10-14)
 - [ ] **Phase 105.1: Lean skill for small open-weight models (INSERTED 2026-10-31)** — `ailsa-lite`, an Agent Skill of about 1 000 tokens on top of new `ailsa case` commands (scan, setup, check/edit, solve, rank, report) that do all bookkeeping; shipped as package data and installed with `ailsa skill install`; partner guide `docs/AILSA-LITE.md` (in progress: v0.1 built)
 - [ ] **Phase 106: Freeze, rename and restructure the skill** — the two measured skill states tagged; `/ailsa:*` commands and `ailsa-*` agents; every skill file restructured to Anthropic's best practices (core under 500 lines, references, TOCs, no dead references, no history, no benchmark compounds, no model IDs, one term per role); an automated skill-lint check
-- [ ] **Phase 106.1: Run record core (INSERTED 2026-11-24)** — every run writes a structured record (manifest, event log, typed results, declared result) in a workspace folder outside the data; release R0a of the web-interface specification; before Phases 109 and 110
+- [ ] **Phase 106.1: Run record core (INSERTED 2026-11-24)** — every run writes a structured record (manifest, event log, typed results, declared result) in a workspace folder outside the data; release R0a of the web-interface specification; package, hooks and the lean skill (split 2026-11-24, see 106.2)
+- [ ] **Phase 106.2: Frontier skill writes the run record (INSERTED 2026-11-24)** — the renamed frontier skill writes the 106.1 record; team and headless runs proven; old web view removed; before Phases 109 and 110
 - [ ] **Phase 107: Evaluation bench and team-mode spike** — fixed ~25-dataset evaluation sample, per-run mechanics report, Mac/compute-host parity check, and a decided route for running the agent team unattended
 - [ ] **Phase 108: Foundation** — full reference DB on the compute host (figshare checked), silent `detect hhb` defect fixed, fragment DB decided, prerequisite checks cover every capability the skill relies on, devil's-advocate checks and sanitiser as scripts
 - [ ] **Phase 109: Rework the CASE workflow** — coordination along the route chosen in Phase 107, use of statistics/fragments per Phase 108, rules kept only with evidence
@@ -354,16 +355,20 @@ dataset, so that the web interface and the comparison run read recorded facts in
 from prose.
 **Requirements**: release R0a of the web-interface specification (draft 2.3, §4; local research
 folder): REC-01 to REC-07, REC-09 to REC-20, REC-22 to REC-25, REC-27 to REC-29, REC-31, REC-33.
-**Depends on**: Phase 106 (the record lands in the renamed and restructured skill). Runs in parallel
-with Phases 107 and 108; must land before Phase 109 (the reworked workflow writes into the record)
-and Phase 110 (the comparison must measure the skill that records).
+**Depends on**: nothing (split 2026-11-24, `106.1-CONTEXT.md` D-01/D-02: the package part does not
+depend on the skill name, so it starts now; the frontier skill is wired in Phase 106.2 after the
+rename). Must land before Phase 109 (the reworked workflow writes into the record) and Phase 110
+(the comparison must measure the skill that records).
+**Scope after the split**: the `ailsa` package (recording commands, launcher, hooks, remote
+solves, spectra view products, renderer) and the lean skill. The frontier skill and the old web
+view stay untouched here.
 **Owner decisions behind it** (2026-11-24): structured record, strict for the final result (D1);
 one workspace folder per run outside the data (D4); tool steps and the final declaration first,
 full decision recording only after measuring its effect on accuracy (D15).
 **Success criteria** (the R0a exit of the specification):
-  1. A team run, a headless run and a lean run each leave a valid record: manifest, append-only event
-     log with hash chain, typed results and an explicitly declared result, in a workspace folder
-     outside the dataset.
+  1. A lean run (α-terpineol, small Claude model in Claude Code) leaves a valid record: manifest,
+     append-only event log with hash chain, typed results and an explicitly declared result, in a
+     workspace folder outside the dataset. (Team and headless runs: Phase 106.2.)
   2. A run whose agent hand-formats its ranking ends "stopped before a result (inferred)", never as
      a success.
   3. Hooks record prompt submissions, permission waits, subagent starts and stops, messages between
@@ -371,7 +376,23 @@ full decision recording only after measuring its effect on accuracy (D15).
      show these items as "not recorded".
   4. `ailsa run render` turns a record into its Markdown view.
   5. A solver run on another host, if any, is recorded with host and LSD version.
-**Plans**: TBD (run `/gsd-discuss-phase 106.1`, then `/gsd-plan-phase 106.1`)
+**Plans**: TBD (context gathered 2026-11-24 in `106.1-CONTEXT.md`; next `/gsd-plan-phase 106.1`)
+
+#### Phase 106.2: Frontier skill writes the run record (INSERTED 2026-11-24)
+
+**Goal**: The renamed frontier skill writes the run record of Phase 106.1, so team and headless runs
+leave the same record as lean runs.
+**Depends on**: Phases 106 and 106.1. Must land before Phase 109 and Phase 110.
+**Requirements**: the frontier-skill side of release R0a (REC-03 for both skills, REC-25 per agent);
+decisions in `106.1-CONTEXT.md`.
+**Success Criteria** (what must be TRUE):
+  1. A team run and a headless run each leave a valid record (manifest, hash-chained event log,
+     typed results, declared result) in a workspace folder outside the dataset.
+  2. The skill creates the record as its first step when started by slash command, uses the note
+     command for prose, and ends with `ailsa run finalize`; `CASE-PROGRESS.md` and
+     `final_results.md` are renderings.
+  3. The old web view (`ailsa webview`, its package code and the skill's auto-launch) is removed.
+**Plans**: TBD
 
 #### Phase 107: Evaluation bench and team-mode spike
 

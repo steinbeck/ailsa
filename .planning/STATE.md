@@ -41,8 +41,18 @@ Last activity: 2026-11-24 -- web-interface decisions, spec 2.3, Phase 106.1 inse
       views, zoomable spectra, a replay of the run, a Team section with every agent message, and the
       data-use notice.
     - **Phase 106.1 "Run record core" inserted (2026-11-24):** this is release R0a of the spec, and the
-      roadmap entry carries its goal and success criteria. It is not planned yet; the next step is
-      `/gsd-discuss-phase 106.1`.
+      roadmap entry carries its goal and success criteria.
+      - **Context gathered 2026-11-24** (`phases/106.1-run-record-core/106.1-CONTEXT.md`, commit
+        `92c45e2`).
+      - Split: 106.1 covers the package, the hooks and the lean skill, and starts now without waiting
+        for the rename. The new **Phase 106.2** wires the renamed frontier skill, proves team and
+        headless runs, and removes the old web view.
+      - Further decisions: workspace `~/ailsa-runs`, settable by an env variable or config (Sheldon:
+        RAID); blind start refused if an earlier run on the same dataset exists; launcher
+        `ailsa run start` plus a first skill step; warnings instead of aborts on bookkeeping gaps;
+        an agent working corner; a note command for prose. Acceptance: one lean α-terpineol run with
+        a small Claude model on Sheldon.
+      - **Next step: `/gsd-plan-phase 106.1`.**
     - **Public example run (D18: α-terpineol, BMRB bmse000667), running since 2026-11-24 ~14:20 UTC.**
       - It runs in an interactive session on Sheldon, tmux session `ailsa-terpineol`, started via
         `/mnt/raid_drive/chris/ailsa-example/launch-terpineol.sh`.
