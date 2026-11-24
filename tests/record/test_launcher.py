@@ -225,7 +225,13 @@ def test_launcher_is_not_bound_to_a_session(
     monkeypatch.setenv("CLAUDE_CODE_SESSION_ID", "outer-session-12345")
     res = _result(_start(dataset, "--model", "haiku"))
     ev = _events(res["run_dir"])
-    assert not _of(ev, "run.bound")
+    # Only the launched session is bound (CR-05: its late hook events may still land after
+    # close); the outer session that ran `ailsa run start` never is.
+    bound = [e["payload"] for e in _of(ev, "run.bound")]
+    assert [b["via"] for b in bound] == ["launcher"]
+    argv = _shim(tmp_path)["argv"]
+    assert bound[0]["session_id"] == argv[argv.index("--session-id") + 1]
+    assert bound[0]["session_id"] != "outer-session-12345"
     assert "CLAUDE_CODE_SESSION_ID" not in _shim(tmp_path)["env"]
 
 

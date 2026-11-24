@@ -112,7 +112,7 @@ def copy_transcripts(
                 "transcript.copied",
                 {"files": copied, "via": via},
                 actor=_actor(via),
-                after_finish=True,
+                allow_after_finish=True,
             )
         if cut_off:
             append_event(
@@ -179,7 +179,7 @@ def record_transcript_models(run_dir: str | os.PathLike[str], files: list[Path])
                     "agent.model_reported",
                     payload,
                     actor={"kind": "hook", "name": "transcript"},
-                    after_finish=True,
+                    allow_after_finish=True,
                 )
             except RecordWriteRefused:
                 continue

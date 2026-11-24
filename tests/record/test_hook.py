@@ -14,7 +14,8 @@ import pytest
 from ailsa.record.events import COMMAND_CAP, HEARTBEAT, HOOK_ERRORS, TEXT_CAP
 from ailsa.record.hook import map_hook_event
 from ailsa.record.hooksettings import handler
-from ailsa.record.log import read_events
+from ailsa.record.log import append_event, read_events
+from ailsa.record.resolve import bind_session
 
 FIX = Path(__file__).parent / "fixtures" / "hooks"
 
@@ -63,7 +64,7 @@ def test_session_start_startup(new_run, tmp_path):
     (ev,) = events_of(run, "session.started")
     assert ev["payload"]["source"] == "startup"
     assert ev["actor"]["kind"] == "hook" and ev["actor"]["name"] == "SessionStart"
-    assert ev["after_finish"] is True
+    assert ev["after_finish"] is False  # true only after run.finished (CR-05)
     assert (run / HEARTBEAT).is_file()
     assert not events_of(run, "agent.model_reported")
 
@@ -301,3 +302,70 @@ def test_planted_module_in_working_folder_is_not_imported(new_run, tmp_path):
     assert r.returncode == 0
     assert not marker.exists()
     assert len(events_of(run, "agent.turn_ended")) == 1
+
+
+# --- CR-05: only the session bound to a run records into it -----------------------------------
+
+FIXTURE_SID = "11111111-1111-4111-8111-111111111111"
+OTHER_SID = "22222222-2222-4222-8222-222222222222"
+TOOL = {"kind": "tool", "name": "test"}
+
+
+def _finish(run: Path) -> None:
+    append_event(run, "run.finished", {"state": "stopped_before_result", "reason": "t"}, actor=TOOL)
+
+
+def _bind_in_record(run: Path, sid: str) -> None:
+    append_event(run, "run.bound", {"session_id": sid, "harness": "x", "via": "init"}, actor=TOOL)
+
+
+@pytest.mark.parametrize("finished", [False, True])
+def test_cwd_marker_alone_never_records(new_run, tmp_path, finished):
+    """A session opened inside a run folder (e.g. to inspect it) writes nothing into the run."""
+    _, run = new_run
+    if finished:
+        _finish(run)
+    before = (run / "events.jsonl").read_bytes() if finished else b""
+    agent = run / "agent"
+    for name in ("session_start", "user_prompt_submit", "stop", "session_end"):
+        data = {**load(name), "cwd": str(agent)}
+        assert run_hook(data, None, tmp_path, cwd=agent).returncode == 0
+    if finished:
+        assert (run / "events.jsonl").read_bytes() == before
+    else:
+        assert events_of(run) == []
+    assert not (run / HEARTBEAT).exists()
+    assert not (run / "transcript").exists()
+
+
+def test_session_pointer_binding_records(new_run, tmp_path):
+    """The open-session path: ailsa run init wrote the pointer for this session id."""
+    _, run = new_run
+    assert bind_session(tmp_path / "ws", FIXTURE_SID, run)
+    run_hook(load("user_prompt_submit"), None, tmp_path)
+    (ev,) = events_of(run, "prompt.submitted")
+    assert ev["after_finish"] is False
+    other = {**load("user_prompt_submit"), "session_id": OTHER_SID}
+    run_hook(other, None, tmp_path)
+    assert len(events_of(run, "prompt.submitted")) == 1
+
+
+def test_finished_run_refuses_unbound_session(new_run, tmp_path):
+    _, run = new_run
+    _bind_in_record(run, FIXTURE_SID)
+    _finish(run)
+    other = {**load("user_prompt_submit"), "session_id": OTHER_SID}
+    run_hook(other, run, tmp_path)
+    run_hook({**load("session_end"), "session_id": OTHER_SID}, run, tmp_path)
+    assert not events_of(run, "prompt.submitted") and not events_of(run, "session.ended")
+
+
+def test_finished_run_takes_bound_session_stragglers(new_run, tmp_path):
+    _, run = new_run
+    _bind_in_record(run, FIXTURE_SID)
+    run_hook(load("stop"), run, tmp_path)
+    _finish(run)
+    run_hook(load("session_end"), run, tmp_path)
+    (turn,) = events_of(run, "agent.turn_ended")
+    (end,) = events_of(run, "session.ended")
+    assert turn["after_finish"] is False and end["after_finish"] is True

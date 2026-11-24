@@ -279,6 +279,18 @@ def launch(prepared: dict[str, Any], *, extra_args: Sequence[str] = ()) -> dict[
     argv = list(prepared["argv"]) + list(extra_args)
     headless = bool(prepared["headless"])
     limit = prepared.get("time_limit_s")
+    if prepared.get("session_id"):
+        # The launched session is bound to this run; hooks of other sessions never record here.
+        append_event(
+            run_dir,
+            "run.bound",
+            {
+                "session_id": prepared["session_id"],
+                "harness": prepared["harness"],
+                "via": "launcher",
+            },
+            actor=_ACTOR,
+        )
     append_event(
         run_dir,
         "run.attempt.started",

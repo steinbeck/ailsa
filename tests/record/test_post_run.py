@@ -43,7 +43,9 @@ def test_hook_needs_after_finish_flag(new_run: tuple[str, Path]) -> None:
     _finish(run_dir)
     with pytest.raises(RecordWriteRefused):
         append_event(run_dir, "session.ended", {"reason": "other"}, actor=HOOK)
-    ev = append_event(run_dir, "session.ended", {"reason": "other"}, actor=HOOK, after_finish=True)
+    ev = append_event(
+        run_dir, "session.ended", {"reason": "other"}, actor=HOOK, allow_after_finish=True
+    )
     assert ev["after_finish"] is True
     assert verify_chain(run_dir)["clean"] is True
 
@@ -53,5 +55,18 @@ def test_hook_flag_does_not_admit_non_hook_type(new_run: tuple[str, Path]) -> No
     _finish(run_dir)
     with pytest.raises(RecordWriteRefused):
         append_event(
-            run_dir, "note.added", {"text": "x", "sender": "t"}, actor=HOOK, after_finish=True
+            run_dir,
+            "note.added",
+            {"text": "x", "sender": "t"},
+            actor=HOOK,
+            allow_after_finish=True,
         )
+
+
+def test_flag_is_stamped_from_run_state_not_caller(new_run: tuple[str, Path]) -> None:
+    """CR-05: a hook event during the run is not after_finish, whatever the caller allows."""
+    _, run_dir = new_run
+    ev = append_event(
+        run_dir, "session.started", {"source": "startup"}, actor=HOOK, allow_after_finish=True
+    )
+    assert ev["after_finish"] is False

@@ -142,6 +142,44 @@ def test_foreign_host_and_human_messages(tmp_path: Path) -> None:
     assert _fold(build_fixture_record(tmp_path / "f2"))["assisted"] is False
 
 
+def test_events_after_finish_change_no_classification(tmp_path: Path) -> None:
+    """CR-05: post-finish hook events never count as human messages, hook counts or the end."""
+    run = build_fixture_record(tmp_path / "pf", base_utc="2026-01-01T10:00:00.000Z")
+    append_event(
+        run,
+        "run.finished",
+        {"state": "result_declared", "reason": "closed"},
+        actor={"kind": "tool", "name": "t"},
+        utc="2026-01-01T10:30:00.000Z",
+    )
+    before = _fold(run)
+    hook = {"kind": "hook", "name": "UserPromptSubmit"}
+    for text in ("first look", "second look"):
+        ev = append_event(
+            run,
+            "prompt.submitted",
+            {"text": text, "chars": len(text), "auto": False},
+            actor=hook,
+            allow_after_finish=True,
+            utc="2026-01-01T11:00:00.000Z",
+        )
+        assert ev["after_finish"] is True
+    append_event(
+        run,
+        "session.ended",
+        {"reason": "other"},
+        actor={"kind": "hook", "name": "SessionEnd"},
+        allow_after_finish=True,
+        utc="2026-01-01T11:05:00.000Z",
+    )
+    after = _fold(run)
+    assert after["human_messages"] == before["human_messages"] == 0
+    assert after["assisted"] is before["assisted"] is False
+    assert after["harness"]["hook_counts"] == before["harness"]["hook_counts"]
+    assert after["status"]["ended_utc"] == before["status"]["ended_utc"]
+    assert after["status"]["state"] == before["status"]["state"]
+
+
 def test_unknown_types_ignored() -> None:
     m = fold([{"seq": 1, "type": "future.thing", "payload": {}}], {"clean": True}, now=NOW)
     assert m["status"]["state"] in ("running", "no_heartbeat")

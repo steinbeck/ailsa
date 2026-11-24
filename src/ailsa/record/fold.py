@@ -350,20 +350,27 @@ def fold(
     by_type = {t: n for n, t in HOOK_COUNT_TYPES.items()}
     end_ev: dict[str, Any] | None = None
     hooks = False
+    # Hook events written after run.finished (after_finish) belong to the session after the
+    # run: they never count as human messages, hook counts or the run's end. Decided by
+    # position, because records written before the flag was fixed stamp it on every hook event.
+    finished_seen = False
 
     for ev in events:
         etype = ev.get("type")
+        post_finish = finished_seen
         raw_actor = ev.get("actor")
         actor: dict[str, Any] = raw_actor if isinstance(raw_actor, dict) else {}
         if actor.get("kind") == "hook":
             hooks = True
-        if etype in by_type:
+        if etype in by_type and not post_finish:
             counts[by_type[str(etype)]] += 1
-        if etype in END_EVENTS:
+        if etype in END_EVENTS and not post_finish:
             end_ev = ev
+        if etype == "run.finished":
+            finished_seen = True
         _index_artefacts(m, ev)
         handler = HANDLERS.get(str(etype))
-        if handler is not None:
+        if handler is not None and not (post_finish and etype == "prompt.submitted"):
             handler(m, ev, s)
 
     writer = m["writer_host"]

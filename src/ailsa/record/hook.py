@@ -1,7 +1,8 @@
 """Claude Code hook entry point for the run record (standard library only).
 
-Reads one hook payload from stdin and appends typed events to the active run. Outside a run
-it does nothing. It never writes to stdout (stdout would be injected into the context) and
+Reads one hook payload from stdin and appends typed events to the run bound to this session
+(launcher environment or session pointer; never through the cwd marker alone). Outside such a
+run it does nothing. It never writes to stdout (stdout would be injected into the context) and
 always exits 0 (exit 1 prints a notice, exit 2 blocks).
 """
 
@@ -15,7 +16,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from ailsa.record.events import COMMAND_CAP, HOOK_ERRORS, TEXT_CAP
+from ailsa.record.events import COMMAND_CAP, FINISHED, HOOK_ERRORS, TEXT_CAP
 
 MAX_STDIN = 1024 * 1024
 WAITING_TYPES = ("permission_prompt", "idle_prompt", "agent_needs_input")
@@ -268,23 +269,53 @@ def _transcript_enabled() -> bool:
     return load_config().get("transcript") is not False
 
 
+def _bound_sessions(run_dir: Path) -> set[str]:
+    """Session ids the record binds to the run (launcher, ``run init``, rebinding hooks)."""
+    from ailsa.record.log import read_events
+
+    found: set[str] = set()
+    for ev in read_events(run_dir)["events"]:
+        payload = ev.get("payload")
+        if ev.get("type") == "run.bound" and isinstance(payload, dict):
+            sid = payload.get("session_id")
+            if isinstance(sid, str) and sid:
+                found.add(sid)
+    return found
+
+
+def _bound_run(session_id: Any, cwd: Any) -> Path | None:
+    """The run this hook may record into, or None.
+
+    Only a session bound to a run records into it: through the launcher's environment or the
+    session pointer that ``ailsa run init`` (or a rebinding SessionStart) wrote. A session that
+    merely runs inside a run folder (cwd marker) never does. A finished run takes the
+    remaining hook events only of a session its record shows as bound.
+    """
+    from ailsa.record.resolve import find_active_run
+
+    sid = session_id if isinstance(session_id, str) else None
+    ref = find_active_run(session_id=sid, cwd=Path(cwd) if isinstance(cwd, str) and cwd else None)
+    if ref is None or ref.via not in ("env", "session"):
+        return None
+    if (ref.run_dir / FINISHED).exists():
+        if sid is None or sid not in _bound_sessions(ref.run_dir):
+            return None
+    return ref.run_dir
+
+
 def _run(data: dict[str, Any]) -> None:
     from ailsa.record.log import append_event, write_heartbeat
-    from ailsa.record.resolve import RUN_DIR_ENV, bind_session, find_active_run
+    from ailsa.record.resolve import RUN_DIR_ENV, bind_session
     from ailsa.record.workspace import workspace_root
 
     name = data.get("hook_event_name")
     if not isinstance(name, str):
         return
-    cwd = data.get("cwd")
     session_id = data.get("session_id")
-    ref = find_active_run(
-        session_id=session_id if isinstance(session_id, str) else None,
-        cwd=Path(cwd) if isinstance(cwd, str) and cwd else None,
-    )
-    if ref is None:
+    found = _bound_run(session_id, data.get("cwd"))
+    if found is None:
         return
-    run_dir = ref.run_dir
+    run_dir = found
     try:
         write_heartbeat(run_dir, name)
         actor_base = {"kind": "hook", "name": name}
@@ -305,7 +336,6 @@ def _run(data: dict[str, Any]) -> None:
                             "via": "session_start",
                         },
                         actor=actor_base,
-                        after_finish=True,
                     )
                 except Exception as exc:
                     _log_error(run_dir, name, "run.bound", exc)
@@ -316,7 +346,7 @@ def _run(data: dict[str, Any]) -> None:
                     etype,
                     payload,
                     actor={**actor_base, "agent_id": extra.get("agent_id")},
-                    after_finish=True,
+                    allow_after_finish=True,  # stragglers of the bound session (checked above)
                 )
             except Exception as exc:
                 _log_error(run_dir, name, etype, exc)
@@ -341,7 +371,7 @@ def _log_bad_input(exc: BaseException) -> None:
     from ailsa.record.resolve import find_active_run
 
     ref = find_active_run()
-    if ref is not None:
+    if ref is not None and ref.via in ("env", "session"):
         _log_error(ref.run_dir, "unknown", "input", exc)
 
 

@@ -115,12 +115,15 @@ class LockedLog:
         refs: list[str] | None = None,
         span: dict[str, Any] | None = None,
         artefacts: list[dict[str, Any]] | None = None,
-        after_finish: bool = False,
+        allow_after_finish: bool = False,
         fsync: bool = False,
         utc: str | None = None,
         host: str | None = None,
     ) -> dict[str, Any]:
-        if self.finished() and not (type in HOOK_TYPES and after_finish):
+        # ``allow_after_finish`` only permits a hook event once the run has finished; the
+        # envelope's ``after_finish`` says whether it really was written after run.finished.
+        finished = self.finished()
+        if finished and not (type in HOOK_TYPES and allow_after_finish):
             raise RecordWriteRefused(
                 "run finished: post-run material goes to the verification store, not the run folder"
             )
@@ -153,7 +156,7 @@ class LockedLog:
                 refs=refs,
                 span=span,
                 artefacts=artefacts,
-                after_finish=after_finish,
+                after_finish=finished,
                 utc=utc,
                 host=host,
             )
@@ -239,7 +242,7 @@ def append_event(
     refs: list[str] | None = None,
     span: dict[str, Any] | None = None,
     artefacts: list[dict[str, Any]] | None = None,
-    after_finish: bool = False,
+    allow_after_finish: bool = False,
     fsync: bool = False,
     utc: str | None = None,
     host: str | None = None,
@@ -253,7 +256,7 @@ def append_event(
             refs=refs,
             span=span,
             artefacts=artefacts,
-            after_finish=after_finish,
+            allow_after_finish=allow_after_finish,
             fsync=fsync,
             utc=utc,
             host=host,
