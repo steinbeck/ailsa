@@ -323,15 +323,36 @@ def test_interactive_time_limit_ends_the_whole_tree(
     assert _gone(child) and _gone(_shim(tmp_path)["pid"])
 
 
+@pytest.mark.parametrize("start_handler", ["default", "ignored"])
 def test_sigint_in_a_headless_run_closes_it(
-    claude: Path, dataset: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    claude: Path,
+    dataset: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    start_handler: str,
 ) -> None:
-    """WR-04: Ctrl-C ends the harness group, records the attempt and closes the run."""
+    """WR-04: Ctrl-C ends the harness group, records the attempt and closes the run.
+
+    Afterwards the launcher restores the SIGINT handler it found: Python's default in a
+    terminal, SIG_IGN when the process was started in the background by a non-interactive
+    shell (``setsid nohup … &``). The starting handler is set explicitly so the test does not
+    depend on how pytest itself was started.
+    """
     import signal
-    import threading
 
     monkeypatch.setenv("FAKE_CLAUDE_MODE", "grandchild,sleep")
     monkeypatch.setattr(launcher, "KILL_GRACE_S", 2)
+    before = signal.default_int_handler if start_handler == "default" else signal.SIG_IGN
+    outer = signal.signal(signal.SIGINT, before)
+    try:
+        _sigint_run_closes(tmp_path, dataset, before)
+    finally:
+        signal.signal(signal.SIGINT, outer)
+
+
+def _sigint_run_closes(tmp_path: Path, dataset: Path, before: Any) -> None:
+    import signal
+    import threading
 
     def interrupt() -> None:
         deadline = time.monotonic() + 20
@@ -353,7 +374,7 @@ def test_sigint_in_a_headless_run_closes_it(
     while not _gone(child) and time.monotonic() < deadline:
         time.sleep(0.1)
     assert _gone(child)
-    assert signal.getsignal(signal.SIGINT) is signal.default_int_handler
+    assert signal.getsignal(signal.SIGINT) is before
 
 
 def test_setup_failure_after_init_closes_the_run(
