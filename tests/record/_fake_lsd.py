@@ -22,7 +22,7 @@ from pathlib import Path
 
 CONFIG_NAME = "fake_lsd.json"
 
-_LSD_SCRIPT = '''#!{python}
+_LSD_SCRIPT = """#!{python}
 import json, os, sys, time
 here = os.path.dirname(os.path.realpath(__file__))
 cfg = json.load(open(os.path.join(here, "{config}")))
@@ -65,9 +65,9 @@ else:
     n = int(cfg.get("count", 3))
     write(n)
     print("%d solutions" % n)
-'''
+"""
 
-_OUTLSD_SCRIPT = '''#!{python}
+_OUTLSD_SCRIPT = """#!{python}
 import json, os, sys
 here = os.path.dirname(os.path.realpath(__file__))
 cfg = json.load(open(os.path.join(here, "{config}")))
@@ -78,7 +78,7 @@ if cfg.get("outlsd") == "fail":
 for line in data.splitlines():
     if line.startswith("SOLUTION"):
         print("CCO")
-'''
+"""
 
 
 def _write_exec(path: Path, text: str) -> None:
@@ -93,5 +93,7 @@ def install_fake_lsd(bin_dir: Path, mode: str = "solutions", **params: object) -
     lsd = _LSD_SCRIPT.format(python=sys.executable, config=CONFIG_NAME)
     for name in ("LSD", "lsd"):
         _write_exec(bin_dir / name, lsd)
-    _write_exec(bin_dir / "outlsd", _OUTLSD_SCRIPT.format(python=sys.executable, config=CONFIG_NAME))
+    _write_exec(
+        bin_dir / "outlsd", _OUTLSD_SCRIPT.format(python=sys.executable, config=CONFIG_NAME)
+    )
     return bin_dir

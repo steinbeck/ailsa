@@ -40,6 +40,61 @@ def lsd_check() -> None:
         raise SystemExit(1)
 
 
+def _begin_record(
+    input_file: str, purpose: str, parent: str | None, timeout: int
+) -> tuple[object | None, object | None]:
+    """Register the input in the active run, if any. Returns (record, run)."""
+    from ailsa.record.resolve import current_run_for_tool
+
+    run = current_run_for_tool("lsd run")
+    if run is None:
+        return None, None
+    from ailsa.record.lsdrec import begin_solver_run
+
+    try:
+        record = begin_solver_run(
+            run, input_file=input_file, purpose=purpose, parent=parent, timeout_s=timeout
+        )
+    except ValueError as exc:
+        if parent is not None and "parent" in str(exc):
+            click.echo(f"Error: {exc}", err=True)
+            raise SystemExit(1) from exc
+        click.echo(f"ailsa: record write failed: {exc}", err=True)
+        return None, run
+    except Exception as exc:  # a record problem never changes the solver result
+        click.echo(f"ailsa: record write failed: {exc}", err=True)
+        return None, run
+    return record, run
+
+
+def _finish_record(record: object, result: object, output_dir: Path) -> dict[str, object] | None:
+    from ailsa.record.env import probe_lsd, probe_outlsd
+    from ailsa.record.lsdrec import finish_solver_run
+
+    try:
+        info = finish_solver_run(
+            record,  # type: ignore[arg-type]
+            result,
+            output_dir=output_dir,
+            lsd_info=probe_lsd(),
+            outlsd_info=probe_outlsd(),
+        )
+    except Exception as exc:
+        click.echo(f"ailsa: record write failed: {exc}", err=True)
+        return None
+    click.echo(
+        f"Recorded as {info['iteration']} ({record.purpose})",  # type: ignore[attr-defined]
+        err=True,
+    )
+    return info
+
+
+def _echo_outcome(info: dict[str, object] | None, outcome: str) -> None:
+    """Text mode shows the outcome only in a run, so output outside a run stays as it was."""
+    if info is not None:
+        click.echo(f"  Outcome: {outcome}")
+
+
 @lsd.command("run")
 @click.argument("input_file", type=click.Path(exists=True))
 @click.option(
@@ -56,6 +111,17 @@ def lsd_check() -> None:
     help="Directory for solution files.",
 )
 @click.option(
+    "--purpose",
+    type=click.Choice(["main", "family", "diagnostic", "control"]),
+    default="main",
+    help="Why this solve is run (recorded in a run).",
+)
+@click.option(
+    "--parent",
+    default=None,
+    help="Iteration this input derives from (default: the latest main iteration).",
+)
+@click.option(
     "--format",
     "output_format",
     type=click.Choice(["text", "json"]),
@@ -63,7 +129,12 @@ def lsd_check() -> None:
     help="Output format.",
 )
 def lsd_run(
-    input_file: str, timeout: int, output_dir: str | None, output_format: str
+    input_file: str,
+    timeout: int,
+    output_dir: str | None,
+    purpose: str,
+    parent: str | None,
+    output_format: str,
 ) -> None:
     """Run LSD on an input file.
 
@@ -73,12 +144,7 @@ def lsd_run(
         click.echo("Error: LSD is not installed or not in PATH", err=True)
         raise SystemExit(1)
 
-    # Read input file and create problem
-    input_content = Path(input_file).read_text()
-
-    # Parse basic info from content
-    atom_count = input_content.count("\nMULT ")
-    corr_count = input_content.count("\nHMBC ") + input_content.count("\nHSQC ")
+    record, _run = _begin_record(input_file, purpose, parent, timeout)
 
     # Run LSD
     runner = LSDRunner()
@@ -88,31 +154,51 @@ def lsd_run(
         timeout=timeout,
     )
 
+    info = None
+    if record is not None:
+        info = _finish_record(record, result, result.output_dir or Path(input_file).parent)
+
+    stopped_at_limit = result.outcome == "timeout"
+    partial = result.partial_count if result.partial_count is not None else 0
+
     if output_format == "json":
-        data = {
+        data: dict[str, object] = {
             "success": result.success,
             "solution_count": result.solution_count,
             "return_code": result.return_code,
             "output_files": [str(f) for f in result.output_files],
             "stderr": result.stderr,
+            "outcome": result.outcome,
+            "partial_count": result.partial_count,
+            "elapsed_s": round(result.elapsed_s, 3),
         }
+        if info is not None:
+            data["iteration"] = info["iteration"]
         click.echo(json.dumps(data, indent=2))
     else:
         if result.success:
-            click.echo(f"LSD completed successfully")
+            click.echo("LSD completed successfully")
             click.echo(f"  Solutions found: {result.solution_count}")
+            _echo_outcome(info, result.outcome)
             if result.output_files:
-                click.echo(f"  Output files:")
+                click.echo("  Output files:")
                 for f in result.output_files:
                     click.echo(f"    - {f}")
+        elif stopped_at_limit:
+            click.echo(
+                f"LSD stopped at the time limit: {partial} structures found so far"
+            )
+            _echo_outcome(info, result.outcome)
         elif "No solution found" in f"{result.stdout}\n{result.stderr}":
             # Not a failure: the constraints admit no structure
             click.echo("LSD completed: no structure fits the constraints")
             click.echo("  Solutions found: 0")
+            _echo_outcome(info, result.outcome)
         else:
             click.echo(f"LSD failed (return code: {result.return_code})")
             if result.stderr:
                 click.echo(f"  Error: {result.stderr[:500]}")
+            _echo_outcome(info, result.outcome)
 
 
 def _get_default_table_path() -> Path:

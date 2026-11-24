@@ -61,7 +61,9 @@ def work(tmp_path: Path) -> Path:
     return d
 
 
-def _runner(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, mode: str, **params: object) -> LSDRunner:
+def _runner(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, mode: str, **params: object
+) -> LSDRunner:
     bin_dir = install_fake_lsd(tmp_path / "bin", mode, **params)
     monkeypatch.setenv("PATH", f"{bin_dir}:/usr/bin:/bin")
     return LSDRunner()
@@ -98,7 +100,9 @@ def test_error_line(tmp_path, monkeypatch, work) -> None:
 
 def test_limit_reached(tmp_path, monkeypatch, work) -> None:
     (work / "compound.lsd").write_text(LSD_TEXT + "MAXS 4\n")
-    result = _runner(tmp_path, monkeypatch, "maxs").run_file(work / "compound.lsd", work, timeout=20)
+    result = _runner(tmp_path, monkeypatch, "maxs").run_file(
+        work / "compound.lsd", work, timeout=20
+    )
     assert result.outcome == "limit_reached"
     assert result.limit == 4
     assert result.solution_count == 4
