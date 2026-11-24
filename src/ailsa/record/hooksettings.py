@@ -10,12 +10,13 @@ import copy
 import json
 import os
 import shutil
+import stat
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from ailsa.record.fsutil import atomic_write_json
+from ailsa.record.fsutil import atomic_write_bytes
 
 MODULE = "ailsa.record.hook"
 OWN_MARKERS = ("ailsa.record.hook", "ailsa-hook")
@@ -127,6 +128,33 @@ def _backup(path: Path) -> Path:
     return target
 
 
+def _indent_of(text: str) -> int | str:
+    """The indentation the user's file uses (first indented line), default two spaces."""
+    for line in text.splitlines()[1:]:
+        body = line.lstrip(" \t")
+        if body and len(body) < len(line):
+            lead = line[: len(line) - len(body)]
+            return "\t" if lead.startswith("\t") else len(lead)
+    return 2
+
+
+def _write_settings(path: Path, data: dict[str, Any]) -> None:
+    """Write the merged settings without disturbing the user's file more than needed.
+
+    A symlinked settings file (dotfile managers) is written through to its target, never
+    replaced by a regular file; key order, indentation and the file mode are kept.
+    """
+    target = Path(os.path.realpath(path))
+    try:
+        original = target.read_text(encoding="utf-8")
+        mode = stat.S_IMODE(os.stat(target).st_mode)
+    except OSError:
+        original, mode = "", 0o600
+    text = json.dumps(data, indent=_indent_of(original), ensure_ascii=False) + "\n"
+    target.parent.mkdir(parents=True, exist_ok=True)
+    atomic_write_bytes(target, text.encode("utf-8"), mode=mode)
+
+
 def install(settings_path: str | os.PathLike[str], python_exe: str = sys.executable) -> Path | None:
     path = Path(settings_path)
     data = _load(path)
@@ -143,8 +171,7 @@ def install(settings_path: str | os.PathLike[str], python_exe: str = sys.executa
     if data == original and path.exists():
         return None
     backup = _backup(path) if path.exists() else None
-    path.parent.mkdir(parents=True, exist_ok=True)
-    atomic_write_json(path, data)
+    _write_settings(path, data)
     return backup
 
 
@@ -156,5 +183,5 @@ def uninstall(settings_path: str | os.PathLike[str]) -> int:
     removed = _strip_ours(data)
     if removed:
         _backup(path)
-        atomic_write_json(path, data)
+        _write_settings(path, data)
     return removed

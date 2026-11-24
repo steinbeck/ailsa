@@ -125,6 +125,28 @@ def test_mixed_group_keeps_foreign_handler(tmp_path):
     assert json.loads(path.read_text())["hooks"]["Stop"] == [{"hooks": [OTHER]}]
 
 
+def test_symlinked_settings_written_through_order_and_indent_kept(tmp_path):
+    """WR-16: a dotfile-managed symlink stays a symlink; the user's layout is kept."""
+    managed = tmp_path / "dotfiles" / "settings.json"
+    managed.parent.mkdir()
+    start = {"zeta": 1, "alpha": {"b": 2, "a": 1}, "hooks": {"Stop": [{"hooks": [OTHER]}]}}
+    managed.write_text(json.dumps(start, indent=4) + "\n")
+    managed.chmod(0o644)
+    link = tmp_path / "claude" / "settings.json"
+    link.parent.mkdir()
+    link.symlink_to(managed)
+    install(link, PY)
+    assert link.is_symlink() and link.resolve() == managed.resolve()
+    text = managed.read_text()
+    assert list(json.loads(text)) == ["zeta", "alpha", "hooks"]
+    assert '\n    "zeta": 1,' in text
+    assert oct(managed.stat().st_mode & 0o777) == "0o644"
+    assert count_ours(json.loads(text)) == 13
+    assert uninstall(link) == 13
+    assert link.is_symlink()
+    assert managed.read_text() == json.dumps(start, indent=4) + "\n"
+
+
 @pytest.mark.parametrize("text", ["{bad", "[1]"])
 def test_install_refuses_invalid(tmp_path: Path, text: str):
     path = tmp_path / "settings.json"
