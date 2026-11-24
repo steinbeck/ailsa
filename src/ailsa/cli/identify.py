@@ -20,6 +20,21 @@ import click
 from ailsa.identity import check_identity_result
 
 
+def _record_identity(result: dict[str, object], smiles: str, reported_name: str | None) -> None:
+    """Save the verdict in the active run, if any. Never raises, never changes stdout."""
+    try:
+        from ailsa.record.resolve import current_run_for_tool
+
+        run = current_run_for_tool("identify")
+        if run is None:
+            return
+        from ailsa.record.tooldata import record_identity
+
+        record_identity(run, result, smiles=smiles, reported_name=reported_name)
+    except Exception as exc:
+        click.echo(f"ailsa: record write failed: {exc}", err=True)
+
+
 @click.command("identify")
 @click.option(
     "--smiles",
@@ -64,6 +79,7 @@ def identify(
         ailsa identify --smiles "CC(C)Cc1ccc(cc1)C(C)C(=O)O" --format json
     """
     result = check_identity_result(smiles, reported_name, db_path=database)
+    _record_identity(result, smiles, reported_name)
 
     if output_format == "json":
         click.echo(json.dumps(result, indent=2))
