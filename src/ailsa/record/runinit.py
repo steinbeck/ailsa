@@ -37,6 +37,27 @@ OPEN_SESSION_WEB_WARNING = (
 )
 _TOOL = {"kind": "tool", "name": "ailsa run init"}
 _PACKAGED_SKILLS = "skills"
+# Blind runs: the agent can read the run folder (../events.jsonl), so values that could name
+# the compound are never stored there. The options and their values leave the recorded argv.
+BLIND_WITHHELD = "withheld (blind)"
+_BLIND_SCRUBBED_OPTIONS = ("--label", "--source", "--licence", "--prompt")
+
+
+def scrub_blind_args(args: Sequence[str]) -> list[str]:
+    """``args`` without the options of _BLIND_SCRUBBED_OPTIONS and their values."""
+    out: list[str] = []
+    skip = False
+    for arg in args:
+        if skip:
+            skip = False
+            continue
+        if arg in _BLIND_SCRUBBED_OPTIONS:
+            skip = True
+            continue
+        if arg.startswith(tuple(f"{opt}=" for opt in _BLIND_SCRUBBED_OPTIONS)):
+            continue
+        out.append(arg)
+    return out
 
 
 class InitRefused(Exception):
@@ -369,9 +390,10 @@ def init_run(
             "formula_source": formula_source,
             "blind": bool(blind and not overridden),
             "blind_requested": bool(blind),
-            "source": source,
-            "licence": licence,
+            "source": (BLIND_WITHHELD if source else None) if blind else source,
+            "licence": (BLIND_WITHHELD if licence else None) if blind else licence,
         }
+        recorded_args = scrub_blind_args(args) if blind else list(args)
         append_event(
             run_dir,
             "run.created",
@@ -384,7 +406,7 @@ def init_run(
                     "mode": mode,
                     "harness": harness,
                     "prompt": prompt,
-                    "args": list(args),
+                    "args": recorded_args,
                     "options": {
                         "blind": bool(blind),
                         "allow_prior_runs": bool(allow_prior_runs),

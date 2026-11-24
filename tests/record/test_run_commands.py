@@ -99,6 +99,46 @@ def test_init_options_recorded(workspace: Path, tmp_path: Path) -> None:
     assert first["request"]["skill"] == "ailsa-lite" and first["request"]["mode"] == "lean"
 
 
+def test_blind_run_stores_no_label_source_or_licence(
+    workspace: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """CR-06: the agent can read the run folder, so nothing that could name the compound."""
+    canary = "CANARY-NAME-7731"
+    args = [
+        "init",
+        str(_dataset(tmp_path, "CASE9")),
+        "--blind",
+        "--no-views",
+        "--label",
+        f"{canary}-label",
+        f"--source={canary}-source",
+        "--licence",
+        f"{canary}-licence",
+        "--format",
+        "json",
+    ]
+    monkeypatch.setattr("sys.argv", ["ailsa", "run", *args])
+    res = _invoke(args)
+    assert res.exit_code == 0, res.output
+    run_dir = Path(json.loads(res.stdout)["run_dir"])
+    _invoke(["status", "--run", str(run_dir)])  # writes manifest.json too
+    for path in run_dir.rglob("*"):
+        if path.is_file():
+            assert canary not in path.read_text(errors="replace"), path
+    created = read_events(run_dir)["events"][0]["payload"]
+    assert created["dataset"]["label"] == "CASE9"
+    assert created["dataset"]["source"] == created["dataset"]["licence"] == "withheld (blind)"
+    recorded = created["request"]["args"]
+    assert "--blind" in recorded and "--label" not in recorded and "--licence" not in recorded
+
+
+def test_scrub_blind_args_forms() -> None:
+    from ailsa.record.runinit import scrub_blind_args
+
+    args = ["run", "start", "d", "--label", "x", "--prompt=y", "--source", "z", "--blind"]
+    assert scrub_blind_args(args) == ["run", "start", "d", "--blind"]
+
+
 def test_init_help_lists_options() -> None:
     text = _invoke(["init", "--help"]).output
     for flag in (

@@ -64,10 +64,18 @@ def _emit(data: Any, fmt: str, lines: list[str] | None = None) -> None:
     show_default=True,
     help="Data class of the run.",
 )
-@click.option("--label", default=None, help="Dataset label (ignored in blind mode).")
+@click.option(
+    "--label", default=None, help="Dataset label (not used or stored in blind mode)."
+)
 @click.option("--formula", default=None, help="Molecular formula, if known.")
-@click.option("--source", default=None, help="Where the data come from.")
-@click.option("--licence", default=None, help="Licence or acknowledgement of the data.")
+@click.option(
+    "--source", default=None, help="Where the data come from (not stored in blind mode)."
+)
+@click.option(
+    "--licence",
+    default=None,
+    help="Licence or acknowledgement of the data (not stored in blind mode).",
+)
 @click.option("--skill", default=None, help="Skill that runs, for example ailsa-lite.")
 @click.option(
     "--mode",
@@ -480,10 +488,18 @@ def finalize_cmd(
     show_default=True,
     help="Data class. Confidential removes the web tools from Claude Code.",
 )
-@click.option("--label", default=None, help="Dataset label (ignored in blind mode).")
+@click.option(
+    "--label", default=None, help="Dataset label (not used or stored in blind mode)."
+)
 @click.option("--formula", default=None, help="Molecular formula, if known.")
-@click.option("--source", default=None, help="Where the data come from.")
-@click.option("--licence", default=None, help="Licence or acknowledgement of the data.")
+@click.option(
+    "--source", default=None, help="Where the data come from (not stored in blind mode)."
+)
+@click.option(
+    "--licence",
+    default=None,
+    help="Licence or acknowledgement of the data (not stored in blind mode).",
+)
 @click.option("--blind", is_flag=True, help="Blind run: refuse when earlier results are readable.")
 @click.option("--allow-prior-runs", is_flag=True, help="Start a blind run anyway (marked).")
 @click.option(

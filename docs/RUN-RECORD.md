@@ -136,8 +136,10 @@ need a ranking.
 `ailsa run init --blind` (or the launcher with `--blind`) refuses to start when earlier runs or
 results for the same data are readable from the workspace. `--allow-prior-runs` overrides the
 refusal and marks the run as not blind. This protects against accident only: the workspace is
-readable by the agent, and an agent that looks for earlier results can find them. The dataset
-label is ignored in blind mode.
+readable by the agent, and an agent that looks for earlier results can find them. In blind mode
+`--label`, `--source` and `--licence` are neither used nor stored in the run folder (which the
+agent can read): the folder is named after the dataset folder, source and licence are recorded
+only as "withheld (blind)", and these options are removed from the recorded command line.
 
 ## What the hash chain proves
 
