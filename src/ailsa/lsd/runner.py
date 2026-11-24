@@ -91,7 +91,9 @@ def _invoke_outlsd(
 
 _MAXS = re.compile(r"^\s*MAXS\s+(\d+)", re.IGNORECASE)
 _TIME_STOP = re.compile(
-    r"(time limit|maximum time|maxt)[^\n]*(reached|exceeded|elapsed)"
+    # LSD 3.5.3 on MAXT: "Aborted by user (time limit) after N solutions." (stderr)
+    r"aborted by user \(time limit\)"
+    r"|(time limit|maximum time|maxt)[^\n]*(reached|exceeded|elapsed)"
     r"|(reached|exceeded)[^\n]*(time limit|maximum time|maxt)",
     re.IGNORECASE,
 )

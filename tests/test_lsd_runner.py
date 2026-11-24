@@ -591,3 +591,11 @@ def test_ring_exclusion_lsd_produces_smiles(tmp_path: Path) -> None:
             f"Expected aromatic ring in solution, got {aromatic_atoms} aromatic atoms: "
             f"{smiles!r}"
         )
+
+
+def test_time_stop_matches_real_lsd_wording():
+    """LSD 3.5.3 stops on MAXT with this exact stderr line (checked on a real run)."""
+    from ailsa.lsd.runner import _TIME_STOP
+
+    assert _TIME_STOP.search("Aborted by user (time limit) after 34 solutions.")
+    assert not _TIME_STOP.search("Aborted by user (too many solutions) after 5 solutions.")
