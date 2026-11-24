@@ -440,20 +440,58 @@ class LSDRunner:
             sol_file = output_dir / f"{input_file.stem}.sol"
 
             # LSD's own time limit (MAXT) stops it with a partial result; never "0 solutions".
+            # The partial .sol is still converted below, as it always was: success, the
+            # solution count and solutions.smi stay what they were before the run record
+            # (D-07); the record only adds outcome "timeout" and the partial count.
             time_stop = bool(_TIME_STOP.search(combined))
+            partial: int | None = None
             if time_stop:
                 partial = read_solncounter(output_dir)
+                partial = solution_count if partial is None else partial
+
+            # Run outlsd to convert solutions to SMILES if available
+            smiles_path: Path | None = None
+            conversion_error: str | None = None
+            if sol_file.exists() and solution_count > 0 and self.outlsd_path:
+                try:
+                    smiles_path = self._run_outlsd(output_dir, input_file)
+                except RuntimeError as exc:
+                    conversion_error = str(exc)
+            if time_stop:
                 partial = solution_count if partial is None else partial
                 outcome, absent = classify_outcome(
                     started=True, blocked=False, error_line=None, timed_out=True,
                     count=partial, limit=limit, no_solution_text=False,
                     sol_exists=sol_file.exists(), smiles_ok=None, conversion_skipped=False,
                 )
+                if smiles_path is not None:
+                    absent = None
+                elif conversion_error is not None:
+                    absent = "conversion_failed"
+                if conversion_error is not None:
+                    # Old contract: a fail-loud conversion error reads as a failed run.
+                    return LSDResult(
+                        success=False,
+                        solution_count=0,
+                        stderr=conversion_error,
+                        return_code=-1,
+                        elapsed_s=elapsed,
+                        timed_out=True,
+                        partial_count=partial,
+                        limit=limit,
+                        outcome=outcome,
+                        smiles_absent_reason=absent,
+                        found_count=partial,
+                    )
                 return LSDResult(
-                    success=False,
+                    success=sol_file.exists() and smiles_path is not None,
                     solution_count=solution_count,
                     solutions=solutions,
-                    output_files=output_files,
+                    output_files=(
+                        list(output_dir.glob("*.sol"))
+                        + list(output_dir.glob("*.out"))
+                        + list(output_dir.glob("*.smi"))
+                    ),
                     stdout=proc.stdout,
                     stderr=proc.stderr,
                     return_code=proc.returncode,
@@ -465,15 +503,6 @@ class LSDRunner:
                     smiles_absent_reason=absent,
                     found_count=partial,
                 )
-
-            # Run outlsd to convert solutions to SMILES if available
-            smiles_path: Path | None = None
-            conversion_error: str | None = None
-            if sol_file.exists() and solution_count > 0 and self.outlsd_path:
-                try:
-                    smiles_path = self._run_outlsd(output_dir, input_file)
-                except RuntimeError as exc:
-                    conversion_error = str(exc)
             # Re-scan for output files to include .smi
             output_files = (
                 list(output_dir.glob("*.sol"))

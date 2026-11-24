@@ -289,7 +289,9 @@ def lsd_run(
             remote,
         )
 
-    stopped_at_limit = result.outcome == "timeout"
+    # The time-limit wording is part of the run record's output; outside a run the text stays
+    # exactly as it was before the record existed (D-07). JSON only gains keys.
+    stopped_at_limit = result.outcome == "timeout" and _run is not None
     partial = result.partial_count if result.partial_count is not None else 0
 
     if output_format == "json":
@@ -309,7 +311,16 @@ def lsd_run(
             data["host"] = host
         click.echo(json.dumps(data, indent=2))
     else:
-        if result.success:
+        if stopped_at_limit:
+            click.echo(
+                f"LSD stopped at the time limit: {partial} structures found so far"
+            )
+            _echo_outcome(info, result.outcome)
+            if result.success and result.output_files:
+                click.echo("  Output files:")
+                for f in result.output_files:
+                    click.echo(f"    - {f}")
+        elif result.success:
             click.echo("LSD completed successfully")
             click.echo(f"  Solutions found: {result.solution_count}")
             _echo_outcome(info, result.outcome)
@@ -317,11 +328,6 @@ def lsd_run(
                 click.echo("  Output files:")
                 for f in result.output_files:
                     click.echo(f"    - {f}")
-        elif stopped_at_limit:
-            click.echo(
-                f"LSD stopped at the time limit: {partial} structures found so far"
-            )
-            _echo_outcome(info, result.outcome)
         elif "No solution found" in f"{result.stdout}\n{result.stderr}":
             # Not a failure: the constraints admit no structure
             click.echo("LSD completed: no structure fits the constraints")

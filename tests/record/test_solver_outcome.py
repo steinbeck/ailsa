@@ -80,6 +80,19 @@ def test_solutions(tmp_path, monkeypatch, work) -> None:
     assert result.success is True
 
 
+def test_maxt_stop_still_converts_the_partial_solutions(tmp_path, monkeypatch, work) -> None:
+    """WR-06: a MAXT stop keeps the old success and SMILES, and adds outcome timeout."""
+    result = _runner(tmp_path, monkeypatch, "timestop", count=2).run_file(
+        work / "compound.lsd", work, timeout=20
+    )
+    assert result.success is True
+    assert result.solution_count == 2
+    assert (work / "solutions.smi").read_text().split() == ["CCO", "CCO"]
+    assert result.outcome == "timeout" and result.timed_out is True
+    assert result.partial_count == 2
+    assert result.smiles_absent_reason is None
+
+
 def test_no_solution(tmp_path, monkeypatch, work) -> None:
     result = _runner(tmp_path, monkeypatch, "nosolution").run_file(
         work / "compound.lsd", work, timeout=20

@@ -8,6 +8,7 @@ PATH to use them. Modes:
 - ``nosolution``: prints ``No solution found``; the ``.sol`` holds only the input echo.
 - ``error`` (``code``): prints ``error <code> - 6 commands read`` and an explanation line.
 - ``sleep`` (``seconds``, ``partial``): writes ``solncounter`` with ``partial``, then sleeps.
+- ``timestop`` (``count``): as ``solutions``, then LSD's MAXT stop line on stderr.
 - ``maxs``: as ``solutions`` with the count taken from the input's ``MAXS`` line.
 
 ``outlsd`` writes one SMILES per solution, or fails (``outlsd="fail"``).
@@ -53,6 +54,10 @@ elif mode == "sleep":
         fh.write("%d\\n" % cfg.get("partial", 12))
     sys.stdout.flush()
     time.sleep(cfg.get("seconds", 10))
+elif mode == "timestop":
+    n = int(cfg.get("count", 2))
+    write(n)
+    sys.stderr.write("Aborted by user (time limit) after %d solutions.\\n" % n)
 elif mode == "maxs":
     limit = 1
     for line in text.splitlines():

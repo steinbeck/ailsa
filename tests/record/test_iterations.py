@@ -176,6 +176,50 @@ def test_outside_a_run_nothing_is_recorded(new_run, tmp_path, monkeypatch) -> No
     assert "Outcome" not in text.stdout and "Solutions found: 2" in text.stdout
 
 
+def _outside(tmp_path, monkeypatch, mode: str, **params) -> Path:
+    monkeypatch.delenv("AILSA_RUN_DIR", raising=False)
+    bin_dir = install_fake_lsd(tmp_path / "bin", mode, **params)
+    monkeypatch.setenv("PATH", f"{bin_dir}:/usr/bin:/bin")
+    work = tmp_path / "work"
+    work.mkdir()
+    (work / "compound.lsd").write_text(LSD_TEXT)
+    monkeypatch.chdir(work)
+    return work
+
+
+def test_outside_a_run_maxt_stop_reads_as_before(workspace, tmp_path, monkeypatch) -> None:
+    """WR-06 (D-07): a MAXT stop outside a run converts and reports success as it always did."""
+    work = _outside(tmp_path, monkeypatch, "timestop", count=2)
+    data = json.loads(_invoke("compound.lsd", "--format", "json").stdout)
+    assert data["success"] is True and data["solution_count"] == 2
+    assert data["outcome"] == "timeout"
+    assert (work / "solutions.smi").is_file()
+    text = _invoke("compound.lsd").stdout
+    assert "LSD completed successfully" in text and "Solutions found: 2" in text
+    assert "time limit" not in text and "Outcome" not in text
+
+
+def test_outside_a_run_timeout_text_as_before(workspace, tmp_path, monkeypatch) -> None:
+    """WR-06 (D-07): the --timeout message outside a run is the old failure text."""
+    _outside(tmp_path, monkeypatch, "sleep", seconds=10, partial=12)
+    text = _invoke("compound.lsd", "--timeout", "2").stdout
+    assert "LSD failed (return code: -1)" in text
+    assert "timed out after 2 seconds" in text
+    assert "stopped at the time limit" not in text
+
+
+def test_in_a_run_maxt_stop_is_recorded_with_smiles(run_env, tmp_path, monkeypatch) -> None:
+    run_dir, it = run_env
+    install_fake_lsd(tmp_path / "bin", "timestop", count=2)
+    monkeypatch.chdir(it)
+    res = _invoke("compound.lsd")
+    assert "LSD stopped at the time limit: 2 structures found so far" in res.stdout
+    fin = next(e for e in _events(run_dir) if e["type"] == "solver.finished")["payload"]
+    assert fin["outcome"] == "timeout" and fin["count"] == 2
+    assert fin["smiles_absent_reason"] is None
+    assert (run_dir / "iterations" / "it01" / "solutions.smi").is_file()
+
+
 def test_solver_outputs_registered_and_agent_file_still_warned(run_env, monkeypatch) -> None:
     from ailsa.record.finalize import unregistered_files
 
