@@ -376,7 +376,29 @@ full decision recording only after measuring its effect on accuracy (D15).
      show these items as "not recorded".
   4. `ailsa run render` turns a record into its Markdown view.
   5. A solver run on another host, if any, is recorded with host and LSD version.
-**Plans**: TBD (context gathered 2026-11-24 in `106.1-CONTEXT.md`; next `/gsd-plan-phase 106.1`)
+**Plans**: 20 plans in 8 waves (planned 2026-11-24)
+
+Plans:
+- [ ] 106.1-01-PLAN.md — lazy CLI startup (REC-04 prerequisite) and the four new command groups
+- [ ] 106.1-02-PLAN.md — hook payload spike on Sheldon; scrubbed real fixtures; open hook questions answered
+- [ ] 106.1-03-PLAN.md — public example dataset: processing and BMRB download scripts, credit (D-15)
+- [ ] 106.1-04-PLAN.md — record core: event vocabulary, workspace and run ids, hash-chained append-only log
+- [ ] 106.1-05-PLAN.md — active-run lookup, warning gate, artefact registration, tool calls record themselves
+- [ ] 106.1-06-PLAN.md — typed models and committed JSON Schemas for events, artefacts, declaration, manifest
+- [ ] 106.1-07-PLAN.md — manifest reducer and Markdown renderings (state, staleness, "not recorded", break marking)
+- [ ] 106.1-08-PLAN.md — dataset fingerprint and prior-run scan, environment probe, experiment inventory
+- [ ] 106.1-09-PLAN.md — Claude Code hook, hook settings install, transcript copy, model reports
+- [ ] 106.1-10-PLAN.md — spectra view products (`ailsa spectra export`)
+- [ ] 106.1-11-PLAN.md — peak-pick and identity artefacts; NUS/JCAMP outputs out of the dataset
+- [ ] 106.1-12-PLAN.md — batch recording commands (`ailsa peaks decide`, `ailsa model import`)
+- [ ] 106.1-13-PLAN.md — solver outcome enum, iteration registration, `ailsa lsd import`
+- [ ] 106.1-14-PLAN.md — `ailsa run init|note|status|verify|render|index`
+- [ ] 106.1-15-PLAN.md — ranking artefact with atom map and prediction basis; correlation analysis with ELIM drops
+- [ ] 106.1-16-PLAN.md — remote solves (`ailsa lsd run --host`) and the real vitus-to-Sheldon check (D-14)
+- [ ] 106.1-17-PLAN.md — `ailsa run finalize|close|start|hooks` (strict declaration, launcher)
+- [ ] 106.1-18-PLAN.md — lean skill 0.3.0 wired to the record; docs/RUN-RECORD.md
+- [ ] 106.1-19-PLAN.md — full suite, mypy and ruff on Sheldon in a separate checkout, compared with the baseline
+- [ ] 106.1-20-PLAN.md — acceptance: one lean α-terpineol run with a small Claude model on Sheldon (D-12, owner checkpoint)
 
 #### Phase 106.2: Frontier skill writes the run record (INSERTED 2026-11-24)
 
