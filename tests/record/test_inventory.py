@@ -1,0 +1,121 @@
+"""Experiment inventory (REC-28): complete, unreadable entries kept, no titles."""
+
+from __future__ import annotations
+
+import json
+from pathlib import Path
+
+from ailsa.record.inventory import build_inventory
+
+CANARY = "CANARY-COMPOUND-NAME-9431"
+
+
+def _acqus(pulprog: str, nuc: str, *, sfo1: float, extra: str = "") -> str:
+    return (
+        f"##TITLE= Parameter file {CANARY}\n"
+        f"##$PULPROG= <{pulprog}>\n##$NUC1= <{nuc}>\n##$NS= 16\n"
+        f"##$SFO1= {sfo1}\n##$TE= 298.0\n##$SW_h= 12000.0\n##$SOLVENT= <CDCl3>\n{extra}"
+    )
+
+
+def _make(root: Path) -> Path:
+    one = root / "1"
+    (one / "pdata" / "1").mkdir(parents=True)
+    (one / "acqus").write_text(_acqus("zgpg30", "13C", sfo1=100.6))
+    (one / "fid").write_bytes(b"1234")
+    (one / "pdata" / "1" / "1r").write_bytes(b"5678")
+    (one / "pdata" / "1" / "procs").write_text("##$SI= 32768\n")
+    (one / "pdata" / "1" / "title").write_text(CANARY)
+
+    two = root / "2"
+    (two / "pdata" / "1").mkdir(parents=True)
+    (two / "acqus").write_text(
+        _acqus("hsqcedetgpsisp2.3", "1H", sfo1=400.1, extra="##$NusAMOUNT= 25\n")
+    )
+    (two / "acqu2s").write_text("##$NUC1= <13C>\n##$SFO1= 100.6\n")
+    (two / "ser").write_bytes(b"abcd")
+    (two / "nuslist").write_text("0\n1\n")
+    (two / "pdata" / "1" / "title").write_text(CANARY)
+
+    three = root / "3"
+    three.mkdir()
+    (three / "acqus").write_text(_acqus("weird_pp", "1H", sfo1=400.1))
+    (three / "acqu2s").write_text("##$NUC1= <1H>\n##$SFO1= 400.1\n")
+    (three / "ser").write_bytes(b"x")
+
+    (root / "4").mkdir()
+    (root / "4" / "readme.txt").write_text("nothing")
+
+    foo = root / "foo"
+    foo.mkdir()
+    (foo / "acqus").write_text(_acqus("zg30", "1H", sfo1=400.1))
+    (foo / "fid").write_bytes(b"f")
+
+    (root / "spec.jdx").write_text(
+        f"##TITLE= {CANARY}\n##OWNER= {CANARY}\n##JCAMP-DX= 5.01\n##.OBSERVE FREQUENCY= 400.1\n"
+        "##XYDATA= (X++(Y..Y))\n1 2 3\n##END=\n"
+    )
+    return root
+
+
+def test_inventory_entries(tmp_path: Path) -> None:
+    ds = _make(tmp_path / "ds")
+    inv = build_inventory(ds, blind=True, fingerprint="sha256:abc")
+    assert inv["schema"] == "ailsa.experiment-inventory"
+    assert inv["schema_version"] == "1"
+    assert inv["dataset_fingerprint"] == "sha256:abc"
+    assert inv["blind"] is True
+    by_id = {e["id"]: e for e in inv["experiments"]}
+    assert set(by_id) == {"exp:1", "exp:2", "exp:3", "exp:4", "exp:x1"}
+    assert by_id["exp:1"]["readable"] and by_id["exp:2"]["readable"] and by_id["exp:x1"]["readable"]
+    assert by_id["exp:x1"]["folder_alias"] == "x1"
+    for key in ("exp:3", "exp:4"):
+        assert by_id[key]["readable"] is False
+        assert by_id[key]["reason"]
+    assert by_id["exp:4"]["reason"] == "no acqus"
+    assert by_id["exp:3"]["reason"].startswith("unknown experiment type")
+    assert inv["unreadable"] == 2
+
+
+def test_entry_two_fields(tmp_path: Path) -> None:
+    ds = _make(tmp_path / "ds")
+    inv = build_inventory(ds, blind=False, fingerprint="sha256:abc")
+    e = {x["id"]: x for x in inv["experiments"]}["exp:2"]
+    assert e["kind"] == "HSQC"
+    assert e["edited"] is True
+    assert e["processed"] is False
+    assert e["raw"] is True
+    assert e["nus"] == {"fraction": 0.25, "schedule_present": True}
+    assert e["sfo1_mhz"] == 400.1
+    assert e["sfo1_f1_mhz"] == 100.6
+    assert e["temperature_k"] == 298.0
+    names = {f["path"] for f in e["source_files"]}
+    assert {"2/acqus", "2/acqu2s", "2/ser"} <= names
+    assert all(len(f["sha256"]) == 64 for f in e["source_files"])
+
+
+def test_titles_never_leak(tmp_path: Path) -> None:
+    ds = _make(tmp_path / "ds")
+    inv = build_inventory(ds, blind=True, fingerprint="sha256:abc")
+    assert CANARY not in json.dumps(inv)
+    assert "foo" not in json.dumps(inv)
+
+
+def test_jcamp_headers(tmp_path: Path) -> None:
+    ds = _make(tmp_path / "ds")
+    inv = build_inventory(ds, blind=True, fingerprint="sha256:abc")
+    (jc,) = inv["jcamp_files"]
+    assert jc["path"] == "spec.jdx"
+    assert len(jc["sha256"]) == 64
+    keys = {k.upper() for k in jc["headers"]}
+    assert "TITLE" not in keys and "OWNER" not in keys
+    assert "JCAMP-DX" in keys
+    assert "XYDATA" not in keys
+
+
+def test_validates_against_model(tmp_path: Path) -> None:
+    from ailsa.record.models import ExperimentInventory
+
+    ds = _make(tmp_path / "ds")
+    inv = build_inventory(ds, blind=True, fingerprint="sha256:abc")
+    ExperimentInventory.model_validate(inv)

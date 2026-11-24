@@ -51,6 +51,12 @@ class Experiment:
     processed: bool
     edited: bool = False
     raw: bool = False
+    sfo1_mhz: float | None = None
+    sfo1_f1_mhz: float | None = None
+    temperature_k: float | None = None
+    sw_hz: float | None = None
+    nus_fraction: float | None = None
+    nus_schedule: bool | None = None
 
     def to_dict(self) -> dict[str, object]:
         return {
@@ -61,6 +67,12 @@ class Experiment:
             "processed": self.processed,
             "raw": self.raw,
             "edited": self.edited,
+            "sfo1_mhz": self.sfo1_mhz,
+            "sfo1_f1_mhz": self.sfo1_f1_mhz,
+            "temperature_k": self.temperature_k,
+            "sw_hz": self.sw_hz,
+            "nus_fraction": self.nus_fraction,
+            "nus_schedule": self.nus_schedule,
         }
 
 
@@ -89,6 +101,18 @@ def _param(text: str, key: str) -> str | None:
     if value.startswith("<") and value.endswith(">"):
         value = value[1:-1]
     return value.strip()
+
+
+def _float(text: str | None, key: str) -> float | None:
+    if text is None:
+        return None
+    raw = _param(text, key)
+    if raw is None:
+        return None
+    try:
+        return float(raw)
+    except ValueError:
+        return None
 
 
 def classify(pulse_program: str, nucleus: str, nucleus_f1: str | None, is_2d: bool) -> str:
@@ -148,8 +172,10 @@ def read_experiment(path: Path) -> Experiment | None:
     pulse_program = _param(text, "PULPROG") or ""
     nucleus = _param(text, "NUC1") or ""
     nucleus_f1 = None
+    text_f1: str | None = None
     if is_2d:
-        nucleus_f1 = _param(acqu2s.read_text(errors="replace"), "NUC1")
+        text_f1 = acqu2s.read_text(errors="replace")
+        nucleus_f1 = _param(text_f1, "NUC1")
     try:
         scans = int(float(_param(text, "NS") or 0))
     except ValueError:
@@ -160,6 +186,9 @@ def read_experiment(path: Path) -> Experiment | None:
     raw = (path / ("ser" if is_2d else "fid")).is_file()
     kind = classify(pulse_program, nucleus, nucleus_f1, is_2d)
     edited = kind == "HSQC" and "hsqced" in pulse_program.lower()
+    nus_pct = _float(text, "NusAMOUNT")
+    nus_fraction = nus_pct / 100.0 if nus_pct is not None and nus_pct > 0 else None
+    nus_schedule = (path / "nuslist").is_file() if (is_2d or nus_pct is not None) else None
     return Experiment(
         expno=path.name,
         path=path,
@@ -172,6 +201,12 @@ def read_experiment(path: Path) -> Experiment | None:
         processed=processed,
         edited=edited,
         raw=raw,
+        sfo1_mhz=_float(text, "SFO1"),
+        sfo1_f1_mhz=_float(text_f1, "SFO1"),
+        temperature_k=_float(text, "TE"),
+        sw_hz=_float(text, "SW_h"),
+        nus_fraction=nus_fraction,
+        nus_schedule=nus_schedule,
     )
 
 
