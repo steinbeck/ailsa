@@ -423,10 +423,11 @@ class NusRunner:
 
         run = current_run_for_tool("nus")
         if run is not None:
+            from ailsa.record.inventory import experiment_label
             from ailsa.record.tooldata import run_output_dir
 
             try:
-                return run_output_dir(run, "nus", expdir.name)
+                return run_output_dir(run, "nus", experiment_label(expdir))
             except ValueError as exc:
                 raise RuntimeError(f"refused to write NUS stages into the run: {exc}") from exc
         stage_dir = expdir / "analysis" / "nus_recon" / expdir.name

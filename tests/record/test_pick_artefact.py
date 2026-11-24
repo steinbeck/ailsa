@@ -62,6 +62,27 @@ def test_pick_1d_in_run(new_run, monkeypatch, tmp_path: Path) -> None:
     assert picked[0]["payload"]["count"] == len(model.peaks)
 
 
+def test_pick_uses_the_inventory_alias_not_the_folder_name(
+    new_run, monkeypatch, tmp_path: Path
+) -> None:
+    """WR-08: a non-numeric folder name never reaches ids or paths; the inventory label does."""
+    from ailsa.record.inventory import build_inventory
+
+    _, run_dir = new_run
+    ds = tmp_path / "ds"
+    make_1d(ds, "1")
+    exp = make_1d(ds, "my sample: 1H")
+    labels = [e["id"] for e in build_inventory(ds, blind=True, fingerprint="")["experiments"]]
+    assert labels == ["exp:1", "exp:x1"]
+    monkeypatch.setenv("AILSA_RUN_DIR", str(run_dir))
+    assert _run_json(["1d", str(exp), "--format", "json"])["pick_id"] == "pick:x1:1"
+    assert (run_dir / "peaks" / "x1.1.json").is_file()
+    raw = (run_dir / "events.jsonl").read_text()
+    assert "my sample" not in raw
+    model = PeakPick.model_validate(json.loads((run_dir / "peaks" / "x1.1.json").read_text()))
+    assert model.experiment == "exp:x1"
+
+
 def test_second_pick_gets_next_number(new_run, monkeypatch, tmp_path: Path) -> None:
     _, run_dir = new_run
     exp = make_1d(tmp_path / "ds", "5")

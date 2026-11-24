@@ -606,10 +606,13 @@ def pipeline(
     active_run = current_run_for_tool("nus")
     if active_run is not None:
         # REC-05: in a run, peak output goes to the run folder, not the dataset.
+        from ailsa.record.inventory import experiment_label
         from ailsa.record.tooldata import run_output_dir
 
         try:
-            nmr_peaks_dir = run_output_dir(active_run, "peaks", "nus", resolved.name)
+            nmr_peaks_dir = run_output_dir(
+                active_run, "peaks", "nus", experiment_label(resolved)
+            )
         except ValueError as exc:
             click.echo(f"NUS: refused to write peaks into the run: {exc}", err=True)
             raise SystemExit(1) from exc

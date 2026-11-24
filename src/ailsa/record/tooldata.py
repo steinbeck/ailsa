@@ -106,9 +106,13 @@ def record_pick(
     command: str = "pick",
 ) -> str:
     """Write a peak-pick artefact and its peaks.picked event; return the pick id."""
+    from ailsa.record.inventory import experiment_label
     from ailsa.record.models import PeakPick
 
-    expno, exp_dir = experiment_of(path)
+    _folder, exp_dir = experiment_of(path)
+    # The inventory's label (expno or alias), never a folder name that could name the compound
+    # or break the id patterns; picks then link to the inventory's experiments (REC-17/28).
+    expno = experiment_label(exp_dir)
     hashes = source_hashes(exp_dir)
     ref = referencing if referencing is not None else referencing_of(exp_dir, two_d)
     with log_session(run.run_dir) as lg:

@@ -7,6 +7,7 @@ that could name the compound. Standard library only at module level.
 
 from __future__ import annotations
 
+import hashlib
 import os
 import re
 from pathlib import Path
@@ -113,35 +114,61 @@ def _jcamp_files(dataset: Path) -> list[dict[str, Any]]:
     return found
 
 
-def build_inventory(dataset: Path, *, blind: bool, fingerprint: str) -> dict[str, Any]:
-    """Inventory dict matching the ``ExperimentInventory`` contract."""
+def _labelled_folders(dataset: Path) -> list[tuple[Path, Any, str, str | None]]:
+    """(folder, experiment or None, label, alias) for every experiment folder, in order.
+
+    Same aliasing rule as scan_dataset: numeric folder names are their own label, other
+    readable ones become x1, x2, ... and unreadable ones u1, u2, ...
+    """
     from ailsa.case.scan import _expno_key, read_experiment
 
-    dataset = Path(dataset).resolve()
-    entries: list[dict[str, Any]] = []
     folders = sorted(
-        (p for p in dataset.iterdir() if p.is_dir() and not p.is_symlink()),
+        (p for p in Path(dataset).iterdir() if p.is_dir() and not p.is_symlink()),
         key=lambda p: _expno_key(p.name),
     )
-    # Same aliasing rule as scan_dataset: non-numeric folder names become x1, x2, ...
+    out: list[tuple[Path, Any, str, str | None]] = []
     aliases = 0
     unreadable_aliases = 0
     for folder in folders:
         exp = read_experiment(folder)
-        numeric = folder.name.isdigit()
+        if folder.name.isdigit():
+            label, alias = folder.name, None
+        elif exp is not None:
+            aliases += 1
+            label = alias = f"x{aliases}"
+        else:
+            unreadable_aliases += 1
+            label = alias = f"u{unreadable_aliases}"
+        out.append((folder, exp, label, alias))
+    return out
+
+
+def experiment_label(exp_dir: str | os.PathLike[str]) -> str:
+    """The inventory label of an experiment folder (its expno, or its x/u alias).
+
+    Record ids and run-folder paths use this label, never a non-numeric folder name, which
+    could name the compound. A folder the inventory would not list gets a hash alias.
+    """
+    folder = Path(exp_dir)
+    if folder.name.isdigit():
+        return folder.name
+    try:
+        for candidate, _exp, label, _alias in _labelled_folders(folder.parent):
+            if candidate.name == folder.name:
+                return label
+    except OSError:
+        pass
+    return "x" + hashlib.sha256(folder.name.encode("utf-8")).hexdigest()[:8]
+
+
+def build_inventory(dataset: Path, *, blind: bool, fingerprint: str) -> dict[str, Any]:
+    """Inventory dict matching the ``ExperimentInventory`` contract."""
+    dataset = Path(dataset).resolve()
+    entries: list[dict[str, Any]] = []
+    for folder, exp, label, alias in _labelled_folders(dataset):
         if exp is not None:
-            if numeric:
-                label, alias = folder.name, None
-            else:
-                aliases += 1
-                label, alias = f"x{aliases}", f"x{aliases}"
             entry = _entry(exp, label, alias)
         else:
-            if numeric:
-                label, alias = folder.name, None
-            else:
-                unreadable_aliases += 1
-                label, alias = f"u{unreadable_aliases}", f"u{unreadable_aliases}"
             has_acqus = (folder / "acqus").is_file()
             entry = {
                 "id": exp_id(label),
