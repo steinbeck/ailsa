@@ -9,7 +9,7 @@ from __future__ import annotations
 import importlib
 from typing import TYPE_CHECKING, Any
 
-from ailsa._version import __version__
+from ailsa._version import __version__ as __version__
 
 if TYPE_CHECKING:
     from ailsa.analysis import (

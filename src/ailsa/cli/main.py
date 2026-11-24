@@ -1,31 +1,84 @@
 """Main CLI entry point for ailsa."""
 
+import importlib
 from collections.abc import Sequence
+from typing import Any
 
 import click
 
-from ailsa import __version__
-from ailsa.cli.analyze import analyze
-from ailsa.cli.case import case
-from ailsa.cli.database import database
-from ailsa.cli.dereplicate import dereplicate
-from ailsa.cli.detect import detect
-from ailsa.cli.fetch import fetch
-from ailsa.cli.fragment import fragment
-from ailsa.cli.identify import identify
-from ailsa.cli.jcamp import jcamp
-from ailsa.cli.lsd import lsd
-from ailsa.cli.nus import nus
-from ailsa.cli.pick import pick
-from ailsa.cli.predict import predict
-from ailsa.cli.pylsd import pylsd
-from ailsa.cli.read import read
-from ailsa.cli.skill import skill
-from ailsa.cli.visualize import visualize
-from ailsa.cli.webview import webview
+from ailsa._version import __version__
+
+# Fixed registry: command name -> "module:attr". Only these names are ever
+# imported (T-106.1-01); unknown names fall through to click's usual error.
+_COMMANDS: dict[str, str] = {
+    "analyze": "ailsa.cli.analyze:analyze",
+    "case": "ailsa.cli.case:case",
+    "database": "ailsa.cli.database:database",
+    "dereplicate": "ailsa.cli.dereplicate:dereplicate",
+    "detect": "ailsa.cli.detect:detect",
+    "fetch": "ailsa.cli.fetch:fetch",
+    "fragment": "ailsa.cli.fragment:fragment",
+    "identify": "ailsa.cli.identify:identify",
+    "jcamp": "ailsa.cli.jcamp:jcamp",
+    "lsd": "ailsa.cli.lsd:lsd",
+    "nus": "ailsa.cli.nus:nus",
+    "pick": "ailsa.cli.pick:pick",
+    "predict": "ailsa.cli.predict:predict",
+    "pylsd": "ailsa.cli.pylsd:pylsd",
+    "read": "ailsa.cli.read:read",
+    "skill": "ailsa.cli.skill:skill",
+    "visualize": "ailsa.cli.visualize:visualize",
+    "webview": "ailsa.cli.webview:webview",
+    "run": "ailsa.cli.run:run",
+    "spectra": "ailsa.cli.spectra:spectra",
+    "peaks": "ailsa.cli.peaks:peaks",
+    "model": "ailsa.cli.model:model",
+}
 
 
-@click.group()
+class LazyGroup(click.Group):
+    """Click group that imports a command module only when it is used."""
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        self._loaded: dict[str, click.Command] = {}
+        super().__init__(*args, **kwargs)
+
+    @property  # type: ignore[override]
+    def commands(self) -> dict[str, click.Command]:
+        """All commands; loads every registry entry (used by contract tests)."""
+        for name in _COMMANDS:
+            self._load(name)
+        return self._loaded
+
+    @commands.setter
+    def commands(self, value: dict[str, click.Command]) -> None:
+        self._loaded = dict(value)
+
+    def add_command(self, cmd: click.Command, name: str | None = None) -> None:
+        key = name or cmd.name
+        if not key:
+            raise TypeError("Command has no name.")
+        self._loaded[key] = cmd
+
+    def _load(self, name: str) -> click.Command | None:
+        if name in self._loaded:
+            return self._loaded[name]
+        target = _COMMANDS.get(name)
+        if target is None:
+            return None
+        module_path, attr = target.split(":")
+        cmd = getattr(importlib.import_module(module_path), attr)
+        self._loaded[name] = cmd
+        return cmd  # type: ignore[no-any-return]
+
+    def list_commands(self, ctx: click.Context) -> list[str]:
+        return sorted(set(_COMMANDS) | set(self._loaded))
+
+    def get_command(self, ctx: click.Context, cmd_name: str) -> click.Command | None:
+        return self._load(cmd_name)
+
+
+@click.group(cls=LazyGroup)
 @click.version_option(version=__version__, prog_name="ailsa")
 def cli() -> None:
     """ailsa: AI-powered Computer-Assisted Structure Elucidation.
@@ -53,29 +106,12 @@ def cli() -> None:
       nus         NUS (Non-Uniform Sampling) 2D reconstruction
       jcamp       JCAMP-DX ingestion (read -> pick -> QC -> write)
       skill       Install the agent skills that ship with ailsa
+      run         Run record: create, note, finalize, render, verify
+      spectra     Spectra view products for display
+      peaks       Peak decisions recorded in a run
+      model       Atom model recorded in a run
     """
     pass
-
-
-# Register command groups
-cli.add_command(case)
-cli.add_command(read)
-cli.add_command(pick)
-cli.add_command(analyze)
-cli.add_command(dereplicate)
-cli.add_command(identify)
-cli.add_command(predict)
-cli.add_command(detect)
-cli.add_command(lsd)
-cli.add_command(pylsd)
-cli.add_command(visualize)
-cli.add_command(fetch)
-cli.add_command(database)
-cli.add_command(fragment)
-cli.add_command(webview)
-cli.add_command(nus)
-cli.add_command(jcamp)
-cli.add_command(skill)
 
 
 LUCY_DEPRECATION_MESSAGE = (
