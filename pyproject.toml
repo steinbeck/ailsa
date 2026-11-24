@@ -41,6 +41,7 @@ dependencies = [
 [project.scripts]
 ailsa = "ailsa.cli:cli"
 lucy = "ailsa.cli:lucy_deprecated"
+ailsa-hook = "ailsa.record.hook:main"
 
 [project.optional-dependencies]
 dev = [
