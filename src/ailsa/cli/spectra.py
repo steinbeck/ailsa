@@ -99,7 +99,12 @@ def export(
     only = set(experiments) or None
 
     if run_dir is not None:
-        out_root = run_dir / "spectra"
+        from ailsa.record.artefacts import run_target
+
+        try:
+            out_root = run_target(run_dir, "spectra")
+        except ValueError as exc:
+            raise click.ClickException(f"refused to write into the run: {exc}") from exc
         inventory = _inventory_for_run(run_dir, dataset)
     else:
         from ailsa.record.inventory import build_inventory

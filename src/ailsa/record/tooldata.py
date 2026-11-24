@@ -83,6 +83,12 @@ def _write_new(target: Path, data: bytes) -> None:
     write(target, data, False)
 
 
+def _run_target(run_dir: str | os.PathLike[str], rel: str) -> Path:
+    from ailsa.record.artefacts import run_target
+
+    return run_target(run_dir, rel)
+
+
 def _dump(obj: dict[str, Any]) -> bytes:
     return (json.dumps(obj, sort_keys=True, indent=2) + "\n").encode("utf-8")
 
@@ -129,7 +135,7 @@ def record_pick(
         )
         blob = _dump(model.model_dump(mode="json", by_alias=True))
         rel = f"peaks/{expno}.{n}.json"
-        target = run.run_dir / rel
+        target = _run_target(run.run_dir, rel)
         if os.path.lexists(target):
             raise FileExistsError(f"artefact path already exists: {rel}")
         art = {
@@ -194,7 +200,7 @@ def record_identity(
         )
         blob = _dump(model.model_dump(mode="json", by_alias=True))
         rel = f"identity/{n}.json"
-        target = run.run_dir / rel
+        target = _run_target(run.run_dir, rel)
         if os.path.lexists(target):
             raise FileExistsError(f"artefact path already exists: {rel}")
         art = {
@@ -220,12 +226,23 @@ def record_identity(
     return rel
 
 
-def run_output_dir(run: RunRef, kind: str, name: str) -> Path:
-    """Create and return ``<run>/<kind>/<name>`` (mode 0700) for tool output in a run."""
+def run_output_dir(
+    run: RunRef, kind: str, name: str, *sub: str, children: tuple[str, ...] = ()
+) -> Path:
+    """Create and return ``<run>/<kind>/<name>[/<sub>...]`` (mode 0700) for tool output in a run.
+
+    Every component, and each of ``children`` below it (checked, not created), must not be a
+    symlink: tool output never goes through a link into the dataset or elsewhere (REC-05).
+    Raises ValueError otherwise.
+    """
     if kind not in _OUTPUT_KINDS:
         raise ValueError(f"unknown run output kind: {kind}")
-    if not name or name in {".", ".."} or "/" in name or "\\" in name or "\x00" in name:
-        raise ValueError(f"invalid run output name: {name!r}")
-    target = Path(run.run_dir) / kind / name
+    for part in (name, *sub, *children):
+        if not part or part in {".", ".."} or "/" in part or "\\" in part or "\x00" in part:
+            raise ValueError(f"invalid run output name: {part!r}")
+    rel = "/".join((kind, name, *sub))
+    for child in children:
+        _run_target(run.run_dir, f"{rel}/{child}")
+    target = _run_target(run.run_dir, rel)
     target.mkdir(mode=0o700, parents=True, exist_ok=True)
     return target

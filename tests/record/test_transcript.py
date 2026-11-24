@@ -103,6 +103,20 @@ def test_symlinks_skipped(new_run, tmp_path):
     assert copy_transcripts(run, link_main, None, via="x") == []
 
 
+def test_symlinked_transcript_folder_is_refused(new_run, tmp_path):
+    """WR-03: a transcript/ symlink placed in the run never receives the copies."""
+    _, run = new_run
+    root = build_projects(tmp_path)
+    elsewhere = tmp_path / "dataset"
+    elsewhere.mkdir()
+    (run / "transcript").symlink_to(elsewhere, target_is_directory=True)
+    main = root / "some-project" / f"{SID}.jsonl"
+    assert copy_transcripts(run, main, SID, via="session_end") == []
+    assert list(elsewhere.iterdir()) == []
+    warned = events(run, "warning.raised")
+    assert warned and warned[0]["payload"]["code"] == "transcript_path_refused"
+
+
 def test_size_cap_warns(new_run, tmp_path):
     _, run = new_run
     root = build_projects(tmp_path)

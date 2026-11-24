@@ -12,6 +12,7 @@ import os
 from pathlib import Path
 from typing import Any
 
+from ailsa.record.artefacts import run_target
 from ailsa.record.fsutil import atomic_write_bytes, is_regular_file_no_symlink, sha256_bytes
 from ailsa.record.log import RecordWriteRefused, append_event, read_events
 from ailsa.record.resolve import SESSION_ID_RE
@@ -79,8 +80,8 @@ def copy_transcripts(
         main = find_session_transcript(session_id)
     if main is None or not is_regular_file_no_symlink(main):
         return []
-    target_root = run / TRANSCRIPT_DIR
     copied: list[dict[str, Any]] = []
+    refused: list[str] = []
     total = 0
     cut_off = False
     for src, name in _sources(main):
@@ -95,7 +96,12 @@ def copy_transcripts(
             cut_off = True
             break
         digest = sha256_bytes(data)
-        target = target_root / name
+        try:
+            # Never write through a symlinked transcript/ (or subfolder) placed in the run.
+            target = run_target(run, f"{TRANSCRIPT_DIR}/{name}")
+        except ValueError:
+            refused.append(name)
+            continue
         if is_regular_file_no_symlink(target):
             try:
                 if sha256_bytes(target.read_bytes()) == digest:
@@ -121,6 +127,17 @@ def copy_transcripts(
                 {
                     "code": "transcript_size_cap",
                     "message": f"transcript copy stopped above {max_total} bytes",
+                },
+                actor=_actor(via),
+            )
+        if refused:
+            append_event(
+                run,
+                "warning.raised",
+                {
+                    "code": "transcript_path_refused",
+                    "message": "transcript copy refused (symlink in the run folder): "
+                    + ", ".join(refused)[:500],
                 },
                 actor=_actor(via),
             )

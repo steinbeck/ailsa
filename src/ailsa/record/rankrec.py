@@ -27,7 +27,7 @@ from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 
-from ailsa.record.artefacts import _write_new
+from ailsa.record.artefacts import _write_new, run_target
 from ailsa.record.events import artefact_id, candidate_id, ranking_id, solution_id
 from ailsa.record.fsutil import sha256_bytes, sha256_file
 from ailsa.record.log import log_session, read_events
@@ -323,7 +323,7 @@ def _write_ranking(
         model = Ranking.model_validate(build(rk))
         blob = _dump(model.model_dump(mode="json", by_alias=True))
         rel = f"rankings/{rk}.json"
-        target = run_dir / rel
+        target = run_target(run_dir, rel)
         if os.path.lexists(target):
             raise FileExistsError(f"artefact path already exists: {rel}")
         sha = sha256_bytes(blob)
@@ -568,7 +568,7 @@ def record_analysis(
             raise RecordWriteRefused("run finished: no new analyses")
         n = lg.next_counter(f"analysis:{iteration}")
         rel = f"iterations/{iteration}/analysis.{n}.json"
-        target = run_dir / rel
+        target = run_target(run_dir, rel)
         if os.path.lexists(target):
             raise FileExistsError(f"artefact path already exists: {rel}")
         art = {

@@ -247,6 +247,11 @@ def _export(
         return _result("skipped", exp, reason="no processed or raw data", started=started)
     vid = _view_id(exp, state)
     target = out_dir / exp / state
+    for folder in (out_dir / exp, target):
+        if folder.is_symlink():
+            return _result(
+                "failed", exp, reason=f"refused: {folder.name} is a symlink", started=started
+            )
     if (target / "view.json").exists() and not overwrite:
         return _result(
             "skipped", exp, state=state, view=vid, reason="already exported", started=started

@@ -425,7 +425,10 @@ class NusRunner:
         if run is not None:
             from ailsa.record.tooldata import run_output_dir
 
-            return run_output_dir(run, "nus", expdir.name)
+            try:
+                return run_output_dir(run, "nus", expdir.name)
+            except ValueError as exc:
+                raise RuntimeError(f"refused to write NUS stages into the run: {exc}") from exc
         stage_dir = expdir / "analysis" / "nus_recon" / expdir.name
         stage_dir.mkdir(parents=True, exist_ok=True)
         return stage_dir

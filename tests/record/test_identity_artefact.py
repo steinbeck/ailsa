@@ -62,6 +62,21 @@ def test_verdict_saved(new_run, monkeypatch) -> None:
     assert ev[0]["payload"]["hidden_in_blind"] is False
 
 
+def test_symlinked_identity_folder_is_refused(new_run, monkeypatch, tmp_path) -> None:
+    """WR-03: the verdict is never written through an identity/ symlink in the run."""
+    _, run_dir = new_run
+    _patch(monkeypatch)
+    _created(run_dir, False)
+    elsewhere = tmp_path / "elsewhere"
+    elsewhere.mkdir()
+    (run_dir / "identity").symlink_to(elsewhere, target_is_directory=True)
+    monkeypatch.setenv("AILSA_RUN_DIR", str(run_dir))
+    res = CliRunner().invoke(identify, ["--smiles", "CCO", "--format", "json"])
+    assert res.exit_code == 0
+    assert "record write failed" in res.stderr
+    assert list(elsewhere.iterdir()) == []
+
+
 def test_blind_run_hidden(new_run, monkeypatch) -> None:
     _, run_dir = new_run
     _patch(monkeypatch)

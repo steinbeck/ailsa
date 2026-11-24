@@ -165,14 +165,17 @@ def decide(table_path: Path, dry_run: bool, run_ref: str | None, fmt: str) -> No
     blob = (
         json.dumps(table.model_dump(mode="json", by_alias=True), sort_keys=True, indent=2) + "\n"
     ).encode("utf-8")
-    from ailsa.record.artefacts import _write_new
+    from ailsa.record.artefacts import _write_new, run_target
 
     with log_session(run.run_dir) as lg:
         if lg.finished():
             _fail("run finished: no new artefacts")
         n = lg.next_counter("art:peak-decisions")
         rel = f"peaks/decisions.{n}.json"
-        target = run.run_dir / rel
+        try:
+            target = run_target(run.run_dir, rel)
+        except ValueError as exc:
+            _fail(str(exc))
         if os.path.lexists(target):
             _fail(f"artefact path already exists: {rel}")
         art = {

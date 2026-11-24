@@ -16,7 +16,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from ailsa.record.artefacts import _write_new, copy_into_run
+from ailsa.record.artefacts import _write_new, copy_into_run, run_target
 from ailsa.record.events import DIFF_CAP, ITERATION_PURPOSES, artefact_id, iteration_id
 from ailsa.record.fsutil import sha256_bytes
 from ailsa.record.log import RecordWriteRefused, log_session, read_events
@@ -251,7 +251,10 @@ def _write_text_file(
     rel = f"iterations/{record.iteration}/{name}"
     blob = text.encode("utf-8", errors="replace")
     try:
-        _write_new(Path(record.run.run_dir) / rel, blob, False)
+        target = run_target(record.run.run_dir, rel)
+        if os.path.lexists(target):
+            return
+        _write_new(target, blob, False)
     except (OSError, ValueError):
         return
     files[key] = _file_info(Path(record.run.run_dir), rel, blob)

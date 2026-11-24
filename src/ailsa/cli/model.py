@@ -39,7 +39,7 @@ def import_model(file: Path, dry_run: bool, run_ref: str | None, fmt: str) -> No
         _report,
         _resolve_run,
     )
-    from ailsa.record.artefacts import _write_new
+    from ailsa.record.artefacts import _write_new, run_target
     from ailsa.record.events import artefact_id
     from ailsa.record.fsutil import sha256_bytes
     from ailsa.record.log import log_session
@@ -108,7 +108,10 @@ def import_model(file: Path, dry_run: bool, run_ref: str | None, fmt: str) -> No
             _fail("run finished: no new artefacts")
         n = lg.next_counter("art:atom-model")
         rel = f"model/atoms.{n}.json"
-        target = run.run_dir / rel
+        try:
+            target = run_target(run.run_dir, rel)
+        except ValueError as exc:
+            _fail(str(exc))
         if os.path.lexists(target):
             _fail(f"artefact path already exists: {rel}")
         supersedes = artefact_id("atom-model", n - 1) if n > 1 else None

@@ -46,6 +46,15 @@ def safe_relpath(run_dir: str | os.PathLike[str], rel_path: str) -> str:
     return str(pure)
 
 
+def run_target(run_dir: str | os.PathLike[str], rel_path: str) -> Path:
+    """``run_dir / rel_path`` for a tool write, after ``safe_relpath``.
+
+    Raises ValueError when a component is a symlink or the path leaves the run folder, so a
+    writer never creates folders or files through a link the agent placed in the run folder.
+    """
+    return Path(run_dir) / safe_relpath(run_dir, rel_path)
+
+
 def _read_source(src: Path, max_bytes: int) -> bytes:
     st = os.lstat(src)
     if not stat.S_ISREG(st.st_mode):

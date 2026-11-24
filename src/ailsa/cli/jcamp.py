@@ -340,7 +340,15 @@ def jcamp(
             from ailsa.record.tooldata import run_output_dir
 
             stem = input_root.name if len(resolved) == 1 and resolved[0].is_dir() else files[0].stem
-            out_root = run_output_dir(active_run, "jcamp", stem) / "nmr_peaks"
+            try:
+                out_root = (
+                    run_output_dir(
+                        active_run, "jcamp", stem, children=("nmr_peaks", "jcamp_ingest")
+                    )
+                    / "nmr_peaks"
+                )
+            except ValueError as exc:
+                raise click.ClickException(f"refused to write into the run: {exc}") from exc
     # The work root deliberately sits BESIDE out_root, not inside it, so
     # staged/quarantine JSON can never be picked up by a later
     # `ailsa nus qc <out_root>` run (102-RESEARCH.md Pitfall 3) and so a FAIL

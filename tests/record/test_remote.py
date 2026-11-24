@@ -189,6 +189,26 @@ def test_extract_refuses_traversal(tmp_path: Path) -> None:
         remote._extract_outputs(buf.getvalue(), tmp_path, {"lsd.out"})
 
 
+def test_extract_never_writes_through_a_symlink(tmp_path: Path) -> None:
+    """WR-03: a fetched file is never written through a symlink in the output folder."""
+    import io
+    import tarfile
+
+    buf = io.BytesIO()
+    with tarfile.open(fileobj=buf, mode="w") as tar:
+        info = tarfile.TarInfo("lsd.out")
+        info.size = 1
+        tar.addfile(info, io.BytesIO(b"x"))
+    out = tmp_path / "out"
+    out.mkdir()
+    victim = tmp_path / "victim.txt"
+    victim.write_text("keep")
+    (out / "lsd.out").symlink_to(victim)
+    with pytest.raises(OSError):
+        remote._extract_outputs(buf.getvalue(), out, {"lsd.out"})
+    assert victim.read_text() == "keep"
+
+
 # --- ailsa lsd run --host -------------------------------------------------------------------
 
 

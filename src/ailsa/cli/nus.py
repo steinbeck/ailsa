@@ -608,8 +608,11 @@ def pipeline(
         # REC-05: in a run, peak output goes to the run folder, not the dataset.
         from ailsa.record.tooldata import run_output_dir
 
-        nmr_peaks_dir = run_output_dir(active_run, "peaks", "nus") / resolved.name
-        nmr_peaks_dir.mkdir(parents=True, exist_ok=True)
+        try:
+            nmr_peaks_dir = run_output_dir(active_run, "peaks", "nus", resolved.name)
+        except ValueError as exc:
+            click.echo(f"NUS: refused to write peaks into the run: {exc}", err=True)
+            raise SystemExit(1) from exc
     written: list[str] = []
     quarantine: str | None = None
 

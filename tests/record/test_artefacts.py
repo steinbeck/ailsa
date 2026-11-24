@@ -90,6 +90,32 @@ def test_safe_relpath(new_run, tmp_path: Path) -> None:
     assert safe_relpath(run_dir, "peaks/a.json") == "peaks/a.json"
 
 
+def test_tool_writers_refuse_symlinked_run_folders(new_run, tmp_path: Path) -> None:
+    """WR-03: run_target and run_output_dir never create folders through a symlink."""
+    from ailsa.record.artefacts import run_target
+    from ailsa.record.resolve import RunRef
+    from ailsa.record.tooldata import run_output_dir
+
+    run_id, run_dir = new_run
+    elsewhere = tmp_path / "dataset"
+    elsewhere.mkdir()
+    for name in ("rankings", "nus", "jcamp"):
+        (run_dir / name).symlink_to(elsewhere, target_is_directory=True)
+    with pytest.raises(ValueError):
+        run_target(run_dir, "rankings/rk01.json")
+    ref = RunRef(run_dir=run_dir, run_id=run_id, via="flag")
+    with pytest.raises(ValueError):
+        run_output_dir(ref, "nus", "6")
+    with pytest.raises(ValueError):
+        run_output_dir(ref, "jcamp", "x")
+    (run_dir / "peaks").mkdir()
+    (run_dir / "peaks" / "nus").symlink_to(elsewhere, target_is_directory=True)
+    with pytest.raises(ValueError):
+        run_output_dir(ref, "peaks", "nus", "6")
+    assert list(elsewhere.iterdir()) == []
+    assert run_output_dir(ref, "peaks", "other", "6") == run_dir / "peaks" / "other" / "6"
+
+
 def test_copy_into_run(new_run, tmp_path: Path) -> None:
     _, run_dir = new_run
     src = tmp_path / "src.bin"

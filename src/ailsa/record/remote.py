@@ -293,7 +293,21 @@ def _extract_outputs(blob: bytes, out_dir: Path, allowed: set[str]) -> None:
             fh = tar.extractfile(member)
             if fh is None:
                 raise RemoteError(f"unreadable member in fetched archive: {member.name!r}")
-            (out_dir / name).write_bytes(fh.read())
+            _write_no_follow(out_dir / name, fh.read())
+
+
+def _write_no_follow(path: Path, data: bytes, *, exclusive: bool = False) -> None:
+    """Write a file, refusing (OSError) when ``path`` is a symlink: never write through one."""
+    from ailsa.record.fsutil import write_all
+
+    flags = os.O_WRONLY | os.O_CREAT | os.O_NOFOLLOW | (os.O_EXCL if exclusive else os.O_TRUNC)
+    if os.path.islink(path):
+        raise OSError(f"refusing to write through a symlink: {path}")
+    fd = os.open(path, flags, 0o644)
+    try:
+        write_all(fd, data)
+    finally:
+        os.close(fd)
 
 
 def _smiles_ok(path: Path) -> bool:
@@ -453,8 +467,11 @@ def solve_remote(
             _cleanup(alias, root, scratch)
             raise
         for filt in ("ring3", "ring4"):
-            if not (out_dir / filt).exists():
-                (out_dir / filt).write_bytes((stage / filt).read_bytes())
+            if not os.path.lexists(out_dir / filt):
+                try:
+                    _write_no_follow(out_dir / filt, (stage / filt).read_bytes(), exclusive=True)
+                except OSError:
+                    pass
         outlsd_path = info["outlsd"]["path"] if info["outlsd"]["sha256"] else None
         script = _run_sh(stem, name, lsd_path, outlsd_path, timeout_s, info["timeout"])
         blob = _tar_bytes(stage, staged, script)
