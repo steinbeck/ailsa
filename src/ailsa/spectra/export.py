@@ -56,7 +56,8 @@ def _quantise_z(z: np.ndarray[Any, Any], zmax: float) -> np.ndarray[Any, Any]:
     if denom <= 0:
         return np.zeros(z.shape, dtype=np.int16)
     q = np.sign(z) * INT16_SCALE * np.log1p(np.abs(z)) / denom
-    return np.clip(np.rint(q), -INT16_SCALE, INT16_SCALE).astype(np.int16)
+    out: np.ndarray[Any, Any] = np.clip(np.rint(q), -INT16_SCALE, INT16_SCALE).astype(np.int16)
+    return out
 
 
 def dequantise(q: np.ndarray[Any, Any], zmax: float) -> np.ndarray[Any, Any]:
@@ -64,7 +65,8 @@ def dequantise(q: np.ndarray[Any, Any], zmax: float) -> np.ndarray[Any, Any]:
     qf = np.asarray(q, dtype=np.float64)
     if zmax <= 0:
         return np.zeros(qf.shape, dtype=np.float64)
-    return np.sign(qf) * np.expm1(np.abs(qf) * np.log1p(zmax) / INT16_SCALE)
+    back: np.ndarray[Any, Any] = np.sign(qf) * np.expm1(np.abs(qf) * np.log1p(zmax) / INT16_SCALE)
+    return back
 
 
 def pool_max_abs(a: np.ndarray[Any, Any], f: int) -> np.ndarray[Any, Any]:
@@ -350,7 +352,7 @@ def _export_2d(
         )
 
     put("level0.i16", z, 1.0)
-    for n, factor in enumerate(level_factors(z.shape), start=1):
+    for n, factor in enumerate(level_factors((z.shape[0], z.shape[1])), start=1):
         put(f"level{n}.i16", pool_max_abs(z, factor), float(factor))
     p1, p2 = projections(z)
     _write(target / "proj_f1.f32", p1, "<f4")
@@ -430,6 +432,60 @@ def export_dataset(
     return results
 
 
+def register_result(
+    run_dir: Path, result: dict[str, Any], *, state_guess: str = "vendor"
+) -> list[dict[str, Any]]:
+    """Record one export result in the run: one ``spectrum.processed`` event per experiment.
+
+    Files of an ``ok`` result (relative to ``run_dir/spectra``) are registered as artefacts,
+    ``view.json`` as ``spectrum-view`` and the data files as ``spectrum-data``. Skipped and
+    failed results get the event without artefacts.
+    """
+    from ailsa.record.artefacts import safe_relpath
+    from ailsa.record.log import append_event, log_session
+
+    label = result["experiment"]
+    state = result.get("state") or state_guess
+    vid = result.get("view_id") or _view_id(label, state)
+    payload: dict[str, Any] = {
+        "experiment": label,
+        "view_id": vid,
+        "state": state,
+        "status": result["status"],
+        "seconds": result["seconds"],
+    }
+    if result.get("reason"):
+        payload["reason"] = result["reason"]
+    actor = {"kind": "tool", "name": "ailsa spectra export"}
+    refs = [f"exp:{label}", vid]
+    run = Path(run_dir)
+    if result["status"] != "ok":
+        append_event(run, "spectrum.processed", payload, actor=actor, refs=refs)
+        return []
+    staged: list[tuple[str, str, Path]] = []
+    for name in result["files"]:
+        rel = safe_relpath(run, f"spectra/{name}")
+        kind = "spectrum-view" if name.endswith("view.json") else "spectrum-data"
+        staged.append((kind, rel, run / rel))
+    hashed = [(k, r, sha256_file(path), path.stat().st_size) for k, r, path in staged]
+    entries: list[dict[str, Any]] = []
+    with log_session(run) as lg:
+        for kind, rel, digest, size in hashed:
+            n = lg.next_counter("art:" + kind)
+            entries.append(
+                {
+                    "id": f"art:{kind}:{n}",
+                    "kind": kind,
+                    "path": rel,
+                    "sha256": digest,
+                    "bytes": size,
+                    "supersedes": None,
+                }
+            )
+        lg.append("spectrum.processed", payload, actor=actor, refs=refs, artefacts=entries)
+    return entries
+
+
 __all__ = [
     "dequantise",
     "export_dataset",
@@ -438,4 +494,5 @@ __all__ = [
     "pool_max_abs",
     "projections",
     "quantise",
+    "register_result",
 ]

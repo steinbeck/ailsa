@@ -234,6 +234,111 @@ def test_export_dataset_lists_unreadable(tmp_path: Path) -> None:
     assert [r["experiment"] for r in only] == ["2"]
 
 
+# ----------------------------------------------------------------------------- command
+
+
+def _dataset(tmp_path: Path) -> Path:
+    ds = tmp_path / "ds"
+    make_1d(ds, "1")
+    make_2d(ds, "2")
+    (ds / "3").mkdir()
+    return ds
+
+
+def _events(run: Path) -> list[dict]:
+    from ailsa.record.log import read_events
+
+    return read_events(run)["events"]
+
+
+def test_command_in_run_registers_views(
+    tmp_path: Path, new_run: tuple[str, Path], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from click.testing import CliRunner
+
+    from ailsa.cli.spectra import spectra
+    from ailsa.record.fingerprint import dataset_fingerprint
+
+    run = new_run[1]
+    monkeypatch.setenv("AILSA_RUN_DIR", str(run))
+    ds = _dataset(tmp_path)
+    before = dataset_fingerprint(ds)
+    res = CliRunner().invoke(spectra, ["export", str(ds), "--format", "json"])
+    assert res.exit_code == 0, res.output
+    out = json.loads(res.output)
+    assert [v["experiment"] for v in out["views"]] == ["1", "2"]
+    assert [s["experiment"] for s in out["skipped"]] == ["3"]
+    assert out["failed"] == [] and out["seconds"] >= 0
+    assert (run / "spectra" / "2" / "vendor" / "view.json").is_file()
+    assert dataset_fingerprint(ds) == before
+    events = [e for e in _events(run) if e["type"] == "spectrum.processed"]
+    assert [e["payload"]["status"] for e in events] == ["ok", "ok", "skipped"]
+    assert events[2]["payload"]["reason"]
+    kinds = [a["kind"] for a in events[1]["artefacts"]]
+    assert kinds.count("spectrum-view") == 1 and kinds.count("spectrum-data") == 5
+    assert any(e["type"] == "spectra.scanned" for e in _events(run))
+    assert not (ds / "spectra").exists()
+
+
+def test_command_experiment_filter_and_text(
+    tmp_path: Path, new_run: tuple[str, Path], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from click.testing import CliRunner
+
+    from ailsa.cli.spectra import spectra
+
+    monkeypatch.setenv("AILSA_RUN_DIR", str(new_run[1]))
+    ds = _dataset(tmp_path)
+    res = CliRunner().invoke(spectra, ["export", str(ds), "--experiment", "1"])
+    assert res.exit_code == 0, res.output
+    assert res.output.split()[:3] == ["1", "vendor", "ok"]
+    assert len(res.output.strip().splitlines()) == 1
+
+
+def test_command_run_option(
+    tmp_path: Path, new_run: tuple[str, Path], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from click.testing import CliRunner
+
+    from ailsa.cli.spectra import spectra
+
+    ds = _dataset(tmp_path)
+    res = CliRunner().invoke(
+        spectra, ["export", str(ds), "--run", str(new_run[1]), "--experiment", "1"]
+    )
+    assert res.exit_code == 0, res.output
+    assert (new_run[1] / "spectra" / "1" / "vendor" / "view.json").is_file()
+
+
+def test_command_needs_run_or_out(tmp_path: Path, workspace: Path) -> None:
+    from click.testing import CliRunner
+
+    from ailsa.cli.spectra import spectra
+
+    res = CliRunner().invoke(spectra, ["export", str(_dataset(tmp_path))])
+    assert res.exit_code == 1
+    assert "spectra export needs an active run or --out DIR" in res.output
+
+
+def test_command_out_writes_no_event(
+    tmp_path: Path, new_run: tuple[str, Path], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from click.testing import CliRunner
+
+    from ailsa.cli.spectra import spectra
+    from ailsa.record.fingerprint import dataset_fingerprint
+
+    monkeypatch.setenv("AILSA_RUN_DIR", str(new_run[1]))
+    ds = _dataset(tmp_path)
+    before = dataset_fingerprint(ds)
+    out = tmp_path / "view-out"
+    res = CliRunner().invoke(spectra, ["export", str(ds), "--out", str(out), "--format", "json"])
+    assert res.exit_code == 0, res.output
+    assert (out / "1" / "vendor" / "data.f32").is_file()
+    assert _events(new_run[1]) == []
+    assert dataset_fingerprint(ds) == before
+
+
 # ----------------------------------------------------------------------------- real data
 
 
