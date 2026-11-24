@@ -77,6 +77,67 @@ def test_counters_increment(new_run: tuple[str, Path]) -> None:
         assert session.next_counter("ranking") == 1
 
 
+def _art(kind: str, n: int, path: str) -> dict[str, object]:
+    return {"id": f"art:{kind}:{n}", "kind": kind, "path": path, "sha256": "0" * 64,
+            "bytes": 1, "supersedes": None}
+
+
+def _seed_ids(run_dir: Path) -> None:
+    append_event(
+        run_dir,
+        "lsd.input.registered",
+        {"iteration": "it02", "parent": None, "purpose": "main", "lsd_sha256": "x", "path": "p"},
+        actor=ACTOR,
+        artefacts=[_art("lsd-input", 2, "iterations/it02/compound.lsd")],
+    )
+    append_event(
+        run_dir,
+        "ranking.computed",
+        {"ranking_id": "rk03", "method": "m", "inputs": [], "candidate_count": 0},
+        actor=ACTOR,
+        artefacts=[_art("ranking", 3, "rankings/rk03.json")],
+    )
+    append_event(
+        run_dir,
+        "identity.derived",
+        {"smiles": "C", "inchikey": None, "verdict": "v"},
+        actor=ACTOR,
+        artefacts=[_art("identity", 1, "identity/4.json")],
+    )
+
+
+def test_corrupt_counters_are_rebuilt_from_the_log(new_run: tuple[str, Path]) -> None:
+    """WR-12: an invalid .counters.json never restarts ids; the rebuild is recorded."""
+    _, run_dir = new_run
+    _seed_ids(run_dir)
+    (run_dir / ".counters.json").write_text("{not json")
+    with log_session(run_dir) as session:
+        assert session.next_counter("iteration") == 3
+        assert session.next_counter("ranking") == 4
+        assert session.next_counter("art:ranking") == 4
+        assert session.next_counter("identity") == 5
+        assert session.next_counter("art:peak-pick") == 1
+    warnings = [e for e in read_events(run_dir)["events"] if e["type"] == "warning.raised"]
+    assert len(warnings) == 1 and warnings[0]["payload"]["code"] == "counters_rebuilt"
+    assert read_events(run_dir)["integrity"]["clean"] is True
+
+
+def test_missing_counters_are_rebuilt_quietly_only_for_a_new_run(
+    new_run: tuple[str, Path]
+) -> None:
+    """WR-12: a missing file in a fresh run is normal; in a run with ids it is a warning."""
+    _, run_dir = new_run
+    with log_session(run_dir) as session:
+        assert session.next_counter("iteration") == 1
+    assert read_events(run_dir)["events"] == []
+    _seed_ids(run_dir)
+    (run_dir / ".counters.json").unlink()
+    with log_session(run_dir) as session:
+        assert session.next_counter("iteration") == 3
+    types = [e["type"] for e in read_events(run_dir)["events"]]
+    assert types.count("warning.raised") == 1
+
+
 def test_overrides_are_deterministic(new_run: tuple[str, Path]) -> None:
     _, run_dir = new_run
     ev = append_event(

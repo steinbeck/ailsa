@@ -15,6 +15,7 @@ from __future__ import annotations
 import fcntl
 import json
 import os
+import re
 import time
 from collections.abc import Iterator
 from contextlib import contextmanager
@@ -100,6 +101,56 @@ def _tail_state(fd: int, run_id: str) -> tuple[int, str, bytes]:
     return (max(seqs) if seqs else 0), prev, partial
 
 
+_ART_ID = re.compile(r"^art:([A-Za-z0-9_-]+):(\d+)$")
+_ITERATION = re.compile(r"^it(\d+)")
+_RANKING = re.compile(r"^rk(\d+)$")
+_PICK = re.compile(r"^pick:([^:\s]+):(\d+)$")
+_IDENTITY_PATH = re.compile(r"^identity/(\d+)\.json$")
+_ANALYSIS_PATH = re.compile(r"^iterations/([^/]+)/analysis\.(\d+)\.json$")
+
+
+def counters_from_events(events: list[dict[str, Any]]) -> dict[str, int]:
+    """The id counters as the log implies them: the highest number used per counter name."""
+    out: dict[str, int] = {}
+
+    def bump(name: str, value: str) -> None:
+        out[name] = max(out.get(name, 0), int(value))
+
+    for ev in events:
+        if not isinstance(ev, dict):
+            continue
+        raw_payload = ev.get("payload")
+        payload: dict[str, Any] = raw_payload if isinstance(raw_payload, dict) else {}
+        etype = ev.get("type")
+        if etype == "lsd.input.registered":
+            m = _ITERATION.match(str(payload.get("iteration") or ""))
+            if m:
+                bump("iteration", m.group(1))
+        elif etype == "ranking.computed":
+            m = _RANKING.match(str(payload.get("ranking_id") or ""))
+            if m:
+                bump("ranking", m.group(1))
+        elif etype == "peaks.picked":
+            m = _PICK.match(str(payload.get("pick_id") or ""))
+            if m:
+                bump("pick:" + m.group(1), m.group(2))
+        artefacts = ev.get("artefacts")
+        for art in artefacts if isinstance(artefacts, list) else []:
+            if not isinstance(art, dict):
+                continue
+            m = _ART_ID.match(str(art.get("id") or ""))
+            if m:
+                bump("art:" + m.group(1), m.group(2))
+            rel = str(art.get("path") or "")
+            m = _IDENTITY_PATH.match(rel)
+            if m:
+                bump("identity", m.group(1))
+            m = _ANALYSIS_PATH.match(rel)
+            if m:
+                bump("analysis:" + m.group(1), m.group(2))
+    return out
+
+
 class LockedLog:
     def __init__(self, run_dir: Path) -> None:
         self.run_dir = run_dir
@@ -109,17 +160,46 @@ class LockedLog:
         return (self.run_dir / FINISHED).exists()
 
     def next_counter(self, name: str) -> int:
+        """Next number for ``name``; called under the log lock.
+
+        ``.counters.json`` is a cache. When it is missing or invalid the counters are rebuilt
+        from the ids in the log (so ids never restart), and a rebuild that changes anything is
+        recorded as ``warning.raised``.
+        """
         path = self.run_dir / COUNTERS
+        counters: dict[str, int] | None = None
+        problem = "invalid"
         try:
-            counters = json.loads(path.read_text(encoding="utf-8"))
-            if not isinstance(counters, dict):
-                counters = {}
+            loaded = json.loads(path.read_text(encoding="utf-8"))
+            if isinstance(loaded, dict) and all(
+                isinstance(v, int) and not isinstance(v, bool) for v in loaded.values()
+            ):
+                counters = loaded
+        except FileNotFoundError:
+            problem = "missing"
         except (OSError, ValueError):
-            counters = {}
-        value = int(counters.get(name, 0)) + 1
+            pass
+        if counters is None:
+            counters = counters_from_events(read_events(self.run_dir)["events"])
+            if problem == "invalid" or counters:
+                self._counters_warning(problem)
+        value = counters.get(name, 0) + 1
         counters[name] = value
         atomic_write_json(path, counters)
         return value
+
+    def _counters_warning(self, problem: str) -> None:
+        try:
+            self.append(
+                "warning.raised",
+                {
+                    "code": "counters_rebuilt",
+                    "message": f"{COUNTERS} was {problem}; id counters rebuilt from the event log",
+                },
+                actor={"kind": "tool", "name": "ailsa.record.log"},
+            )
+        except RecordWriteRefused:
+            pass
 
     def append(
         self,
