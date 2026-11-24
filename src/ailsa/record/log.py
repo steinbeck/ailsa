@@ -59,8 +59,27 @@ def _run_id(run_dir: Path) -> str:
         return run_dir.name
 
 
+def _seq_of(raw: bytes) -> int | None:
+    """The ``seq`` of a complete line that parses as an event (the reader's rule), else None."""
+    try:
+        obj = json.loads(raw)
+    except ValueError:
+        return None
+    if not isinstance(obj, dict):
+        return None
+    seq = obj.get("seq")
+    return seq if isinstance(seq, int) and not isinstance(seq, bool) else None
+
+
 def _tail_state(fd: int, run_id: str) -> tuple[int, str, bytes]:
-    """Return (last valid seq, hash of last complete line, partial tail bytes)."""
+    """Return (highest seq in the tail, hash of the last complete line, partial tail bytes).
+
+    The next event continues after the highest sequence number, so a duplicated or
+    out-of-order line never makes the writer reuse a number. It chains to the raw bytes of the
+    last complete line, parseable or not, which is what the reader expects after it. The
+    window grows until it holds an event; the genesis hash is used only while the file has no
+    complete line at all (a partial tail is then chained by ``log.recovered``).
+    """
     size = os.fstat(fd).st_size
     genesis = sha256_bytes(run_id.encode("utf-8"))
     if size == 0:
@@ -71,18 +90,14 @@ def _tail_state(fd: int, run_id: str) -> tuple[int, str, bytes]:
         data = os.pread(fd, size - start, start)
         parts = data.split(b"\n")
         partial = parts[-1]
-        complete = parts[:-1]
-        if start == 0 or len(complete) >= 2:
+        # A line with a leading cut-off is only safe when something precedes it in the window.
+        complete = parts[:-1] if start == 0 else parts[1:-1]
+        seqs = [s for s in (_seq_of(raw) for raw in complete) if s is not None]
+        if start == 0 or seqs:
             break
         window *= 2
-    # A line with a leading cut-off is only safe when something precedes it in the window.
-    for raw in reversed(complete if start == 0 else complete[1:]):
-        try:
-            obj = json.loads(raw)
-            return int(obj["seq"]), sha256_bytes(raw), partial
-        except (ValueError, KeyError, TypeError):
-            continue
-    return 0, genesis, partial
+    prev = sha256_bytes(complete[-1]) if complete else genesis
+    return (max(seqs) if seqs else 0), prev, partial
 
 
 class LockedLog:
@@ -270,6 +285,7 @@ def read_events(run_dir: str | os.PathLike[str]) -> dict[str, Any]:
     integrity: dict[str, Any] = {
         "clean": True,
         "first_bad_seq": None,
+        "first_bad_line": None,
         "reason": None,
         "events": 0,
         "head": None,
@@ -282,26 +298,34 @@ def read_events(run_dir: str | os.PathLike[str]) -> dict[str, Any]:
 
     events: list[dict[str, Any]] = []
     hashes: dict[int, str] = {}
+    # Suspects are marked by position in the file, not by seq: after a duplicated or
+    # out-of-order line the seq numbers no longer say where the record changed (D-09).
+    first_bad_pos: int | None = None
 
-    def flag(seq: int, reason: str) -> None:
+    def flag(seq: int, reason: str, pos: int, line: int | None) -> None:
+        nonlocal first_bad_pos
         if integrity["first_bad_seq"] is None:
             integrity["first_bad_seq"] = seq
+            integrity["first_bad_line"] = line
             integrity["reason"] = reason
             integrity["clean"] = False
+            first_bad_pos = pos
 
     parts = data.split(b"\n")
     tail = parts[-1]
     lines = parts[:-1]
     expected_prev = sha256_bytes(run_id.encode("utf-8"))
     expected_seq = 1
-    pending: tuple[str, int] | None = None
+    # (hash, expected seq, event position, line number) of an unparseable line not yet settled
+    pending: tuple[str, int, int, int] | None = None
     last_event_hash: str | None = None
     last_seq = 0
+    last_line = 0
 
     def settle_pending() -> None:
         nonlocal pending
         if pending is not None:
-            flag(pending[1], "unparseable")
+            flag(pending[1], "unparseable", pending[2], pending[3])
             pending = None
 
     for number, raw in enumerate(lines, start=1):
@@ -313,7 +337,7 @@ def read_events(run_dir: str | os.PathLike[str]) -> dict[str, Any]:
         except ValueError:
             settle_pending()
             integrity["bad_lines"].append({"line": number, "bytes": len(raw)})
-            pending = (digest, expected_seq)
+            pending = (digest, expected_seq, len(events), number)
             expected_prev = digest
             continue
         seq = obj["seq"]
@@ -323,42 +347,47 @@ def read_events(run_dir: str | os.PathLike[str]) -> dict[str, Any]:
             and obj.get("prev") == pending[0]
             and seq == expected_seq
         ):
-            flag(seq, "truncated_recovered")
+            flag(seq, "truncated_recovered", len(events), pending[3])
             pending = None
         else:
             settle_pending()
             if seq != expected_seq:
-                flag(expected_seq, "seq_gap")
+                flag(expected_seq, "seq_gap", len(events), number)
             elif obj.get("prev") != expected_prev:
-                flag(max(last_seq, 1) if last_seq else seq, "chain_break")
+                # The previous event's bytes changed (its hash no longer matches): it is the
+                # first suspect one.
+                if events:
+                    flag(max(last_seq, 1), "chain_break", len(events) - 1, last_line)
+                else:
+                    flag(seq, "chain_break", 0, number)
         events.append(obj)
         hashes[seq] = digest
         last_event_hash = digest
         last_seq = seq
+        last_line = number
         expected_prev = digest
         expected_seq = seq + 1
     settle_pending()
     if tail:
         integrity["bad_lines"].append({"line": len(lines) + 1, "bytes": len(tail)})
-        flag(expected_seq, "truncated")
+        flag(expected_seq, "truncated", len(events), len(lines) + 1)
 
     finished = path / FINISHED
     if finished.exists():
         try:
             fin = json.loads(finished.read_text(encoding="utf-8"))
             fseq = int(fin["seq"])
+            pos = next((i for i, e in enumerate(events) if e["seq"] >= fseq), len(events))
             if fseq in hashes and hashes[fseq] != fin.get("head"):
-                flag(fseq, "chain_break")
+                flag(fseq, "chain_break", pos, None)
             elif fseq not in hashes:
-                flag(fseq, "seq_gap")
+                flag(fseq, "seq_gap", pos, None)
         except (OSError, ValueError, KeyError, TypeError):
             pass
 
-    first_bad = integrity["first_bad_seq"]
-    if first_bad is not None:
-        for obj in events:
-            if obj["seq"] >= first_bad:
-                obj["_suspect"] = True
+    if first_bad_pos is not None:
+        for obj in events[first_bad_pos:]:
+            obj["_suspect"] = True
     integrity["events"] = len(events)
     integrity["head"] = last_event_hash
     return {"events": events, "integrity": integrity}

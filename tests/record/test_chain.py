@@ -83,3 +83,41 @@ def test_truncated_tail_then_recovery(new_run: tuple[str, Path]) -> None:
     assert integrity["clean"] is False
     # the damaged bytes are kept as evidence
     assert path.read_bytes().startswith(cut)
+
+
+def test_duplicate_line_never_reuses_seq_and_marks_by_position(new_run: tuple[str, Path]) -> None:
+    """WR-01: after a duplicated line the writer continues after the highest seq, and the
+    reader marks the duplicate and everything after it as suspect."""
+    _, run_dir = new_run
+    _fill(run_dir, 3)
+    path = run_dir / "events.jsonl"
+    lines = path.read_bytes().split(b"\n")
+    with open(path, "ab") as fh:
+        fh.write(lines[1] + b"\n")
+    new = append_event(run_dir, "note.added", {"text": "after", "sender": "t"}, actor=ACTOR)
+    assert new["seq"] == 4
+    result = read_events(run_dir)
+    integrity = result["integrity"]
+    assert integrity["clean"] is False
+    assert integrity["first_bad_line"] == 4
+    flags = [(e["seq"], bool(e.get("_suspect"))) for e in result["events"]]
+    assert flags == [(1, False), (2, False), (3, False), (2, True), (4, True)]
+
+
+def test_writer_never_falls_back_to_genesis(new_run: tuple[str, Path]) -> None:
+    """WR-01: a tail window full of unparseable bytes does not restart the chain at seq 1."""
+    from ailsa.record.fsutil import sha256_bytes
+
+    _, run_dir = new_run
+    _fill(run_dir, 2)
+    path = run_dir / "events.jsonl"
+    garbage = b"x" * (200 * 1024)
+    with open(path, "ab") as fh:
+        fh.write(garbage + b"\n")
+    new = append_event(run_dir, "note.added", {"text": "after", "sender": "t"}, actor=ACTOR)
+    assert new["seq"] == 3
+    assert new["prev"] == sha256_bytes(garbage)
+    result = read_events(run_dir)
+    assert result["integrity"]["reason"] == "unparseable"
+    assert result["integrity"]["first_bad_line"] == 3
+    assert [bool(e.get("_suspect")) for e in result["events"]] == [False, False, True]
