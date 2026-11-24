@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v11.0
 milestone_name: AILSA Rename
 status: executing
-last_updated: "2026-11-24T13:39:46.623Z"
-last_activity: 2026-11-24 -- web-interface decisions, spec 2.3, Phase 106.1 inserted, public example run started
+last_updated: "2026-11-24T17:45:00.000Z"
+last_activity: 2026-11-24 -- Phase 106.1 planning complete (20 plans, 8 waves)
 progress:
-  total_phases: 10
+  total_phases: 11
   completed_phases: 2
-  total_plans: 16
+  total_plans: 36
   completed_plans: 16
-  percent: 20
+  percent: 18
 ---
 
 # lucy-ng State
@@ -26,8 +26,8 @@ See: .planning/PROJECT.md (updated 2026-07-21)
 
 Phase: 105 (documentation-and-outside-face) — COMPLETE, verified 2026-10-14
 Plan: 10 of 10
-Status: Phase 105 verified (15/15 after closing the deck-PDF gap); pushed to GitHub `steinbeck/ailsa`
-Last activity: 2026-11-24 -- web-interface decisions, spec 2.3, Phase 106.1 inserted, public example run started
+Status: Phase 106.1 ready to execute (20 plans, 8 waves)
+Last activity: 2026-11-24 -- Phase 106.1 planning complete (20 plans, 8 waves)
 
 **Resume here (2026-11-24):**
 
@@ -52,8 +52,13 @@ Last activity: 2026-11-24 -- web-interface decisions, spec 2.3, Phase 106.1 inse
         `ailsa run start` plus a first skill step; warnings instead of aborts on bookkeeping gaps;
         an agent working corner; a note command for prose. Acceptance: one lean α-terpineol run with
         a small Claude model on Sheldon.
-      - **Next step: `/gsd-plan-phase 106.1`.**
-    - **Public example run (D18: α-terpineol, BMRB bmse000667), running since 2026-11-24 ~14:20 UTC.**
+      - **Planned 2026-11-24:** 20 plans in 8 waves (`106.1-01` … `106.1-20-PLAN.md`), plan check
+        passed. Sheldon work happens in a separate checkout `/mnt/raid_drive/chris/ailsa-106.1/` filled
+        by git bundle, never by push. **Next step: `/gsd-execute-phase 106.1`.**
+    - **Public example run (D18: α-terpineol, BMRB bmse000667): DONE 2026-11-24, solved de novo** in
+      58 min (3 iterations, 336 → 20 → 1 solution, 13C MAE 0.68 ppm). Copy on vitus:
+      `~/Dropbox/develop/data/nmrdata/ailsa-example-terpineol/terpineol-run-2026-11-24/`; the tmux
+      session on Sheldon is left open (its transcript feeds the prototype's Team section).
       - It runs in an interactive session on Sheldon, tmux session `ailsa-terpineol`, started via
         `/mnt/raid_drive/chris/ailsa-example/launch-terpineol.sh`.
       - It is a de novo run; Opus 5.5 with xhigh effort.
