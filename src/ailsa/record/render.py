@@ -205,7 +205,8 @@ def render_final(
         for alt in alts:
             lines.append(
                 f"- Candidate {md_escape(alt.get('rank', alt.get('candidate')))}: "
-                f"{md_escape(alt.get('status'))} ({md_escape(alt.get('reason', ''))})"
+                f"{md_escape(alt.get('status'))} "
+                f"({md_escape(alt.get('reason') or 'no reason given')})"
             )
     if decl.get("iterations"):
         lines += ["", "Iterations covered: " + ", ".join(md_escape(i) for i in decl["iterations"])]

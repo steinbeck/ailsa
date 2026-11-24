@@ -110,3 +110,21 @@ def test_changed_ranking_file_is_flagged(tmp_path: Path) -> None:
     render_run(run, now=NOW)
     text = (run / "renderings" / "final_results.md").read_text()
     assert "ranking file changed after it was recorded" in text
+
+
+def test_alternative_without_reason_has_no_empty_parentheses() -> None:
+    m = {
+        "run_id": "r",
+        "dataset": {"label": "example"},
+        "status": {"state": "result_declared"},
+        "final": {
+            "outcome": "proposal",
+            "candidate": 1,
+            "confidence": "low",
+            "alternatives": [{"rank": 2, "status": "excluded"}],
+        },
+    }
+    decl = {"alternatives": [{"rank": 2, "status": "excluded"}]}
+    text = render_final(m, None, decl)
+    assert "Candidate 2: excluded (no reason given)" in text
+    assert "()" not in text
