@@ -72,7 +72,8 @@ def test_find_prior_runs(tmp_path: Path) -> None:
         d.mkdir(parents=True)
     for d, value in ((hit, "sha256:aaa"), (miss, "sha256:bbb"), (nomarker, "sha256:aaa")):
         (d / "events.jsonl").write_text(
-            json.dumps({"type": "run.created", "payload": {"dataset": {"fingerprint": value}}}) + "\n"
+            json.dumps({"type": "run.created", "payload": {"dataset": {"fingerprint": value}}})
+            + "\n"
         )
     (hit / MARKER).write_text("{}")
     (miss / MARKER).write_text("{}")
