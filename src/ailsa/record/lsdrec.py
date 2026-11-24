@@ -322,6 +322,20 @@ def finish_solver_run(
         refs=[record.iteration],
     )
     with log_session(run_dir) as lg:
+        # The tool wrote these files itself: register each (REC-01/REC-02) so they are
+        # not reported as unregistered. Agent-placed files stay unregistered (D-08).
+        tool_files = [
+            {
+                "id": artefact_id("solver-file", lg.next_counter("art:solver-file")),
+                "kind": "solver-file",
+                "path": info["path"],
+                "sha256": info["sha256"],
+                "bytes": info["bytes"],
+                "supersedes": None,
+            }
+            for key, info in files.items()
+            if key != "input"
+        ]
         lg.append(
             "solutions.converted",
             {
@@ -331,6 +345,7 @@ def finish_solver_run(
             },
             actor=_ACTOR,
             refs=[record.iteration],
+            artefacts=tool_files,
         )
     return {
         "iteration": record.iteration,

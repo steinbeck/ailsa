@@ -154,3 +154,21 @@ def test_outside_a_run_nothing_is_recorded(new_run, tmp_path, monkeypatch) -> No
     assert not (run_dir / "iterations").exists() or not any((run_dir / "iterations").iterdir())
     text = _invoke("compound.lsd")
     assert "Outcome" not in text.stdout and "Solutions found: 2" in text.stdout
+
+
+def test_solver_outputs_registered_and_agent_file_still_warned(run_env, monkeypatch) -> None:
+    from ailsa.record.finalize import unregistered_files
+
+    run_dir, it = run_env
+    monkeypatch.chdir(it)
+    res = _invoke("compound.lsd", "--format", "json")
+    assert res.exit_code == 0, res.output
+    (run_dir / "hand_placed.txt").write_text("not from a tool")
+    assert unregistered_files(run_dir, _events(run_dir)) == ["hand_placed.txt"]
+    kinds = {
+        a["path"]
+        for e in _events(run_dir)
+        for a in e.get("artefacts") or []
+        if a["kind"] == "solver-file"
+    }
+    assert "iterations/it01/lsd.out" in kinds
