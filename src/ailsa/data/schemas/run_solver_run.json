@@ -1,0 +1,292 @@
+{
+  "$defs": {
+    "FileInfo": {
+      "additionalProperties": false,
+      "properties": {
+        "bytes": {
+          "minimum": 0,
+          "title": "Bytes",
+          "type": "integer"
+        },
+        "path": {
+          "title": "Path",
+          "type": "string"
+        },
+        "sha256": {
+          "title": "Sha256",
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "sha256",
+        "bytes"
+      ],
+      "title": "FileInfo",
+      "type": "object"
+    },
+    "ToolInfo": {
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Path"
+        },
+        "sha256": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Sha256"
+        },
+        "version": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Version"
+        }
+      },
+      "title": "ToolInfo",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "count": {
+      "minimum": 0,
+      "title": "Count",
+      "type": "integer"
+    },
+    "elapsed_s": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Elapsed S"
+    },
+    "error_line": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Error Line"
+    },
+    "exit_code": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Exit Code"
+    },
+    "files": {
+      "additionalProperties": {
+        "$ref": "#/$defs/FileInfo"
+      },
+      "title": "Files",
+      "type": "object"
+    },
+    "host": {
+      "title": "Host",
+      "type": "string"
+    },
+    "iteration": {
+      "title": "Iteration",
+      "type": "string"
+    },
+    "limit": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Limit"
+    },
+    "lsd": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ToolInfo"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "outcome": {
+      "enum": [
+        "not_run",
+        "blocked",
+        "solutions",
+        "no_solution",
+        "limit_reached",
+        "timeout",
+        "error"
+      ],
+      "title": "Outcome",
+      "type": "string"
+    },
+    "outlsd": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ToolInfo"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "parent": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Parent"
+    },
+    "partial_count": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Partial Count"
+    },
+    "provenance": {
+      "enum": [
+        "run",
+        "imported"
+      ],
+      "title": "Provenance",
+      "type": "string"
+    },
+    "purpose": {
+      "enum": [
+        "main",
+        "family",
+        "diagnostic",
+        "control"
+      ],
+      "title": "Purpose",
+      "type": "string"
+    },
+    "remote": {
+      "default": false,
+      "title": "Remote",
+      "type": "boolean"
+    },
+    "schema": {
+      "const": "ailsa.solver-run",
+      "default": "ailsa.solver-run",
+      "title": "Schema",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "1",
+      "default": "1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "scratch_dir": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Scratch Dir"
+    },
+    "smiles_absent_reason": {
+      "anyOf": [
+        {
+          "enum": [
+            "no_solution",
+            "conversion_skipped_large",
+            "conversion_failed",
+            "timeout",
+            "not_run",
+            "blocked",
+            "error"
+          ],
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Smiles Absent Reason"
+    },
+    "timeout_s": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Timeout S"
+    }
+  },
+  "required": [
+    "iteration",
+    "purpose",
+    "host",
+    "provenance",
+    "outcome",
+    "count"
+  ],
+  "title": "SolverRun",
+  "type": "object"
+}

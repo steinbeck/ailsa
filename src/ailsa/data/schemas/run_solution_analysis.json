@@ -1,0 +1,238 @@
+{
+  "$defs": {
+    "ElimInfo": {
+      "additionalProperties": false,
+      "properties": {
+        "max_bonds": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Bonds"
+        },
+        "max_eliminated": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Eliminated"
+        }
+      },
+      "title": "ElimInfo",
+      "type": "object"
+    },
+    "SolutionCorrelation": {
+      "additionalProperties": false,
+      "properties": {
+        "allowed_max": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Allowed Max"
+        },
+        "carbon": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Carbon"
+        },
+        "exceeds_window": {
+          "default": false,
+          "title": "Exceeds Window",
+          "type": "boolean"
+        },
+        "j_coupling": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "J Coupling"
+        },
+        "kind": {
+          "title": "Kind",
+          "type": "string"
+        },
+        "path_length": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Path Length"
+        },
+        "proton": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Proton"
+        }
+      },
+      "required": [
+        "kind"
+      ],
+      "title": "SolutionCorrelation",
+      "type": "object"
+    },
+    "SolutionEntry": {
+      "additionalProperties": false,
+      "properties": {
+        "correlations": {
+          "items": {
+            "$ref": "#/$defs/SolutionCorrelation"
+          },
+          "title": "Correlations",
+          "type": "array"
+        },
+        "dropped_by_elim": {
+          "items": {
+            "type": "integer"
+          },
+          "title": "Dropped By Elim",
+          "type": "array"
+        },
+        "solution": {
+          "title": "Solution",
+          "type": "integer"
+        },
+        "solution_id": {
+          "title": "Solution Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "solution",
+        "solution_id"
+      ],
+      "title": "SolutionEntry",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "analysed": {
+      "title": "Analysed",
+      "type": "integer"
+    },
+    "cap": {
+      "title": "Cap",
+      "type": "integer"
+    },
+    "elim": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ElimInfo"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "elim_active": {
+      "default": false,
+      "title": "Elim Active",
+      "type": "boolean"
+    },
+    "iteration": {
+      "title": "Iteration",
+      "type": "string"
+    },
+    "lsd_sha256": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Lsd Sha256"
+    },
+    "schema": {
+      "const": "ailsa.solution-analysis",
+      "default": "ailsa.solution-analysis",
+      "title": "Schema",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "1",
+      "default": "1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "sol_sha256": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Sol Sha256"
+    },
+    "solutions": {
+      "items": {
+        "$ref": "#/$defs/SolutionEntry"
+      },
+      "title": "Solutions",
+      "type": "array"
+    },
+    "total": {
+      "title": "Total",
+      "type": "integer"
+    },
+    "truncated": {
+      "title": "Truncated",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "iteration",
+    "cap",
+    "analysed",
+    "total",
+    "truncated"
+  ],
+  "title": "SolutionAnalysis",
+  "type": "object"
+}

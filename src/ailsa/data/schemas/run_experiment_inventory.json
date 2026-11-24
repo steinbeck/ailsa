@@ -1,0 +1,316 @@
+{
+  "$defs": {
+    "ExperimentEntry": {
+      "additionalProperties": false,
+      "properties": {
+        "edited": {
+          "default": false,
+          "title": "Edited",
+          "type": "boolean"
+        },
+        "folder_alias": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Folder Alias"
+        },
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "kind": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Kind"
+        },
+        "nucleus": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Nucleus"
+        },
+        "nucleus_f1": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Nucleus F1"
+        },
+        "nus": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/NusInfo"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "processed": {
+          "default": false,
+          "title": "Processed",
+          "type": "boolean"
+        },
+        "pulse_program": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Pulse Program"
+        },
+        "raw": {
+          "default": false,
+          "title": "Raw",
+          "type": "boolean"
+        },
+        "readable": {
+          "default": true,
+          "title": "Readable",
+          "type": "boolean"
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reason"
+        },
+        "scans": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Scans"
+        },
+        "sfo1_f1_mhz": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Sfo1 F1 Mhz"
+        },
+        "sfo1_mhz": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Sfo1 Mhz"
+        },
+        "solvent": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Solvent"
+        },
+        "source_files": {
+          "items": {
+            "$ref": "#/$defs/SourceFile"
+          },
+          "title": "Source Files",
+          "type": "array"
+        },
+        "sw_hz": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Sw Hz"
+        },
+        "temperature_k": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Temperature K"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "title": "ExperimentEntry",
+      "type": "object"
+    },
+    "JcampFile": {
+      "additionalProperties": false,
+      "properties": {
+        "headers": {
+          "additionalProperties": true,
+          "title": "Headers",
+          "type": "object"
+        },
+        "path": {
+          "title": "Path",
+          "type": "string"
+        },
+        "sha256": {
+          "title": "Sha256",
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "sha256"
+      ],
+      "title": "JcampFile",
+      "type": "object"
+    },
+    "NusInfo": {
+      "additionalProperties": false,
+      "properties": {
+        "fraction": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Fraction"
+        },
+        "schedule_present": {
+          "default": false,
+          "title": "Schedule Present",
+          "type": "boolean"
+        }
+      },
+      "title": "NusInfo",
+      "type": "object"
+    },
+    "SourceFile": {
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "title": "Path",
+          "type": "string"
+        },
+        "sha256": {
+          "title": "Sha256",
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "sha256"
+      ],
+      "title": "SourceFile",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "blind": {
+      "title": "Blind",
+      "type": "boolean"
+    },
+    "dataset_fingerprint": {
+      "title": "Dataset Fingerprint",
+      "type": "string"
+    },
+    "experiments": {
+      "items": {
+        "$ref": "#/$defs/ExperimentEntry"
+      },
+      "title": "Experiments",
+      "type": "array"
+    },
+    "jcamp_files": {
+      "items": {
+        "$ref": "#/$defs/JcampFile"
+      },
+      "title": "Jcamp Files",
+      "type": "array"
+    },
+    "schema": {
+      "const": "ailsa.experiment-inventory",
+      "default": "ailsa.experiment-inventory",
+      "title": "Schema",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "1",
+      "default": "1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "unreadable": {
+      "default": 0,
+      "minimum": 0,
+      "title": "Unreadable",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "dataset_fingerprint",
+    "blind"
+  ],
+  "title": "ExperimentInventory",
+  "type": "object"
+}

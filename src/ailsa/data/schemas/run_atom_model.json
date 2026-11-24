@@ -1,0 +1,192 @@
+{
+  "$defs": {
+    "AtomEntry": {
+      "additionalProperties": false,
+      "properties": {
+        "element": {
+          "title": "Element",
+          "type": "string"
+        },
+        "evidence": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Evidence",
+          "type": "array"
+        },
+        "h_count": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "H Count"
+        },
+        "hybridisation": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Hybridisation"
+        },
+        "id": {
+          "pattern": "^at:\\d+$",
+          "title": "Id",
+          "type": "string"
+        },
+        "lsd_index": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Lsd Index"
+        },
+        "multiplicity": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Multiplicity"
+        },
+        "shift": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Shift"
+        },
+        "sources": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Sources",
+          "type": "object"
+        }
+      },
+      "required": [
+        "id",
+        "element"
+      ],
+      "title": "AtomEntry",
+      "type": "object"
+    },
+    "CorrelationEntry": {
+      "additionalProperties": false,
+      "properties": {
+        "atoms": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Atoms",
+          "type": "array"
+        },
+        "confidence": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Confidence"
+        },
+        "id": {
+          "pattern": "^cor:[A-Za-z0-9_-]+:\\d+$",
+          "title": "Id",
+          "type": "string"
+        },
+        "kind": {
+          "title": "Kind",
+          "type": "string"
+        },
+        "peaks": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Peaks",
+          "type": "array"
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reason"
+        },
+        "use": {
+          "default": true,
+          "title": "Use",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "kind"
+      ],
+      "title": "CorrelationEntry",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "atoms": {
+      "items": {
+        "$ref": "#/$defs/AtomEntry"
+      },
+      "title": "Atoms",
+      "type": "array"
+    },
+    "correlations": {
+      "items": {
+        "$ref": "#/$defs/CorrelationEntry"
+      },
+      "title": "Correlations",
+      "type": "array"
+    },
+    "schema": {
+      "const": "ailsa.atom-model",
+      "default": "ailsa.atom-model",
+      "title": "Schema",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "1",
+      "default": "1",
+      "title": "Schema Version",
+      "type": "string"
+    }
+  },
+  "title": "AtomModel",
+  "type": "object"
+}

@@ -1,0 +1,317 @@
+{
+  "$defs": {
+    "ManifestHarness": {
+      "additionalProperties": true,
+      "properties": {
+        "hook_counts": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "title": "Hook Counts",
+          "type": "object"
+        },
+        "hooks_recorded": {
+          "default": false,
+          "title": "Hooks Recorded",
+          "type": "boolean"
+        },
+        "name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Name"
+        }
+      },
+      "title": "ManifestHarness",
+      "type": "object"
+    },
+    "ManifestStatus": {
+      "additionalProperties": true,
+      "properties": {
+        "counts_as_clean": {
+          "default": false,
+          "title": "Counts As Clean",
+          "type": "boolean"
+        },
+        "ended_utc": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ended Utc"
+        },
+        "heartbeat_utc": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Heartbeat Utc"
+        },
+        "inferred": {
+          "default": false,
+          "title": "Inferred",
+          "type": "boolean"
+        },
+        "label": {
+          "default": "",
+          "title": "Label",
+          "type": "string"
+        },
+        "last_event_utc": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Last Event Utc"
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reason"
+        },
+        "started_utc": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Started Utc"
+        },
+        "state": {
+          "enum": [
+            "running",
+            "result_declared",
+            "declaration_stale",
+            "stopped_before_result",
+            "no_heartbeat"
+          ],
+          "title": "State",
+          "type": "string"
+        }
+      },
+      "required": [
+        "state"
+      ],
+      "title": "ManifestStatus",
+      "type": "object"
+    }
+  },
+  "additionalProperties": true,
+  "properties": {
+    "agents": {
+      "additionalProperties": true,
+      "title": "Agents",
+      "type": "object"
+    },
+    "artefacts": {
+      "additionalProperties": true,
+      "title": "Artefacts",
+      "type": "object"
+    },
+    "assisted": {
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Assisted"
+    },
+    "blind": {
+      "default": false,
+      "title": "Blind",
+      "type": "boolean"
+    },
+    "class": {
+      "anyOf": [
+        {
+          "enum": [
+            "public",
+            "internal",
+            "confidential"
+          ],
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Class"
+    },
+    "dataset": {
+      "additionalProperties": true,
+      "title": "Dataset",
+      "type": "object"
+    },
+    "environment": {
+      "additionalProperties": true,
+      "title": "Environment",
+      "type": "object"
+    },
+    "experiments": {
+      "additionalProperties": true,
+      "title": "Experiments",
+      "type": "object"
+    },
+    "final": {
+      "additionalProperties": true,
+      "title": "Final",
+      "type": "object"
+    },
+    "foreign_host_events": {
+      "default": 0,
+      "title": "Foreign Host Events",
+      "type": "integer"
+    },
+    "harness": {
+      "$ref": "#/$defs/ManifestHarness"
+    },
+    "human_messages": {
+      "default": 0,
+      "title": "Human Messages",
+      "type": "integer"
+    },
+    "identity": {
+      "items": {},
+      "title": "Identity",
+      "type": "array"
+    },
+    "integrity": {
+      "additionalProperties": true,
+      "title": "Integrity",
+      "type": "object"
+    },
+    "iterations": {
+      "additionalProperties": true,
+      "title": "Iterations",
+      "type": "object"
+    },
+    "not_blind_reason": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Not Blind Reason"
+    },
+    "notes": {
+      "default": 0,
+      "title": "Notes",
+      "type": "integer"
+    },
+    "picks": {
+      "additionalProperties": true,
+      "title": "Picks",
+      "type": "object"
+    },
+    "prior_runs": {
+      "additionalProperties": true,
+      "title": "Prior Runs",
+      "type": "object"
+    },
+    "rankings": {
+      "additionalProperties": true,
+      "title": "Rankings",
+      "type": "object"
+    },
+    "request": {
+      "additionalProperties": true,
+      "title": "Request",
+      "type": "object"
+    },
+    "run_id": {
+      "title": "Run Id",
+      "type": "string"
+    },
+    "schema": {
+      "const": "ailsa.run-manifest",
+      "default": "ailsa.run-manifest",
+      "title": "Schema",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "1",
+      "default": "1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "spans": {
+      "additionalProperties": true,
+      "title": "Spans",
+      "type": "object"
+    },
+    "status": {
+      "$ref": "#/$defs/ManifestStatus"
+    },
+    "views": {
+      "additionalProperties": true,
+      "title": "Views",
+      "type": "object"
+    },
+    "warnings": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Warnings",
+      "type": "array"
+    },
+    "writer_host": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Writer Host"
+    }
+  },
+  "required": [
+    "run_id",
+    "status"
+  ],
+  "title": "RunManifest",
+  "type": "object"
+}

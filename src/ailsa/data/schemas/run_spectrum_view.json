@@ -1,0 +1,262 @@
+{
+  "$defs": {
+    "LevelFile": {
+      "additionalProperties": false,
+      "properties": {
+        "factor": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Factor"
+        },
+        "file": {
+          "title": "File",
+          "type": "string"
+        },
+        "shape": {
+          "items": {
+            "type": "integer"
+          },
+          "title": "Shape",
+          "type": "array"
+        }
+      },
+      "required": [
+        "file",
+        "shape"
+      ],
+      "title": "LevelFile",
+      "type": "object"
+    },
+    "ProjectionFile": {
+      "additionalProperties": false,
+      "properties": {
+        "axis": {
+          "title": "Axis",
+          "type": "string"
+        },
+        "file": {
+          "title": "File",
+          "type": "string"
+        }
+      },
+      "required": [
+        "axis",
+        "file"
+      ],
+      "title": "ProjectionFile",
+      "type": "object"
+    },
+    "Quantisation": {
+      "additionalProperties": false,
+      "properties": {
+        "method": {
+          "const": "log1p-noise",
+          "title": "Method",
+          "type": "string"
+        },
+        "scale": {
+          "title": "Scale",
+          "type": "number"
+        },
+        "zmax": {
+          "title": "Zmax",
+          "type": "number"
+        }
+      },
+      "required": [
+        "method",
+        "zmax",
+        "scale"
+      ],
+      "title": "Quantisation",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "contour_levels_sigma": {
+      "items": {
+        "type": "number"
+      },
+      "title": "Contour Levels Sigma",
+      "type": "array"
+    },
+    "experiment": {
+      "title": "Experiment",
+      "type": "string"
+    },
+    "kind": {
+      "enum": [
+        "1d",
+        "2d"
+      ],
+      "title": "Kind",
+      "type": "string"
+    },
+    "levels": {
+      "items": {
+        "$ref": "#/$defs/LevelFile"
+      },
+      "title": "Levels",
+      "type": "array"
+    },
+    "noise_sigma": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Noise Sigma"
+    },
+    "nuclei": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Nuclei",
+      "type": "array"
+    },
+    "points": {
+      "items": {
+        "type": "integer"
+      },
+      "title": "Points",
+      "type": "array"
+    },
+    "ppm_end": {
+      "items": {
+        "type": "number"
+      },
+      "title": "Ppm End",
+      "type": "array"
+    },
+    "ppm_start": {
+      "items": {
+        "type": "number"
+      },
+      "title": "Ppm Start",
+      "type": "array"
+    },
+    "projections": {
+      "items": {
+        "$ref": "#/$defs/ProjectionFile"
+      },
+      "title": "Projections",
+      "type": "array"
+    },
+    "qc_verdict": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Qc Verdict"
+    },
+    "quantisation": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Quantisation"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "reader": {
+      "title": "Reader",
+      "type": "string"
+    },
+    "reader_version": {
+      "title": "Reader Version",
+      "type": "string"
+    },
+    "referencing": {
+      "additionalProperties": true,
+      "title": "Referencing",
+      "type": "object"
+    },
+    "schema": {
+      "const": "ailsa.spectrum-view",
+      "default": "ailsa.spectrum-view",
+      "title": "Schema",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "1",
+      "default": "1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "sf_mhz": {
+      "items": {
+        "type": "number"
+      },
+      "title": "Sf Mhz",
+      "type": "array"
+    },
+    "sign_meaning": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Sign Meaning"
+    },
+    "source_sha256": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "title": "Source Sha256",
+      "type": "object"
+    },
+    "state": {
+      "enum": [
+        "vendor",
+        "rawproc",
+        "nus-smile",
+        "nus-vendor",
+        "agent-script"
+      ],
+      "title": "State",
+      "type": "string"
+    },
+    "view_id": {
+      "title": "View Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "view_id",
+    "experiment",
+    "kind",
+    "nuclei",
+    "sf_mhz",
+    "ppm_start",
+    "ppm_end",
+    "points",
+    "state",
+    "reader",
+    "reader_version"
+  ],
+  "title": "SpectrumView",
+  "type": "object"
+}

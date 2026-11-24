@@ -1,0 +1,244 @@
+{
+  "$defs": {
+    "PeakEntry": {
+      "additionalProperties": false,
+      "properties": {
+        "extra": {
+          "additionalProperties": true,
+          "title": "Extra",
+          "type": "object"
+        },
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "intensity": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Intensity"
+        },
+        "ppm": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ppm"
+        },
+        "ppm_f1": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ppm F1"
+        },
+        "ppm_f2": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ppm F2"
+        },
+        "sign": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Sign"
+        },
+        "snr": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Snr"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "title": "PeakEntry",
+      "type": "object"
+    },
+    "RejectedPeak": {
+      "additionalProperties": false,
+      "properties": {
+        "category": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Category"
+        },
+        "ppm": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ppm"
+        },
+        "ppm_f1": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ppm F1"
+        },
+        "ppm_f2": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ppm F2"
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reason"
+        }
+      },
+      "title": "RejectedPeak",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "experiment": {
+      "title": "Experiment",
+      "type": "string"
+    },
+    "noise_sigma": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Noise Sigma"
+    },
+    "parameters": {
+      "additionalProperties": true,
+      "title": "Parameters",
+      "type": "object"
+    },
+    "peaks": {
+      "items": {
+        "$ref": "#/$defs/PeakEntry"
+      },
+      "title": "Peaks",
+      "type": "array"
+    },
+    "pick_id": {
+      "title": "Pick Id",
+      "type": "string"
+    },
+    "picker": {
+      "title": "Picker",
+      "type": "string"
+    },
+    "referencing": {
+      "additionalProperties": true,
+      "title": "Referencing",
+      "type": "object"
+    },
+    "rejected": {
+      "items": {
+        "$ref": "#/$defs/RejectedPeak"
+      },
+      "title": "Rejected",
+      "type": "array"
+    },
+    "rejected_available": {
+      "default": false,
+      "title": "Rejected Available",
+      "type": "boolean"
+    },
+    "schema": {
+      "const": "ailsa.peak-pick",
+      "default": "ailsa.peak-pick",
+      "title": "Schema",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "1",
+      "default": "1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "source_sha256": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "title": "Source Sha256",
+      "type": "object"
+    }
+  },
+  "required": [
+    "pick_id",
+    "experiment",
+    "picker"
+  ],
+  "title": "PeakPick",
+  "type": "object"
+}

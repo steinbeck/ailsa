@@ -1,0 +1,611 @@
+{
+  "$defs": {
+    "AtomBasis": {
+      "additionalProperties": false,
+      "properties": {
+        "confidence": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Confidence"
+        },
+        "hose_code": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Hose Code"
+        },
+        "match_count": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Match Count"
+        },
+        "max_shift": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Shift"
+        },
+        "min_shift": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Min Shift"
+        },
+        "radius_used": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Radius Used"
+        },
+        "std_dev": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Std Dev"
+        }
+      },
+      "title": "AtomBasis",
+      "type": "object"
+    },
+    "AtomMapEntry": {
+      "additionalProperties": false,
+      "properties": {
+        "depiction_index": {
+          "title": "Depiction Index",
+          "type": "integer"
+        },
+        "element": {
+          "title": "Element",
+          "type": "string"
+        },
+        "h_count": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "H Count"
+        },
+        "lsd_atom": {
+          "title": "Lsd Atom",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "depiction_index",
+        "lsd_atom",
+        "element"
+      ],
+      "title": "AtomMapEntry",
+      "type": "object"
+    },
+    "Candidate": {
+      "additionalProperties": false,
+      "properties": {
+        "atom_map": {
+          "items": {
+            "$ref": "#/$defs/AtomMapEntry"
+          },
+          "title": "Atom Map",
+          "type": "array"
+        },
+        "atoms": {
+          "items": {
+            "$ref": "#/$defs/CandidateAtom"
+          },
+          "title": "Atoms",
+          "type": "array"
+        },
+        "carbons": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Carbons"
+        },
+        "compared": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Compared"
+        },
+        "correlations": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/CandidateCorrelation"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Correlations"
+        },
+        "id": {
+          "pattern": "^cand:rk\\d{2,}:\\d+$",
+          "title": "Id",
+          "type": "string"
+        },
+        "inchikey": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Inchikey"
+        },
+        "mae": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Mae"
+        },
+        "mapping_status": {
+          "enum": [
+            "ok",
+            "unavailable",
+            "not_applicable"
+          ],
+          "title": "Mapping Status",
+          "type": "string"
+        },
+        "max_error": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Error"
+        },
+        "rank": {
+          "minimum": 1,
+          "title": "Rank",
+          "type": "integer"
+        },
+        "smiles": {
+          "title": "Smiles",
+          "type": "string"
+        },
+        "solutions": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Solutions",
+          "type": "array"
+        },
+        "within_tolerance": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Within Tolerance"
+        },
+        "worst_atom": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Worst Atom"
+        }
+      },
+      "required": [
+        "id",
+        "rank",
+        "smiles",
+        "mapping_status"
+      ],
+      "title": "Candidate",
+      "type": "object"
+    },
+    "CandidateAtom": {
+      "additionalProperties": false,
+      "properties": {
+        "basis": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/AtomBasis"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "error": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Error"
+        },
+        "lsd_atom": {
+          "title": "Lsd Atom",
+          "type": "integer"
+        },
+        "observed": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Observed"
+        },
+        "predicted": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Predicted"
+        }
+      },
+      "required": [
+        "lsd_atom"
+      ],
+      "title": "CandidateAtom",
+      "type": "object"
+    },
+    "CandidateCorrelation": {
+      "additionalProperties": false,
+      "properties": {
+        "carbon": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Carbon"
+        },
+        "j_coupling": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "J Coupling"
+        },
+        "kind": {
+          "title": "Kind",
+          "type": "string"
+        },
+        "path_length": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Path Length"
+        },
+        "proton": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Proton"
+        }
+      },
+      "required": [
+        "kind"
+      ],
+      "title": "CandidateCorrelation",
+      "type": "object"
+    },
+    "PredictorInfo": {
+      "additionalProperties": false,
+      "properties": {
+        "backend": {
+          "title": "Backend",
+          "type": "string"
+        },
+        "database_sha256": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Database Sha256"
+        },
+        "max_radius": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Radius"
+        }
+      },
+      "required": [
+        "backend"
+      ],
+      "title": "PredictorInfo",
+      "type": "object"
+    },
+    "RankingInput": {
+      "additionalProperties": false,
+      "properties": {
+        "iteration": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Iteration"
+        },
+        "lsd_sha256": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Lsd Sha256"
+        },
+        "path": {
+          "title": "Path",
+          "type": "string"
+        },
+        "smiles_sha256": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Smiles Sha256"
+        },
+        "sol_sha256": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Sol Sha256"
+        }
+      },
+      "required": [
+        "path"
+      ],
+      "title": "RankingInput",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "candidates": {
+      "items": {
+        "$ref": "#/$defs/Candidate"
+      },
+      "title": "Candidates",
+      "type": "array"
+    },
+    "correlations_cap": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Correlations Cap"
+    },
+    "distinct_structures": {
+      "minimum": 0,
+      "title": "Distinct Structures",
+      "type": "integer"
+    },
+    "inputs": {
+      "items": {
+        "$ref": "#/$defs/RankingInput"
+      },
+      "title": "Inputs",
+      "type": "array"
+    },
+    "method": {
+      "enum": [
+        "assigned",
+        "nearest-line"
+      ],
+      "title": "Method",
+      "type": "string"
+    },
+    "observed_shifts": {
+      "additionalProperties": {
+        "type": "number"
+      },
+      "title": "Observed Shifts",
+      "type": "object"
+    },
+    "predictor": {
+      "$ref": "#/$defs/PredictorInfo"
+    },
+    "ranking_id": {
+      "pattern": "^rk\\d{2,}$",
+      "title": "Ranking Id",
+      "type": "string"
+    },
+    "schema": {
+      "const": "ailsa.ranking",
+      "default": "ailsa.ranking",
+      "title": "Schema",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "1",
+      "default": "1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "skipped": {
+      "default": 0,
+      "minimum": 0,
+      "title": "Skipped",
+      "type": "integer"
+    },
+    "tolerance": {
+      "title": "Tolerance",
+      "type": "number"
+    },
+    "total_solutions": {
+      "minimum": 0,
+      "title": "Total Solutions",
+      "type": "integer"
+    },
+    "warnings": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Warnings",
+      "type": "array"
+    }
+  },
+  "required": [
+    "ranking_id",
+    "method",
+    "tolerance",
+    "predictor",
+    "total_solutions",
+    "distinct_structures"
+  ],
+  "title": "Ranking",
+  "type": "object"
+}

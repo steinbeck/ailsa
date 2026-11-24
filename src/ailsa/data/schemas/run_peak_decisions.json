@@ -1,0 +1,107 @@
+{
+  "$defs": {
+    "PeakDecision": {
+      "additionalProperties": false,
+      "properties": {
+        "action": {
+          "enum": [
+            "accept",
+            "reject",
+            "merge",
+            "assign"
+          ],
+          "title": "Action",
+          "type": "string"
+        },
+        "category": {
+          "anyOf": [
+            {
+              "enum": [
+                "solvent",
+                "1J-leakage",
+                "t1-noise",
+                "impurity",
+                "satellite",
+                "artefact",
+                "other"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Category"
+        },
+        "evidence": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Evidence",
+          "type": "array"
+        },
+        "peaks": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Peaks",
+          "type": "array"
+        },
+        "reason": {
+          "minLength": 1,
+          "title": "Reason",
+          "type": "string"
+        },
+        "target": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Target"
+        }
+      },
+      "required": [
+        "peaks",
+        "action",
+        "reason"
+      ],
+      "title": "PeakDecision",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "decisions": {
+      "items": {
+        "$ref": "#/$defs/PeakDecision"
+      },
+      "minItems": 1,
+      "title": "Decisions",
+      "type": "array"
+    },
+    "schema": {
+      "const": "ailsa.peak-decisions",
+      "default": "ailsa.peak-decisions",
+      "title": "Schema",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "1",
+      "default": "1",
+      "title": "Schema Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "decisions"
+  ],
+  "title": "PeakDecisionTable",
+  "type": "object"
+}

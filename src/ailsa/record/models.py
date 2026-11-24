@@ -137,7 +137,7 @@ def _build_payload_models() -> dict[str, type[BaseModel]]:
             else:
                 fields[key] = (spec, ...)
         name = "Payload_" + etype.replace(".", "_")
-        out[etype] = create_model(  # type: ignore[call-overload]
+        out[etype] = create_model(
             name, __config__=ConfigDict(extra="allow"), **fields
         )
     return out
