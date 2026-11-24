@@ -407,8 +407,13 @@ def export_dataset(
     *,
     only: set[str] | None = None,
     overwrite: bool = False,
+    stop: Any = None,
 ) -> list[dict[str, Any]]:
-    """Export every experiment of the inventory sequentially; unreadable ones appear as skipped."""
+    """Export every experiment of the inventory sequentially; unreadable ones appear as skipped.
+
+    ``stop`` (a callable) is asked before each experiment; once it returns true the remaining
+    experiments are skipped (a run that finished takes no more files).
+    """
     dataset = Path(dataset).resolve()
     mapping = _folder_ids(dataset, inventory)
     results: list[dict[str, Any]] = []
@@ -417,6 +422,9 @@ def export_dataset(
         if only is not None and label not in only and entry.get("folder_alias") not in only:
             continue
         t0 = time.perf_counter()
+        if stop is not None and stop():
+            results.append(_result("skipped", label, reason="run finished", started=t0))
+            continue
         if not entry.get("readable", True):
             results.append(
                 _result("skipped", label, reason=entry.get("reason") or "unreadable", started=t0)

@@ -124,6 +124,37 @@ def test_timeout_kills_remote(tmp_path: Path, fake: Path, work: Path) -> None:
     assert _scratch_dirs(fake) == []
 
 
+@pytest.mark.parametrize("how", ["interrupt", "sigterm"])
+def test_interrupt_kills_remote_and_removes_scratch(
+    fake: Path, work: Path, monkeypatch: pytest.MonkeyPatch, how: str
+) -> None:
+    """WR-04: Ctrl-C or SIGTERM during the poll stops the remote LSD and removes the scratch."""
+    import os
+    import signal
+    import types
+
+    install_fake_lsd(fake / "bin", "sleep", seconds=30, partial=3)
+
+    def sleep(_s: float) -> None:
+        if how == "interrupt":
+            raise KeyboardInterrupt
+        os.kill(os.getpid(), signal.SIGTERM)
+        time.sleep(1)
+
+    fake_time = types.SimpleNamespace(monotonic=time.monotonic, sleep=sleep)
+    monkeypatch.setattr(remote, "time", fake_time)
+    with pytest.raises(BaseException) as caught:
+        solve_remote("fakehost", work / "compound.lsd", work, timeout_s=30)
+    assert not isinstance(caught.value, remote.RemoteError)
+    assert signal.getsignal(signal.SIGTERM) is signal.SIG_DFL
+    time.sleep(0.5)
+    left = subprocess.run(
+        ["pgrep", "-f", str(fake / "bin" / "lsd")], capture_output=True, text=True
+    )
+    assert left.stdout.strip() == ""
+    assert _scratch_dirs(fake) == []
+
+
 def test_error_outcome(fake: Path, work: Path) -> None:
     install_fake_lsd(fake / "bin", "error", code=420)
     res = solve_remote("fakehost", work / "compound.lsd", work, timeout_s=30)

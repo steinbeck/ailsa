@@ -577,6 +577,9 @@ def start_cmd(
             f"state: {result['state']}",
         ],
     )
+    if result.get("signal"):
+        # Interrupted: the run is closed; exit as the shell expects after that signal.
+        raise SystemExit(128 + int(result["signal"]))
 
 
 @run.command("close")

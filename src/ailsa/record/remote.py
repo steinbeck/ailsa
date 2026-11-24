@@ -13,9 +13,12 @@ import io
 import os
 import re
 import shlex
+import signal
 import subprocess
 import tarfile
 import time
+from collections.abc import Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -421,8 +424,6 @@ def solve_remote(
     poll_s: float | None = None,
 ) -> RemoteResult:
     """Upload, start detached, poll, fetch into ``local_output_dir``, remove the scratch folder."""
-    import tempfile
-
     alias = validate_alias(alias)
     src = Path(input_file)
     out_dir = Path(local_output_dir)
@@ -433,6 +434,62 @@ def solve_remote(
     stem = src.stem
 
     info = probe_remote(alias)
+    with _sigterm_raises():
+        try:
+            return _solve_probed(alias, src, out_dir, info, name, stem, timeout_s, poll_s)
+        except BaseException as exc:
+            # Interrupt (Ctrl-C), SIGTERM (e.g. a Bash-tool timeout) or an unexpected error
+            # after the probe: never leave LSD running or the scratch folder behind. The
+            # RemoteError paths have already cleaned up.
+            if not isinstance(exc, RemoteError):
+                _abort_remote(alias, info["root"], info["scratch"])
+            raise
+
+
+class _Terminated(BaseException):
+    """SIGTERM arrived during a remote solve."""
+
+
+@contextmanager
+def _sigterm_raises() -> Iterator[None]:
+    """Turn SIGTERM into an exception (main thread only) so the remote cleanup runs."""
+    import threading
+
+    if threading.current_thread() is not threading.main_thread():
+        yield
+        return
+
+    def handler(signum: int, frame: Any) -> None:
+        raise _Terminated(signum)
+
+    old = signal.signal(signal.SIGTERM, handler)
+    try:
+        yield
+    finally:
+        signal.signal(signal.SIGTERM, old)
+
+
+def _abort_remote(alias: str, root: str, scratch: str) -> None:
+    """Best effort: stop the remote solve and remove its scratch folder."""
+    try:
+        _ssh(alias, _kill_script(scratch), timeout=30)
+        _cleanup(alias, root, scratch)
+    except BaseException:  # noqa: BLE001 - never mask the exception being handled
+        pass
+
+
+def _solve_probed(
+    alias: str,
+    src: Path,
+    out_dir: Path,
+    info: dict[str, Any],
+    name: str,
+    stem: str,
+    timeout_s: int,
+    poll_s: float,
+) -> RemoteResult:
+    import tempfile
+
     root, scratch = info["root"], info["scratch"]
     lsd_path = info["lsd"]["path"]
     result_tools = (_tool(info["lsd"]), _tool(info["outlsd"]))

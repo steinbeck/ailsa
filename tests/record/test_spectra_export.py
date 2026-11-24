@@ -230,6 +230,27 @@ def test_second_export_is_skipped_unless_overwrite(tmp_path: Path) -> None:
     assert export_experiment(exp, out, exp_id="1", overwrite=True)["status"] == "ok"
 
 
+def test_export_dataset_stops_once_the_run_finished(tmp_path: Path) -> None:
+    """WR-04: the detached export never writes files into a run that finished meanwhile."""
+    from ailsa.record.inventory import build_inventory
+    from ailsa.spectra.export import export_dataset
+
+    ds = tmp_path / "ds"
+    make_1d(ds, "1")
+    make_1d(ds, "2")
+    inventory = build_inventory(ds, blind=False, fingerprint="")
+    calls: list[int] = []
+
+    def stop() -> bool:
+        calls.append(1)
+        return len(calls) > 1
+
+    res = export_dataset(ds, inventory, tmp_path / "out", stop=stop)
+    assert [r["status"] for r in res] == ["ok", "skipped"]
+    assert res[1]["reason"] == "run finished"
+    assert not (tmp_path / "out" / "2").exists()
+
+
 def test_export_dataset_lists_unreadable(tmp_path: Path) -> None:
     from ailsa.record.inventory import build_inventory
 

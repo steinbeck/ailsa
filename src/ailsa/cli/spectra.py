@@ -83,6 +83,7 @@ def export(
     """
     import time
 
+    from ailsa.record.events import FINISHED
     from ailsa.record.resolve import current_run_for_tool, find_active_run
     from ailsa.spectra.export import export_dataset, register_result
 
@@ -101,6 +102,8 @@ def export(
     if run_dir is not None:
         from ailsa.record.artefacts import run_target
 
+        if (run_dir / FINISHED).exists():
+            raise click.ClickException("run finished: no new view products")
         try:
             out_root = run_target(run_dir, "spectra")
         except ValueError as exc:
@@ -112,11 +115,17 @@ def export(
         assert out_dir is not None
         out_root = out_dir
         inventory = build_inventory(dataset, blind=False, fingerprint="")
-    results = export_dataset(dataset, inventory, out_root, only=only, overwrite=run_dir is None)
+    # A run that finished meanwhile (e.g. the detached export outlived it) takes no more files.
+    stop = (run_dir / FINISHED).exists if run_dir is not None else None
+    results = export_dataset(
+        dataset, inventory, out_root, only=only, overwrite=run_dir is None, stop=stop
+    )
 
     if run_dir is not None:
         by_label = {str(e["id"]).split(":", 1)[-1]: e for e in inventory["experiments"]}
         for res in results:
+            if res.get("reason") == "run finished":
+                continue
             entry = by_label.get(res["experiment"], {})
             guess = "vendor" if entry.get("processed", True) else "rawproc"
             try:

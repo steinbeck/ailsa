@@ -52,6 +52,10 @@ if "hook" in modes and sid:
         input=json.dumps(payload).encode(),
         env=os.environ,
     )
+if "grandchild" in modes:
+    child = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(60)"])
+    with open(os.environ["FAKE_CLAUDE_OUT"] + ".child", "w") as fh:
+        fh.write(str(child.pid))
 if "ignore_term" in modes:
     signal.signal(signal.SIGTERM, signal.SIG_IGN)
 if "sleep" in modes or "ignore_term" in modes:
@@ -294,6 +298,92 @@ def test_term_ignoring_child_is_killed(
     assert _of(_events(res["run_dir"]), "run.attempt.ended")[0]["payload"]["reason"] == "time_limit"
     with pytest.raises(ProcessLookupError):
         os.kill(_shim(tmp_path)["pid"], 0)
+
+
+def _gone(pid: int) -> bool:
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return True
+    return False
+
+
+def test_interactive_time_limit_ends_the_whole_tree(
+    claude: Path, dataset: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """WR-04: interactive harness stays in the terminal's group; its children die with it."""
+    monkeypatch.setenv("FAKE_CLAUDE_MODE", "grandchild,sleep")
+    monkeypatch.setattr(launcher, "KILL_GRACE_S", 2)
+    res = _result(_start(dataset, "--model", "haiku", "--interactive", "--time-limit", "3"))
+    assert _of(_events(res["run_dir"]), "run.attempt.ended")[0]["payload"]["reason"] == "time_limit"
+    child = int((tmp_path / "shim.json.child").read_text())
+    deadline = time.monotonic() + 5
+    while not _gone(child) and time.monotonic() < deadline:
+        time.sleep(0.1)
+    assert _gone(child) and _gone(_shim(tmp_path)["pid"])
+
+
+def test_sigint_in_a_headless_run_closes_it(
+    claude: Path, dataset: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """WR-04: Ctrl-C ends the harness group, records the attempt and closes the run."""
+    import signal
+    import threading
+
+    monkeypatch.setenv("FAKE_CLAUDE_MODE", "grandchild,sleep")
+    monkeypatch.setattr(launcher, "KILL_GRACE_S", 2)
+
+    def interrupt() -> None:
+        deadline = time.monotonic() + 20
+        while not (tmp_path / "shim.json.child").exists() and time.monotonic() < deadline:
+            time.sleep(0.05)
+        os.kill(os.getpid(), signal.SIGINT)
+
+    threading.Thread(target=interrupt, daemon=True).start()
+    res = _start(dataset, "--model", "haiku")
+    assert res.exit_code == 128 + signal.SIGINT, res.output
+    data = json.loads(res.stdout)
+    ev = _events(data["run_dir"])
+    assert _of(ev, "run.attempt.ended")[0]["payload"]["reason"] == "interrupted"
+    assert ev[-1]["type"] == "run.finished"
+    assert ev[-1]["payload"]["reason"].startswith("interrupted")
+    assert _gone(_shim(tmp_path)["pid"])
+    child = int((tmp_path / "shim.json.child").read_text())
+    deadline = time.monotonic() + 5
+    while not _gone(child) and time.monotonic() < deadline:
+        time.sleep(0.1)
+    assert _gone(child)
+    assert signal.getsignal(signal.SIGINT) is signal.default_int_handler
+
+
+def test_setup_failure_after_init_closes_the_run(
+    claude: Path, dataset: Path, workspace: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """WR-04: an error after the run folder exists closes the run instead of leaving it open."""
+
+    def boom(*_a: Any, **_k: Any) -> None:
+        raise OSError("disk full")
+
+    monkeypatch.setattr(launcher.shutil, "copytree", boom)
+    res = _start(dataset, "--model", "haiku")
+    assert res.exit_code == 2
+    assert "closed" in res.stderr
+    runs = [p for p in workspace.iterdir() if (p / ".ailsa-run").is_file()]
+    assert len(runs) == 1
+    ev = _events(runs[0])
+    assert ev[-1]["type"] == "run.finished"
+    assert "launcher setup failed" in ev[-1]["payload"]["reason"]
+
+
+def test_close_after_the_agent_closed_is_quiet(new_run: tuple[str, Path]) -> None:
+    """WR-04: a run the agent already closed is reported, not a traceback."""
+    from ailsa.record.closing import close_run
+
+    _, run_dir = new_run
+    close_run(run_dir, "agent closed it")
+    out = launcher._close_quietly(run_dir, "harness exited")
+    assert "state" in out
+    assert len(_of(_events(run_dir), "run.finished")) == 1
 
 
 def test_prompt_override_and_context_files(claude: Path, dataset: Path, tmp_path: Path) -> None:

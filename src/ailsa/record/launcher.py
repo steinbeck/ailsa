@@ -28,6 +28,8 @@ SKILL_NAME = "ailsa-lite"
 # Plan 02 spike answer A8: a slash prompt invokes a project skill in `claude -p`.
 SLASH_PROMPT_WORKS = True
 KILL_GRACE_S = 10
+# How long the run waits at its end for the spectra-export child started by init.
+VIEWS_WAIT_S = 30.0
 HARNESSES = ("claude", "opencode")
 _HARNESS_NAME = {"claude": "claude-code", "opencode": "opencode"}
 _SKILL_DIRS = {"claude": (".claude", "skills"), "opencode": (".opencode", "skills")}
@@ -182,28 +184,35 @@ def prepare_run(
     run_dir = Path(result["run_dir"])
     agent_dir = run_dir / AGENT_DIR
     session_id: str | None = None
-    if harness == "claude":
-        session_id = str(uuid.uuid4())
-        settings = build_settings(sys.executable, auto_memory=False)
-        atomic_write_json(run_dir / HOOKS_SETTINGS, settings)
-    parts = _SKILL_DIRS[harness]
-    shutil.copytree(skill_src, agent_dir.joinpath(*parts, SKILL_NAME), symlinks=False)
-    if context_files:
-        target = agent_dir / "context"
-        target.mkdir(mode=0o700, exist_ok=True)
-        for item in context_files:
-            shutil.copy2(Path(item).expanduser(), target / Path(item).name)
-    argv = build_argv(
-        harness=harness,
-        model=model,
-        prompt=request_prompt,
-        headless=headless,
-        run_dir=run_dir,
-        dataset=shown,
-        session_id=session_id,
-        confidential=confidential,
-        extra=extra_args,
-    )
+    try:
+        if harness == "claude":
+            session_id = str(uuid.uuid4())
+            settings = build_settings(sys.executable, auto_memory=False)
+            atomic_write_json(run_dir / HOOKS_SETTINGS, settings)
+        parts = _SKILL_DIRS[harness]
+        shutil.copytree(skill_src, agent_dir.joinpath(*parts, SKILL_NAME), symlinks=False)
+        if context_files:
+            target = agent_dir / "context"
+            target.mkdir(mode=0o700, exist_ok=True)
+            for item in context_files:
+                shutil.copy2(Path(item).expanduser(), target / Path(item).name)
+        argv = build_argv(
+            harness=harness,
+            model=model,
+            prompt=request_prompt,
+            headless=headless,
+            run_dir=run_dir,
+            dataset=shown,
+            session_id=session_id,
+            confidential=confidential,
+            extra=extra_args,
+        )
+    except Exception as exc:
+        # The run exists already: end it instead of leaving it open without an attempt.
+        message = f"launcher setup failed: {type(exc).__name__}: {exc}"[:500]
+        _settle_views(result.get("views_pid"), VIEWS_WAIT_S)
+        _close_quietly(run_dir, message)
+        raise LauncherError(f"{message} (run {result['run_id']} closed)") from exc
     return {
         "run_id": result["run_id"],
         "run_dir": str(run_dir),
@@ -217,39 +226,198 @@ def prepare_run(
         "session_id": session_id,
         "transcript": transcript,
         "warnings": result["warnings"],
+        "views_pid": result.get("views_pid"),
     }
 
 
-def _signal_tree(proc: subprocess.Popen[Any], sig: int, group: bool) -> None:
+def _close_quietly(run_dir: Path, reason: str) -> dict[str, Any]:
+    """Close the run; an already closed run (e.g. the agent ran ``ailsa run close``) is fine."""
+    from ailsa.record.closing import CloseRefused, close_run
+    from ailsa.record.fold import rebuild_manifest
+
     try:
-        if group:
+        return close_run(run_dir, reason, actor=_ACTOR)
+    except CloseRefused:
+        try:
+            state = (rebuild_manifest(run_dir).get("status") or {}).get("state")
+        except Exception:  # noqa: BLE001 - the state is only reported
+            state = None
+        return {"state": state, "head": None}
+    except Exception as exc:  # noqa: BLE001 - report, never crash after the harness ran
+        sys.stderr.write(f"ailsa: run not closed: {type(exc).__name__}: {exc}\n")
+        return {"state": None, "head": None}
+
+
+def _descendants(pid: int) -> list[int]:
+    """Every process below ``pid`` (children first), from ``ps``; empty when ps fails."""
+    try:
+        out = subprocess.run(
+            ["ps", "-A", "-o", "pid=", "-o", "ppid="],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        ).stdout
+    except (OSError, subprocess.SubprocessError):
+        return []
+    children: dict[int, list[int]] = {}
+    for line in out.splitlines():
+        parts = line.split()
+        if len(parts) == 2 and parts[0].isdigit() and parts[1].isdigit():
+            children.setdefault(int(parts[1]), []).append(int(parts[0]))
+    found: list[int] = []
+    queue = list(children.get(pid, []))
+    while queue:
+        child = queue.pop(0)
+        if child in found or child == os.getpid():
+            continue
+        found.append(child)
+        queue.extend(children.get(child, []))
+    return found
+
+
+def _signal_tree(
+    proc: subprocess.Popen[Any], sig: int, group: bool, tree: Sequence[int] = ()
+) -> None:
+    """Signal the harness: its process group (headless), or it and ``tree`` (interactive)."""
+    if group:
+        try:
             os.killpg(proc.pid, sig)
-        else:
-            proc.send_signal(sig)
-    except (ProcessLookupError, PermissionError):
-        pass
+        except (ProcessLookupError, PermissionError):
+            pass
+        return
+    targets = [proc.pid, *tree] if proc.poll() is None else list(tree)
+    for pid in targets:
+        try:
+            os.kill(pid, sig)
+        except (ProcessLookupError, PermissionError):
+            pass
 
 
-def _wait_with_limit(proc: subprocess.Popen[Any], limit: int | None, group: bool) -> bool:
-    """Wait for the child; True when the time limit ended it. The child is always reaped."""
-    timed_out = False
+def _terminate(proc: subprocess.Popen[Any], group: bool) -> None:
+    """SIGTERM the harness and everything it started, SIGKILL whatever is left after the grace.
+
+    A headless harness has its own session, so its process group holds its tool children. An
+    interactive one stays in the terminal's foreground group (its TUI needs the terminal), so
+    its descendants are collected before signalling: they lose their parent link once it dies.
+    """
+    tree = [] if group else _descendants(proc.pid)
+    _signal_tree(proc, signal.SIGTERM, group, tree)
+    try:
+        proc.wait(timeout=KILL_GRACE_S)
+    except subprocess.TimeoutExpired:
+        if not group:
+            tree = [*tree, *(p for p in _descendants(proc.pid) if p not in tree)]
+    _signal_tree(proc, signal.SIGKILL, group, tree)
+
+
+class _StopRequested(BaseException):
+    def __init__(self, signum: int) -> None:
+        super().__init__(signum)
+        self.signum = signum
+
+
+class _SignalGate:
+    """SIGINT/SIGTERM during a launch: recorded once, raised only while waiting for the harness.
+
+    Outside the wait the signal is only noted, so it never interrupts a log write; the run is
+    then ended and closed as interrupted. An interactive harness shares the terminal with the
+    launcher and handles Ctrl-C itself, so the launcher ignores SIGINT there.
+    """
+
+    def __init__(self, *, sigint: bool) -> None:
+        self.signum: int | None = None
+        self.armed = False
+        self._sigint = sigint
+        self._old: dict[int, Any] = {}
+
+    def __enter__(self) -> _SignalGate:
+        import threading
+
+        if threading.current_thread() is threading.main_thread():
+            self._old[signal.SIGTERM] = signal.signal(signal.SIGTERM, self._handle)
+            self._old[signal.SIGINT] = signal.signal(
+                signal.SIGINT, self._handle if self._sigint else signal.SIG_IGN
+            )
+        return self
+
+    def __exit__(self, *exc: object) -> None:
+        for sig, old in self._old.items():
+            signal.signal(sig, old)
+
+    def _handle(self, signum: int, frame: Any) -> None:
+        if self.signum is None:
+            self.signum = signum
+            if self.armed:
+                self.armed = False
+                raise _StopRequested(signum)
+
+
+_STOP_REASONS: dict[int, str] = {
+    int(signal.SIGINT): "interrupted",
+    int(signal.SIGTERM): "terminated",
+}
+
+
+def _wait_with_limit(
+    proc: subprocess.Popen[Any], limit: int | None, group: bool, gate: _SignalGate | None = None
+) -> str | None:
+    """Wait for the child; return why the launcher ended it (time limit or a signal), or None.
+
+    The child (and, headless, its process group) is always ended and reaped.
+    """
+    stopped: str | None = None
     try:
         try:
-            proc.wait(timeout=limit)
-        except subprocess.TimeoutExpired:
-            timed_out = True
-            _signal_tree(proc, signal.SIGTERM, group)
+            if gate is not None:
+                gate.armed = True
+                if gate.signum is not None:
+                    raise _StopRequested(gate.signum)
             try:
-                proc.wait(timeout=KILL_GRACE_S)
-            except subprocess.TimeoutExpired:
-                _signal_tree(proc, signal.SIGKILL, group)
+                proc.wait(timeout=limit)
+            finally:
+                if gate is not None:
+                    gate.armed = False
+        except subprocess.TimeoutExpired:
+            stopped = "time_limit"
+        except _StopRequested as exc:
+            stopped = _STOP_REASONS.get(exc.signum, "interrupted")
+        if stopped is not None:
+            _terminate(proc, group)
     finally:
         if proc.poll() is None:
             _signal_tree(proc, signal.SIGKILL, group)
         proc.wait()
         if group:
             _signal_tree(proc, signal.SIGKILL, group)  # grandchildren left behind
-    return timed_out
+    return stopped
+
+
+def _settle_views(pid: Any, wait_s: float) -> None:
+    """Let the spectra-export child started by init finish, or end it, before the run closes."""
+    if not isinstance(pid, int) or pid <= 0:
+        return
+    deadline = time.monotonic() + wait_s
+    while True:
+        try:
+            done, _ = os.waitpid(pid, os.WNOHANG)
+        except ChildProcessError:
+            return  # already reaped (or not ours)
+        if done:
+            return
+        if time.monotonic() >= deadline:
+            break
+        time.sleep(0.2)
+    for sig in (signal.SIGTERM, signal.SIGKILL):
+        try:
+            os.killpg(pid, sig)  # the child leads its own session
+        except (ProcessLookupError, PermissionError):
+            return
+        try:
+            time.sleep(1.0)
+            if os.waitpid(pid, os.WNOHANG)[0]:
+                return
+        except ChildProcessError:
+            return
 
 
 def _copy_transcripts(run_dir: Path, session_id: str | None) -> None:
@@ -271,104 +439,137 @@ def _copy_transcripts(run_dir: Path, session_id: str | None) -> None:
 
 
 def launch(prepared: dict[str, Any], *, extra_args: Sequence[str] = ()) -> dict[str, Any]:
-    """Start the harness, wait, copy transcripts and close the run. Never leaves an open run."""
-    from ailsa.record.closing import close_run
+    """Start the harness, wait, copy transcripts and close the run. Never leaves an open run.
+
+    SIGTERM (and SIGINT in a headless run) ends the harness with everything it started and
+    closes the run as interrupted; the result then carries the signal number.
+    """
+    headless = bool(prepared["headless"])
+    with _SignalGate(sigint=headless) as gate:
+        return _launch(prepared, extra_args, gate)
+
+
+def _launch(
+    prepared: dict[str, Any], extra_args: Sequence[str], gate: _SignalGate
+) -> dict[str, Any]:
     from ailsa.record.render import render_run
 
     run_dir = Path(prepared["run_dir"])
     argv = list(prepared["argv"]) + list(extra_args)
     headless = bool(prepared["headless"])
     limit = prepared.get("time_limit_s")
-    if prepared.get("session_id"):
-        # The launched session is bound to this run; hooks of other sessions never record here.
+    started = time.monotonic()
+    exit_code: int | None = None
+    reason = "exited"
+    out_path = run_dir / "transcript" / "harness-output.log"
+    closed: dict[str, Any] = {}
+    try:
+        if prepared.get("session_id"):
+            # The launched session is bound to this run; hooks of other sessions never record.
+            append_event(
+                run_dir,
+                "run.bound",
+                {
+                    "session_id": prepared["session_id"],
+                    "harness": prepared["harness"],
+                    "via": "launcher",
+                },
+                actor=_ACTOR,
+            )
         append_event(
             run_dir,
-            "run.bound",
+            "run.attempt.started",
             {
-                "session_id": prepared["session_id"],
+                "attempt": 1,
                 "harness": prepared["harness"],
-                "via": "launcher",
+                "time_limit_s": limit,
+                "argv": [a[:ARGV_ITEM_CAP] for a in argv],
+            },
+            actor=_ACTOR,
+            fsync=True,
+        )
+        append_event(
+            run_dir,
+            "agent.model_reported",
+            {
+                "agent": "main",
+                "requested": prepared["model"],
+                "actual": None,
+                "source": "launcher",
             },
             actor=_ACTOR,
         )
-    append_event(
-        run_dir,
-        "run.attempt.started",
-        {
-            "attempt": 1,
-            "harness": prepared["harness"],
-            "time_limit_s": limit,
-            "argv": [a[:ARGV_ITEM_CAP] for a in argv],
-        },
-        actor=_ACTOR,
-        fsync=True,
-    )
-    append_event(
-        run_dir,
-        "agent.model_reported",
-        {"agent": "main", "requested": prepared["model"], "actual": None, "source": "launcher"},
-        actor=_ACTOR,
-    )
-    started = time.monotonic()
-    exit_code: int | None
-    reason = "exited"
-    out_path = run_dir / "transcript" / "harness-output.log"
-    try:
-        out_path.parent.mkdir(mode=0o700, exist_ok=True)
-        if headless:
-            with open(out_path, "ab") as out:
-                proc = subprocess.Popen(
-                    argv,
-                    cwd=prepared["agent_dir"],
-                    env=prepared["env"],
-                    stdin=subprocess.DEVNULL,
-                    stdout=out,
-                    stderr=subprocess.STDOUT,
-                    start_new_session=True,
-                )
+        if gate.signum is not None:
+            reason = _STOP_REASONS.get(gate.signum, "interrupted") + " before start"
         else:
-            proc = subprocess.Popen(argv, cwd=prepared["agent_dir"], env=prepared["env"])
-    except OSError as exc:
-        exit_code = None
-        reason = f"spawn_failed: {type(exc).__name__}: {exc}"[:200]
-    else:
-        timed_out = _wait_with_limit(proc, limit, headless)
-        exit_code = proc.returncode
-        if timed_out:
-            reason = "time_limit"
-    append_event(
-        run_dir,
-        "run.attempt.ended",
-        {
-            "attempt": 1,
-            "exit_code": exit_code,
-            "reason": reason,
-            "elapsed_s": round(time.monotonic() - started, 3),
-        },
-        actor=_ACTOR,
-        fsync=True,
-    )
-    if prepared.get("transcript") and prepared.get("session_id"):
+            try:
+                out_path.parent.mkdir(mode=0o700, exist_ok=True)
+                if headless:
+                    with open(out_path, "ab") as out:
+                        proc = subprocess.Popen(
+                            argv,
+                            cwd=prepared["agent_dir"],
+                            env=prepared["env"],
+                            stdin=subprocess.DEVNULL,
+                            stdout=out,
+                            stderr=subprocess.STDOUT,
+                            start_new_session=True,
+                        )
+                else:
+                    # Interactive: the TUI needs the terminal's foreground process group, so it
+                    # gets no session of its own; _terminate signals its process tree instead.
+                    proc = subprocess.Popen(argv, cwd=prepared["agent_dir"], env=prepared["env"])
+            except OSError as exc:
+                reason = f"spawn_failed: {type(exc).__name__}: {exc}"[:200]
+            else:
+                stopped = _wait_with_limit(proc, limit, headless, gate)
+                exit_code = proc.returncode
+                if stopped is not None:
+                    reason = stopped
+        append_event(
+            run_dir,
+            "run.attempt.ended",
+            {
+                "attempt": 1,
+                "exit_code": exit_code,
+                "reason": reason,
+                "elapsed_s": round(time.monotonic() - started, 3),
+            },
+            actor=_ACTOR,
+            fsync=True,
+        )
+        if prepared.get("transcript") and prepared.get("session_id"):
+            try:
+                _copy_transcripts(run_dir, prepared["session_id"])
+            except Exception as exc:  # noqa: BLE001 - a transcript problem never blocks closing
+                append_event(
+                    run_dir,
+                    "warning.raised",
+                    {
+                        "code": "transcript_copy_failed",
+                        "message": f"{type(exc).__name__}: {exc}",
+                    },
+                    actor=_ACTOR,
+                )
+    finally:
+        # Always ends the run, whatever happened above (REC-23).
+        _settle_views(prepared.get("views_pid"), VIEWS_WAIT_S)
+        if reason == "time_limit":
+            close_reason = "time limit"
+        elif reason.startswith(("interrupted", "terminated")):
+            close_reason = f"{reason} (signal {gate.signum})"
+        else:
+            close_reason = "harness exited"
+        closed = _close_quietly(run_dir, close_reason)
         try:
-            _copy_transcripts(run_dir, prepared["session_id"])
-        except Exception as exc:  # noqa: BLE001 - a transcript problem never blocks closing
-            append_event(
-                run_dir,
-                "warning.raised",
-                {"code": "transcript_copy_failed", "message": f"{type(exc).__name__}: {exc}"},
-                actor=_ACTOR,
-            )
-    closed = close_run(
-        run_dir, "time limit" if reason == "time_limit" else "harness exited", actor=_ACTOR
-    )
-    try:
-        render_run(run_dir)
-    except Exception as exc:  # noqa: BLE001 - renderings are derived files
-        sys.stderr.write(f"ailsa: renderings not written: {exc}\n")
+            render_run(run_dir)
+        except Exception as exc:  # noqa: BLE001 - renderings are derived files
+            sys.stderr.write(f"ailsa: renderings not written: {exc}\n")
     return {
         "run_id": prepared["run_id"],
         "run_dir": str(run_dir),
         "exit_code": exit_code,
         "reason": reason,
         "state": closed.get("state"),
+        "signal": gate.signum,
     }
