@@ -1,8 +1,10 @@
 """LSD (Logic for Structure Determination) runner."""
 
+import re
 import shutil
 import subprocess
 import tempfile
+import time
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -87,6 +89,67 @@ def _invoke_outlsd(
     return None
 
 
+_MAXS = re.compile(r"^\s*MAXS\s+(\d+)", re.IGNORECASE)
+_TIME_STOP = re.compile(
+    r"(time limit|maximum time|maxt)[^\n]*(reached|exceeded|elapsed)"
+    r"|(reached|exceeded)[^\n]*(time limit|maximum time|maxt)",
+    re.IGNORECASE,
+)
+
+
+def read_solncounter(run_dir: Path | str) -> int | None:
+    """Solutions LSD had written when it stopped, from its ``solncounter`` file."""
+    try:
+        return int((Path(run_dir) / "solncounter").read_text().split()[0])
+    except (OSError, ValueError, IndexError):
+        return None
+
+
+def maxs_limit(lsd_text: str) -> int | None:
+    """The first ``MAXS <n>`` command of an LSD input (comment lines ignored)."""
+    for line in lsd_text.splitlines():
+        if line.lstrip().startswith(";"):
+            continue
+        match = _MAXS.match(line)
+        if match:
+            return int(match.group(1))
+    return None
+
+
+def classify_outcome(
+    *,
+    started: bool,
+    blocked: bool,
+    error_line: str | None,
+    timed_out: bool,
+    count: int,
+    limit: int | None,
+    no_solution_text: bool,
+    sol_exists: bool,
+    smiles_ok: bool | None,
+    conversion_skipped: bool,
+) -> tuple[str, str | None]:
+    """Typed solver outcome and, where the SMILES file is absent, the reason (REC-14)."""
+    if not started:
+        return "not_run", "not_run"
+    if blocked:
+        return "blocked", "blocked"
+    if error_line:
+        return "error", "error"
+    if timed_out:
+        return "timeout", "timeout"
+    if count <= 0 or no_solution_text:
+        return "no_solution", "no_solution"
+    reason: str | None = None
+    if conversion_skipped:
+        reason = "conversion_skipped_large"
+    elif smiles_ok is False or not sol_exists:
+        reason = "conversion_failed"
+    if limit is not None and count >= limit:
+        return "limit_reached", reason
+    return "solutions", reason
+
+
 @dataclass
 class LSDResult:
     """Result from LSD execution.
@@ -112,6 +175,17 @@ class LSDResult:
     return_code: int = 0
     input_file: Path | None = None
     output_dir: Path | None = None
+    # Added for the run record (every field has a default; existing semantics unchanged).
+    elapsed_s: float = 0.0
+    timed_out: bool = False
+    partial_count: int | None = None
+    limit: int | None = None
+    outcome: str = "not_run"
+    error_line: str | None = None
+    smiles_absent_reason: str | None = None
+    lsd_version: str | None = None
+    lsd_sha256: str | None = None
+    found_count: int = 0
 
     def summary(self) -> str:
         """Return a summary of the result."""
@@ -275,6 +349,12 @@ class LSDRunner:
         Returns:
             LSDResult with execution information
         """
+        started_at = time.monotonic()
+        limit: int | None = None
+        try:
+            limit = maxs_limit(input_file.read_text(errors="replace"))
+        except OSError:
+            limit = None
         try:
             # LSD command: lsd compound.lsd (file-argument mode, relative path)
             # LSD-3.4.9 writes {stem}.sol to CWD only when given a RELATIVE path.
@@ -288,26 +368,41 @@ class LSDRunner:
             else:
                 lsd_input_name = input_file.name
             # Copy bundled ring3/ring4 filter files so DEFF F1 "ring3" / DEFF F2 "ring4" resolve.
-            # Unconditional — matches write_file() behavior; idempotent if already present.
+            # Unconditional - matches write_file() behavior; idempotent if already present.
             LSDInputGenerator._write_filter_files(output_dir)
+            # A stale counter from an earlier run must not pose as this run's partial count.
+            (output_dir / "solncounter").unlink(missing_ok=True)
             proc = subprocess.run(
                 [str(self.lsd_path), lsd_input_name],
                 capture_output=True,
                 text=True,
                 timeout=timeout,
                 cwd=output_dir,
+                stdin=subprocess.DEVNULL,
             )
+            elapsed = time.monotonic() - started_at
+            combined = proc.stdout + "\n" + proc.stderr
 
             # An input error ("error 420 - 6 commands read" plus an explanation on the next
             # line) must be reported as such, not as a failed SMILES conversion.
-            lsd_error = self._lsd_error(proc.stdout + "\n" + proc.stderr)
+            lsd_error = self._lsd_error(combined)
             if lsd_error:
+                outcome, absent = classify_outcome(
+                    started=True, blocked=False, error_line=lsd_error, timed_out=False,
+                    count=0, limit=limit, no_solution_text=False, sol_exists=False,
+                    smiles_ok=None, conversion_skipped=False,
+                )
                 return LSDResult(
                     success=False,
                     solution_count=0,
                     stdout=proc.stdout,
                     stderr=lsd_error,
                     return_code=proc.returncode or 1,
+                    elapsed_s=elapsed,
+                    limit=limit,
+                    outcome=outcome,
+                    error_line=lsd_error,
+                    smiles_absent_reason=absent,
                 )
 
             # Find output files
@@ -324,16 +419,68 @@ class LSDRunner:
             # .sol file is written to output_dir with the input file's stem
             sol_file = output_dir / f"{input_file.stem}.sol"
 
+            # LSD's own time limit (MAXT) stops it with a partial result; never "0 solutions".
+            time_stop = bool(_TIME_STOP.search(combined))
+            if time_stop:
+                partial = read_solncounter(output_dir)
+                partial = solution_count if partial is None else partial
+                outcome, absent = classify_outcome(
+                    started=True, blocked=False, error_line=None, timed_out=True,
+                    count=partial, limit=limit, no_solution_text=False,
+                    sol_exists=sol_file.exists(), smiles_ok=None, conversion_skipped=False,
+                )
+                return LSDResult(
+                    success=False,
+                    solution_count=solution_count,
+                    solutions=solutions,
+                    output_files=output_files,
+                    stdout=proc.stdout,
+                    stderr=proc.stderr,
+                    return_code=proc.returncode,
+                    elapsed_s=elapsed,
+                    timed_out=True,
+                    partial_count=partial,
+                    limit=limit,
+                    outcome=outcome,
+                    smiles_absent_reason=absent,
+                    found_count=partial,
+                )
+
             # Run outlsd to convert solutions to SMILES if available
             smiles_path: Path | None = None
+            conversion_error: str | None = None
             if sol_file.exists() and solution_count > 0 and self.outlsd_path:
-                smiles_path = self._run_outlsd(output_dir, input_file)
+                try:
+                    smiles_path = self._run_outlsd(output_dir, input_file)
+                except RuntimeError as exc:
+                    conversion_error = str(exc)
             # Re-scan for output files to include .smi
             output_files = (
                 list(output_dir.glob("*.sol"))
                 + list(output_dir.glob("*.out"))
                 + list(output_dir.glob("*.smi"))
             )
+            no_solution_text = "No solution found" in combined
+            outcome, absent = classify_outcome(
+                started=True, blocked=False, error_line=None, timed_out=False,
+                count=solution_count, limit=limit, no_solution_text=no_solution_text,
+                sol_exists=sol_file.exists(),
+                smiles_ok=(smiles_path is not None) if solution_count > 0 else None,
+                conversion_skipped=False,
+            )
+            if conversion_error is not None:
+                # Old contract: a fail-loud conversion error reads as a failed run.
+                return LSDResult(
+                    success=False,
+                    solution_count=0,
+                    stderr=conversion_error,
+                    return_code=-1,
+                    elapsed_s=elapsed,
+                    limit=limit,
+                    outcome=outcome,
+                    smiles_absent_reason="conversion_failed",
+                    found_count=solution_count,
+                )
             # Success requires .sol file AND SMILES conversion (no silent false-positive)
             success = sol_file.exists() and smiles_path is not None
 
@@ -345,14 +492,28 @@ class LSDRunner:
                 stdout=proc.stdout,
                 stderr=proc.stderr,
                 return_code=proc.returncode,
+                elapsed_s=elapsed,
+                limit=limit,
+                outcome=outcome,
+                smiles_absent_reason=absent,
+                found_count=solution_count,
             )
 
         except subprocess.TimeoutExpired:
+            partial = read_solncounter(output_dir)
+            count = partial if partial is not None else 0
             return LSDResult(
                 success=False,
                 solution_count=0,
                 stderr=f"LSD execution timed out after {timeout} seconds",
                 return_code=-1,
+                elapsed_s=time.monotonic() - started_at,
+                timed_out=True,
+                partial_count=count,
+                limit=limit,
+                outcome="timeout",
+                smiles_absent_reason="timeout",
+                found_count=count,
             )
 
         except Exception as e:
@@ -361,6 +522,11 @@ class LSDRunner:
                 solution_count=0,
                 stderr=str(e),
                 return_code=-1,
+                elapsed_s=time.monotonic() - started_at,
+                limit=limit,
+                outcome="error",
+                error_line=str(e)[:300],
+                smiles_absent_reason="error",
             )
 
     def _count_solutions(
@@ -501,15 +667,22 @@ class LSDRunner:
             return None
 
         try:
-            # Try running lsd --version or similar
-            result = subprocess.run(
-                [str(lsd_path), "--version"],
-                capture_output=True,
-                text=True,
-                timeout=5,
-            )
-            if result.returncode == 0:
-                return result.stdout.strip()
+            # LSD has no --version: it prints its banner and exits non-zero, so the
+            # return code is ignored and the banner is parsed.
+            from ailsa.record.env import parse_lsd_banner
+
+            with tempfile.TemporaryDirectory() as tmp:
+                result = subprocess.run(
+                    [str(lsd_path), "--version"],
+                    capture_output=True,
+                    text=True,
+                    timeout=5,
+                    stdin=subprocess.DEVNULL,
+                    cwd=tmp,
+                )
+            version = parse_lsd_banner(result.stdout + "\n" + result.stderr)
+            if version:
+                return version
         except Exception:
             pass
 
