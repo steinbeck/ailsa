@@ -1,0 +1,9 @@
+{
+  "session_id": "11111111-1111-4111-8111-111111111111",
+  "transcript_path": "/UHOME/.claude/projects/PROJECT/11111111-1111-4111-8111-111111111111.jsonl",
+  "cwd": "/RUN",
+  "prompt_id": "0dd1b09e-2a72-4014-86ed-dd15f24b9098",
+  "permission_mode": "bypassPermissions",
+  "hook_event_name": "UserPromptSubmit",
+  "prompt": "Run `echo MAIN:$CLAUDE_CODE_SESSION_ID` in Bash. Then use the Agent tool to start a general-purpose subagent with model haiku whose task is to run `echo SUB:$CLAUDE_CODE_SESSION_ID` in Bash and report the output. Then send that subagent one message with the SendMessage tool saying \"thanks\". Then rep...[truncated]"
+}

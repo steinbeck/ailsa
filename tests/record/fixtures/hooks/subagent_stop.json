@@ -1,0 +1,18 @@
+{
+  "session_id": "11111111-1111-4111-8111-111111111111",
+  "transcript_path": "/UHOME/.claude/projects/PROJECT/11111111-1111-4111-8111-111111111111.jsonl",
+  "cwd": "/RUN",
+  "prompt_id": "0dd1b09e-2a72-4014-86ed-dd15f24b9098",
+  "permission_mode": "bypassPermissions",
+  "agent_id": "agent-sub-0001",
+  "agent_type": "general-purpose",
+  "effort": {
+    "level": "medium"
+  },
+  "hook_event_name": "SubagentStop",
+  "stop_hook_active": false,
+  "agent_transcript_path": "/UHOME/.claude/projects/PROJECT/11111111-1111-4111-8111-111111111111/subagents/agent-sub-0001.jsonl",
+  "last_assistant_message": "SUB:11111111-1111-4111-8111-111111111111",
+  "background_tasks": [],
+  "session_crons": []
+}
