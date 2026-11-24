@@ -601,6 +601,15 @@ def pipeline(
     report = run_qc_checks(staged_dir, config)
 
     nmr_peaks_dir = resolved / "analysis" / "nmr_peaks"
+    from ailsa.record.resolve import current_run_for_tool
+
+    active_run = current_run_for_tool("nus")
+    if active_run is not None:
+        # REC-05: in a run, peak output goes to the run folder, not the dataset.
+        from ailsa.record.tooldata import run_output_dir
+
+        nmr_peaks_dir = run_output_dir(active_run, "peaks", "nus") / resolved.name
+        nmr_peaks_dir.mkdir(parents=True, exist_ok=True)
     written: list[str] = []
     quarantine: str | None = None
 

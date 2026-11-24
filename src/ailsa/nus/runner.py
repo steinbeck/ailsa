@@ -413,8 +413,19 @@ class NusRunner:
         Returns:
             The created stage directory
             (`expdir / "analysis" / "nus_recon" / expdir.name`).
+
+        REC-05: inside an active run the stage dir is `<run>/nus/<expN>/`
+        instead, so the raw dataset is never written to. Outside a run the
+        path above is unchanged.
         """
         expdir = Path(expdir).resolve()
+        from ailsa.record.resolve import current_run_for_tool
+
+        run = current_run_for_tool("nus")
+        if run is not None:
+            from ailsa.record.tooldata import run_output_dir
+
+            return run_output_dir(run, "nus", expdir.name)
         stage_dir = expdir / "analysis" / "nus_recon" / expdir.name
         stage_dir.mkdir(parents=True, exist_ok=True)
         return stage_dir

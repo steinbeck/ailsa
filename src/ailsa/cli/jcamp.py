@@ -329,6 +329,18 @@ def jcamp(
     # STEP 2 -- resolve output locations. Do NOT create out_root yet -- the
     # FAIL branch must leave it non-existent.
     out_root = Path(out_dir).resolve() if out_dir else input_root / "analysis" / "nmr_peaks"
+    if not out_dir:
+        from ailsa.record.resolve import current_run_for_tool
+
+        active_run = current_run_for_tool("jcamp")
+        if active_run is not None:
+            # REC-05: in a run the default output goes to the run folder, never
+            # beside the input data. work_root stays beside out_root, so the
+            # CR-03 collision guards below apply unchanged.
+            from ailsa.record.tooldata import run_output_dir
+
+            stem = input_root.name if len(resolved) == 1 and resolved[0].is_dir() else files[0].stem
+            out_root = run_output_dir(active_run, "jcamp", stem) / "nmr_peaks"
     # The work root deliberately sits BESIDE out_root, not inside it, so
     # staged/quarantine JSON can never be picked up by a later
     # `ailsa nus qc <out_root>` run (102-RESEARCH.md Pitfall 3) and so a FAIL
