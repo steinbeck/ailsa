@@ -5,6 +5,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+
 from ailsa.record.inventory import build_inventory
 
 CANARY = "CANARY-COMPOUND-NAME-9431"
@@ -21,7 +23,10 @@ def _acqus(pulprog: str, nuc: str, *, sfo1: float, extra: str = "") -> str:
 def _make(root: Path) -> Path:
     one = root / "1"
     (one / "pdata" / "1").mkdir(parents=True)
-    (one / "acqus").write_text(_acqus("zgpg30", "13C", sfo1=100.6))
+    # TopSpin writes NusAMOUNT for every experiment; FnTYPE 0 means fully sampled.
+    (one / "acqus").write_text(
+        _acqus("zgpg30", "13C", sfo1=100.6, extra="##$FnTYPE= 0\n##$NusAMOUNT= 25\n")
+    )
     (one / "fid").write_bytes(b"1234")
     (one / "pdata" / "1" / "1r").write_bytes(b"5678")
     (one / "pdata" / "1" / "procs").write_text("##$SI= 32768\n")
@@ -30,7 +35,7 @@ def _make(root: Path) -> Path:
     two = root / "2"
     (two / "pdata" / "1").mkdir(parents=True)
     (two / "acqus").write_text(
-        _acqus("hsqcedetgpsisp2.3", "1H", sfo1=400.1, extra="##$NusAMOUNT= 25\n")
+        _acqus("hsqcedetgpsisp2.3", "1H", sfo1=400.1, extra="##$FnTYPE= 2\n##$NusAMOUNT= 25\n")
     )
     (two / "acqu2s").write_text("##$NUC1= <13C>\n##$SFO1= 100.6\n")
     (two / "ser").write_bytes(b"abcd")
@@ -92,6 +97,42 @@ def test_entry_two_fields(tmp_path: Path) -> None:
     names = {f["path"] for f in e["source_files"]}
     assert {"2/acqus", "2/acqu2s", "2/ser"} <= names
     assert all(len(f["sha256"]) == 64 for f in e["source_files"])
+    one = {x["id"]: x for x in inv["experiments"]}["exp:1"]
+    assert one["nus"] is None  # NusAMOUNT alone (FnTYPE 0) is not NUS
+
+
+PSP = Path(__file__).resolve().parents[2] / "data" / "PSP"
+
+
+@pytest.mark.skipif(not PSP.is_dir(), reason="repo test data data/PSP absent")
+@pytest.mark.parametrize("exp", ["1", "6", "7"])
+def test_fully_sampled_topspin_data_is_not_nus(exp: str) -> None:
+    """CR-03: zg30, HSQC and HMBC there carry NusAMOUNT= 25 with FnTYPE= 0 (fully sampled)."""
+    from ailsa.case.scan import read_experiment
+
+    info = read_experiment(PSP / exp)
+    assert info is not None
+    assert "NusAMOUNT" in (PSP / exp / "acqus").read_text()
+    assert info.nus_fraction is None and not info.nus_schedule
+    data = info.to_dict()
+    assert "nus_fraction" in data and "nus_schedule" in data  # case scan JSON keys stay
+
+
+def test_nus_flag_and_schedule(tmp_path: Path) -> None:
+    from ailsa.case.scan import read_experiment
+
+    exp = tmp_path / "3"
+    exp.mkdir()
+    (exp / "acqus").write_text(
+        _acqus("hsqcetgpsisp2.2", "1H", sfo1=400.1, extra="##$FnTYPE= 2\n##$NusAMOUNT= 25\n")
+    )
+    (exp / "acqu2s").write_text("##$NUC1= <13C>\n##$SFO1= 100.6\n##$NusTD= 128\n")
+    (exp / "ser").write_bytes(b"abcd")
+    info = read_experiment(exp)
+    assert info is not None and info.nus_fraction == 0.25 and info.nus_schedule is False
+    (exp / "nuslist").write_text("0\n3\n")
+    info = read_experiment(exp)
+    assert info is not None and info.nus_fraction == 0.25 and info.nus_schedule is True
 
 
 def test_titles_never_leak(tmp_path: Path) -> None:

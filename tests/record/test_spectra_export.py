@@ -190,9 +190,21 @@ def test_raw_only_uses_rawproc(tmp_path: Path) -> None:
 
 def test_nus_without_reconstruction_skipped(tmp_path: Path) -> None:
     exp = make_2d(tmp_path / "ds", processed=False)
-    (exp / "acqus").write_text((exp / "acqus").read_text() + "##$NusAMOUNT= 25\n")
+    (exp / "acqus").write_text(
+        (exp / "acqus").read_text() + "##$FnTYPE= 2\n##$NusAMOUNT= 25\n"
+    )
     res = export_experiment(exp, tmp_path / "out", exp_id="2")
     assert res == {**res, "status": "skipped", "reason": "NUS data not reconstructed"}
+
+
+def test_nus_amount_alone_is_not_nus(tmp_path: Path) -> None:
+    """CR-03: TopSpin writes NusAMOUNT for fully sampled data too (FnTYPE 0)."""
+    exp = make_2d(tmp_path / "ds", processed=False)
+    (exp / "acqus").write_text(
+        (exp / "acqus").read_text() + "##$FnTYPE= 0\n##$NusAMOUNT= 25\n"
+    )
+    res = export_experiment(exp, tmp_path / "out", exp_id="2")
+    assert res.get("reason") != "NUS data not reconstructed", res
 
 
 def test_unsupported_2d_type_skipped(tmp_path: Path) -> None:

@@ -186,9 +186,14 @@ def read_experiment(path: Path) -> Experiment | None:
     raw = (path / ("ser" if is_2d else "fid")).is_file()
     kind = classify(pulse_program, nucleus, nucleus_f1, is_2d)
     edited = kind == "HSQC" and "hsqced" in pulse_program.lower()
+    # TopSpin writes NusAMOUNT (and NusTD) for every experiment, NUS or not; NUS is on only
+    # when FnTYPE is 2 ("non-uniform sampling"), and such data carries its nuslist schedule.
+    has_nuslist = (path / "nuslist").is_file()
+    fntype = (_param(text, "FnTYPE") or "").strip()
+    nus_on = fntype == "2" or has_nuslist
     nus_pct = _float(text, "NusAMOUNT")
-    nus_fraction = nus_pct / 100.0 if nus_pct is not None and nus_pct > 0 else None
-    nus_schedule = (path / "nuslist").is_file() if (is_2d or nus_pct is not None) else None
+    nus_fraction = nus_pct / 100.0 if nus_on and nus_pct is not None and nus_pct > 0 else None
+    nus_schedule = has_nuslist if (is_2d or nus_on) else None
     return Experiment(
         expno=path.name,
         path=path,
