@@ -1,8 +1,9 @@
 """Experiment inventory of a Bruker dataset for the run record (REC-28).
 
 Covers every immediate experiment folder, including unreadable ones. Title files are never
-opened and non-numeric folder names are replaced by aliases, so a blind run records nothing
-that could name the compound. Standard library only at module level.
+opened, non-numeric folder names are replaced by aliases, JCAMP files keep only measurement
+headers (an allow-list) and a blind run records them as j1, j2, ..., so a blind run records
+nothing that could name the compound. Standard library only at module level.
 """
 
 from __future__ import annotations
@@ -17,7 +18,65 @@ from ailsa.record.events import exp_id
 from ailsa.record.fsutil import sha256_file
 
 _JCAMP_SUFFIXES = (".dx", ".jdx")
-_DROP_HEADERS = {"TITLE", "OWNER"}
+# JCAMP headers that describe the measurement and cannot name the compound, compared in
+# JCAMP's normal form (upper case; spaces, dashes, slashes and underscores ignored). Everything
+# else (TITLE, NAMES, CAS NAME, CAS REGISTRY NO, $NAME, SAMPLE DESCRIPTION, BLOCK_ID, OWNER,
+# ORIGIN, MOLFORM, ...) is never recorded.
+_SAFE_HEADERS = frozenset(
+    {
+        "JCAMPDX",
+        "DATATYPE",
+        "DATACLASS",
+        "XUNITS",
+        "YUNITS",
+        "XFACTOR",
+        "YFACTOR",
+        "FIRSTX",
+        "LASTX",
+        "FIRSTY",
+        "MINX",
+        "MAXX",
+        "MINY",
+        "MAXY",
+        "NPOINTS",
+        "DELTAX",
+        "RESOLUTION",
+        "NUMDIM",
+        "TEMPERATURE",
+        ".OBSERVEFREQUENCY",
+        ".OBSERVENUCLEUS",
+        ".SOLVENTNAME",
+        ".SOLVENTREFERENCE",
+        ".SHIFTREFERENCE",
+        ".FIELD",
+        ".ACQUISITIONMODE",
+        ".PULSESEQUENCE",
+        ".AVERAGES",
+        ".DIGITISERRES",
+        ".DIGITIZERRES",
+        "$SFO1",
+        "$SFO2",
+        "$BF1",
+        "$BF2",
+        "$SF",
+        "$SW",
+        "$SWH",
+        "$SWP",
+        "$OFFSET",
+        "$TD",
+        "$SI",
+        "$NS",
+        "$TE",
+        "$PULPROG",
+        "$NUC1",
+        "$NUC2",
+        "$SOLVENT",
+    }
+)
+
+
+def _jcamp_label(key: str) -> str:
+    return re.sub(r"[\s\-/_]", "", key).upper()
 _DATA_BLOCK = re.compile(
     r"^##(XYDATA|XYPOINTS|PEAK TABLE|PEAKTABLE|DATA TABLE|DATATABLE|NTUPLES|PAGE)\b", re.I
 )
@@ -87,13 +146,22 @@ def _jcamp_headers(path: Path) -> dict[str, str]:
             if not match:
                 continue
             key = match.group(1).strip()
-            if key.upper() in _DROP_HEADERS:
+            if _jcamp_label(key) not in _SAFE_HEADERS:
                 continue
             headers[key] = match.group(2).strip()
     return headers
 
 
-def _jcamp_files(dataset: Path) -> list[dict[str, Any]]:
+def _jcamp_files(dataset: Path, *, blind: bool = False) -> list[dict[str, Any]]:
+    """JCAMP files with sha256 and safe headers; blind runs record j1, j2, ... as the path."""
+    found = _jcamp_entries(dataset)
+    if blind:
+        for n, entry in enumerate(found, start=1):
+            entry["path"] = f"j{n}{Path(entry['path']).suffix.lower()}"
+    return found
+
+
+def _jcamp_entries(dataset: Path) -> list[dict[str, Any]]:
     found: list[dict[str, Any]] = []
     for dirpath, dirnames, filenames in os.walk(dataset, followlinks=False):
         here = Path(dirpath)
@@ -184,7 +252,7 @@ def build_inventory(dataset: Path, *, blind: bool, fingerprint: str) -> dict[str
         "dataset_fingerprint": fingerprint,
         "blind": blind,
         "experiments": entries,
-        "jcamp_files": _jcamp_files(dataset),
+        "jcamp_files": _jcamp_files(dataset, blind=blind),
         "unreadable": sum(1 for e in entries if not e["readable"]),
     }
 

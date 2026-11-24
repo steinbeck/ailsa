@@ -146,12 +146,30 @@ def test_jcamp_headers(tmp_path: Path) -> None:
     ds = _make(tmp_path / "ds")
     inv = build_inventory(ds, blind=True, fingerprint="sha256:abc")
     (jc,) = inv["jcamp_files"]
-    assert jc["path"] == "spec.jdx"
+    assert jc["path"] == "j1.jdx"  # WR-14: blind runs alias JCAMP file names
     assert len(jc["sha256"]) == 64
     keys = {k.upper() for k in jc["headers"]}
     assert "TITLE" not in keys and "OWNER" not in keys
     assert "JCAMP-DX" in keys
     assert "XYDATA" not in keys
+    (open_jc,) = build_inventory(ds, blind=False, fingerprint="sha256:abc")["jcamp_files"]
+    assert open_jc["path"] == "spec.jdx"
+
+
+def test_jcamp_name_headers_never_recorded(tmp_path: Path) -> None:
+    """WR-14: only measurement headers are kept (allow-list), whatever names the sample."""
+    ds = tmp_path / "ds"
+    ds.mkdir()
+    (ds / f"{CANARY}.dx").write_text(
+        f"##TITLE= x\n##JCAMP-DX= 5.01\n##NAMES= {CANARY}\n##CAS NAME= {CANARY}\n"
+        f"##CAS REGISTRY NO= {CANARY}\n##$NAME= {CANARY}\n##SAMPLE DESCRIPTION= {CANARY}\n"
+        f"##BLOCK_ID= {CANARY}\n##ORIGIN= {CANARY}\n##.OBSERVE NUCLEUS= ^13C\n"
+        "##.SOLVENT NAME= CDCl3\n##XYDATA= (X++(Y..Y))\n1 2 3\n##END=\n"
+    )
+    inv = build_inventory(ds, blind=True, fingerprint="sha256:abc")
+    assert CANARY not in json.dumps(inv)
+    (jc,) = inv["jcamp_files"]
+    assert set(jc["headers"]) == {"JCAMP-DX", ".OBSERVE NUCLEUS", ".SOLVENT NAME"}
 
 
 def test_validates_against_model(tmp_path: Path) -> None:
