@@ -34,14 +34,25 @@ def _fake_run() -> None:
     click.echo("x")
 
 
+@click.command("nuswrite")
+@click.argument("text")
+def _nuswrite(text: str) -> None:
+    """Stands in for a NUS command that writes its stages into <run>/nus/ (REC-05)."""
+    stage = Path(os.environ["AILSA_RUN_DIR"]) / "nus" / "6"
+    stage.mkdir(parents=True, exist_ok=True)
+    (stage / "stage.ft2").write_text(text)
+
+
 @pytest.fixture(autouse=True)
 def _commands() -> Iterator[None]:
     resolve._warned = False
     cli.add_command(_rectest, "rectest")
+    cli.add_command(_nuswrite, "nuswrite")
     saved = cli._loaded.get("run")
     cli._loaded["run"] = _fake_run
     yield
     cli._loaded.pop("rectest", None)
+    cli._loaded.pop("nuswrite", None)
     if saved is not None:
         cli._loaded["run"] = saved
     else:
@@ -63,6 +74,31 @@ def test_outside_run_identical(workspace: Path, tmp_path: Path, monkeypatch) -> 
     assert result.stdout == direct.stdout == LINE
     assert result.stderr == ""
     assert not list(workspace.glob("*/events.jsonl"))
+
+
+def test_tool_written_nus_output_is_registered(
+    workspace: Path, new_run, monkeypatch, tmp_path: Path
+) -> None:
+    """WR-07: files a tool writes into nus/ are registered, not flagged as agent files."""
+    import json
+
+    from ailsa.cli.run import run as run_group
+    from ailsa.record.finalize import unregistered_files
+
+    _, run_dir = new_run
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("AILSA_RUN_DIR", str(run_dir))
+    assert _invoke(["nuswrite", "first"]).exit_code == 0
+    assert _invoke(["nuswrite", "second"]).exit_code == 0
+    first, second = (e["artefacts"] for e in _tool_events(run_dir))
+    assert first[0]["path"] == "nus/6/stage.ft2" and first[0]["kind"] == "nus-stage"
+    assert second[0]["supersedes"] == first[0]["id"]
+    events = read_events(run_dir)["events"]
+    assert unregistered_files(run_dir, events) == []
+    (run_dir / "nus" / "6" / "planted.txt").write_text("agent")
+    assert unregistered_files(run_dir, read_events(run_dir)["events"]) == ["nus/6/planted.txt"]
+    res = CliRunner().invoke(run_group, ["verify", "--run", str(run_dir), "--format", "json"])
+    assert json.loads(res.stdout)["artefacts_ok"] is True
 
 
 def test_inside_run_records(workspace: Path, new_run, monkeypatch, tmp_path: Path) -> None:

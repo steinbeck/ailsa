@@ -323,6 +323,9 @@ def verify_cmd(run_ref: str | None, fmt: str) -> None:
     bad: list[dict[str, str]] = []
     for aid, art in sorted(index.items()):
         rel = str(art.get("path"))
+        successor = index.get(str(art.get("superseded_by")))
+        if successor is not None and successor.get("path") == rel:
+            continue  # a tool rewrote this file in place; its successor is checked
         target = run_dir / rel
         if not target.is_file() or target.is_symlink():
             bad.append({"id": aid, "path": rel, "reason": "missing"})
