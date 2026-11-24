@@ -76,8 +76,13 @@ Last activity: 2026-11-23 -- paper audit answers (leaks, log check); C20H32O2 co
       CLI-written run record (manifest, event log, declared result) must come first (R0a/R0b, with the
       skill rebuild). All 22 owner decisions answered 2026-11-24 (SPEC §13, "Owner answers"):
       local only, single user, read-only; structured run record strict for the final result;
-      separate run workspace. Open follow-ups: example molecule (D18), Claude-app push check (D20),
-      account data terms before the next collaborator run (D22); spec draft 2.3 to fold them in.
+      separate run workspace. Spec draft 2.3 (2026-11-24) folds them in, plus replay, the chemist
+      view while working and the Team section (TL-13 to TL-15) and a plain line per event (REC-34);
+      PDF `background/AILSA-Web-Interface-Specification-Draft2.3.pdf`. Example molecule chosen (D18):
+      α-terpineol from BMRB bmse000667, outside every benchmark, development, blind and teaching
+      set; licence to confirm before it enters the repo. Notifications (D20): Claude-app push needs
+      Remote Control, so headless runs use ntfy. Open: account data terms before the next
+      collaborator run (D22).
       Clickable prototype (same folder, `prototype/index.html`, local only because it embeds an
       unpublished run): chemist and expert views, zoomable spectra, a replay of the run and a Team
       section with every agent message. Design record committed: `PRODUCT.md`, `DESIGN.md`,
