@@ -202,7 +202,7 @@ def render_final(
         lines += ["", "### Alternatives", ""]
         for alt in alts:
             lines.append(
-                f"- Candidate {md_escape(alt.get('candidate'))}: "
+                f"- Candidate {md_escape(alt.get('rank', alt.get('candidate')))}: "
                 f"{md_escape(alt.get('status'))} ({md_escape(alt.get('reason', ''))})"
             )
     if decl.get("iterations"):

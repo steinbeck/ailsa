@@ -15,6 +15,8 @@ from typing import Any
 
 import click
 
+from ailsa.record.events import FINAL_OUTCOMES
+
 _FORMAT = click.Choice(["text", "json"])
 _RECORD_FILES = frozenset(
     {
@@ -372,6 +374,98 @@ def render_cmd(run_ref: str | None, fmt: str) -> None:
     run_dir = _resolve_run(run_ref)
     paths = [str(p) for p in render_run(run_dir)]
     _emit({"files": paths}, fmt, paths)
+
+
+@run.command("finalize")
+@click.option(
+    "--outcome", type=click.Choice(list(FINAL_OUTCOMES)), default=None, help="Declared outcome."
+)
+@click.option(
+    "--ranking",
+    "ranking_ref",
+    default=None,
+    help="Ranking id (rkNN) or 'latest'. Default: latest when the outcome needs a ranking.",
+)
+@click.option("--candidate", type=int, default=None, help="Rank of the chosen candidate.")
+@click.option("--confidence", type=click.Choice(["high", "medium", "low"]), default=None)
+@click.option("--termination-reason", default="agent finished", show_default=True)
+@click.option("--caveat", "caveats", multiple=True, help="A caveat (repeatable).")
+@click.option("--open-question", "open_questions", multiple=True, help="Open question.")
+@click.option("--next-step", "next_steps", multiple=True, help="Suggested next step.")
+@click.option(
+    "--alternative", "alternatives", multiple=True, help="RANK:STATUS, for example 2:less_likely."
+)
+@click.option("--withdraw", is_flag=True, help="Withdraw the current declaration.")
+@click.option("--reason", default=None, help="Reason for a withdrawal.")
+@_run_option
+@_format_option
+def finalize_cmd(
+    outcome: str | None,
+    ranking_ref: str | None,
+    candidate: int | None,
+    confidence: str | None,
+    termination_reason: str,
+    caveats: tuple[str, ...],
+    open_questions: tuple[str, ...],
+    next_steps: tuple[str, ...],
+    alternatives: tuple[str, ...],
+    withdraw: bool,
+    reason: str | None,
+    run_ref: str | None,
+    fmt: str,
+) -> None:
+    """Declare the result of the run against a ranking that ailsa lsd rank wrote."""
+    from ailsa.record.finalize import NO_RUN_MESSAGE, FinalizeRefused, finalize_run
+    from ailsa.record.resolve import SESSION_ENV, find_active_run
+
+    ref = find_active_run(run_ref)
+    if ref is None:
+        click.echo(f"ailsa: {NO_RUN_MESSAGE}", err=True)
+        raise SystemExit(1)
+    if not withdraw and outcome is None:
+        click.echo("ailsa: --outcome is required (or --withdraw)", err=True)
+        raise SystemExit(1)
+    try:
+        result = finalize_run(
+            ref.run_dir,
+            outcome=outcome,
+            ranking_ref=ranking_ref,
+            candidate=candidate,
+            confidence=confidence,
+            termination_reason=termination_reason,
+            caveats=list(caveats),
+            open_questions=list(open_questions),
+            next_steps=list(next_steps),
+            alternatives=list(alternatives),
+            withdraw=withdraw,
+            reason=reason,
+            session_id=os.environ.get(SESSION_ENV),
+        )
+    except FinalizeRefused as exc:
+        click.echo(f"ailsa: {exc}", err=True)
+        raise SystemExit(1) from None
+    lines = ["withdrawn" if result.get("withdrawn") else f"declared: {result.get('outcome')}"]
+    lines += list(result["files"])
+    for rel in result.get("unverified", []):
+        lines.append(f"warning: unverified file {rel}")
+    _emit(result, fmt, lines)
+
+
+@run.command("close")
+@click.option("--reason", default="closed by user", show_default=True)
+@_run_option
+@_format_option
+def close_cmd(reason: str, run_ref: str | None, fmt: str) -> None:
+    """Close the run: it takes no more material afterwards."""
+    from ailsa.record.closing import CloseRefused, close_run
+
+    run_dir = _resolve_run(run_ref)
+    try:
+        result = close_run(run_dir, reason)
+    except CloseRefused as exc:
+        click.echo(f"ailsa: {exc}", err=True)
+        raise SystemExit(1) from None
+    _emit(result, fmt, [f"closed: {result['state']}"])
 
 
 @run.command("index")
