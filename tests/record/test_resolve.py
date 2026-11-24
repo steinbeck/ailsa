@@ -33,6 +33,16 @@ def test_explicit_wins(workspace: Path, new_run: tuple[str, Path], monkeypatch) 
     assert ref is not None and ref.run_dir == run_dir
 
 
+def test_unresolved_explicit_never_falls_back(workspace: Path, new_run, monkeypatch) -> None:
+    """CR-04: a typo in --run must not select the run that happens to be active."""
+    _, run_dir = new_run
+    monkeypatch.setenv("AILSA_RUN_DIR", str(run_dir))
+    bind_session(workspace, SID, run_dir)
+    for bad in ("no-such-run", "/no/such/run", "../escape"):
+        assert find_active_run(bad, session_id=SID, cwd=run_dir) is None, bad
+    assert find_active_run(session_id=SID, cwd=run_dir) is not None
+
+
 def test_env_beats_session_and_cwd(workspace: Path, new_run, monkeypatch, tmp_path) -> None:
     _, run_dir = new_run
     _, other = create_run_dir(workspace, "other")

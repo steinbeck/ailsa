@@ -93,6 +93,8 @@ def export(
     run_dir: Path | None = None
     if out_dir is None:
         ref = find_active_run(run_ref) if run_ref else current_run_for_tool("spectra export")
+        if ref is None and run_ref:
+            raise click.ClickException(f"run not found: {run_ref}")
         if ref is None:
             raise click.ClickException("spectra export needs an active run or --out DIR")
         run_dir = ref.run_dir

@@ -30,6 +30,8 @@ def _resolve_run(command: str, explicit: str | None) -> Any:
     from ailsa.record.resolve import current_run_for_tool, find_active_run
 
     run = find_active_run(explicit=explicit) if explicit else current_run_for_tool(command)
+    if explicit and run is None:
+        _fail(f"run not found: {explicit}")
     if run is None or (run.run_dir / "finished.json").exists():
         _fail(f"{command} needs an active run (start one with ailsa run init)")
     return run

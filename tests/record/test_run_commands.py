@@ -355,6 +355,45 @@ def test_run_help_lists_commands() -> None:
         assert name in text
 
 
+_UNRESOLVED_RUN_COMMANDS = [
+    ("run", ["close"]),
+    ("run", ["finalize", "--outcome", "no_structure_fits"]),
+    ("run", ["note", "into the wrong run?"]),
+    ("run", ["status"]),
+    ("run", ["render"]),
+    ("run", ["verify"]),
+    ("peaks", ["decide", "--from", "{table}"]),
+    ("model", ["import", "{table}"]),
+    ("spectra", ["export", "{dataset}"]),
+]
+
+
+@pytest.mark.parametrize(("group", "args"), _UNRESOLVED_RUN_COMMANDS)
+def test_explicit_run_never_falls_back_to_active_run(
+    workspace: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, group: str, args: list[str]
+) -> None:
+    """CR-04: an explicit --run that does not resolve is an error, whatever run is active."""
+    from ailsa.cli.model import model
+    from ailsa.cli.peaks import peaks
+    from ailsa.cli.spectra import spectra
+
+    groups = {"run": run, "peaks": peaks, "model": model, "spectra": spectra}
+    active = _new_run(workspace, tmp_path)
+    monkeypatch.setenv("AILSA_RUN_DIR", str(active))
+    monkeypatch.chdir(active / "agent")  # the cwd marker would resolve too
+    table = tmp_path / "table.json"
+    table.write_text('{"decisions": []}\n')
+    filled = [a.format(table=table, dataset=tmp_path / "example") for a in args]
+    before = (active / "events.jsonl").read_bytes()
+    manifest_before = sorted(p.name for p in active.iterdir())
+    res = CliRunner().invoke(groups[group], [*filled, "--run", "no-such-run-x1"])
+    assert res.exit_code != 0, res.output
+    assert "run not found: no-such-run-x1" in res.output
+    assert (active / "events.jsonl").read_bytes() == before
+    assert sorted(p.name for p in active.iterdir()) == manifest_before
+    assert not (active / "finished.json").exists()
+
+
 def test_walk_does_not_follow_symlinks(workspace: Path, tmp_path: Path) -> None:
     run_dir = _fixture(workspace)
     outside = tmp_path / "outside"

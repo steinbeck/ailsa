@@ -157,6 +157,10 @@ def note_cmd(
         warned = io.StringIO()
         if run_ref:
             ref = find_active_run(run_ref)
+            if ref is None:
+                # A usage error, never a reason to note into whichever run is active.
+                click.echo(f"ailsa: run not found: {run_ref}", err=True)
+                raise SystemExit(1)
         else:
             ref = current_run_for_tool("run note", stream=warned)
         if ref is None:
@@ -420,7 +424,8 @@ def finalize_cmd(
 
     ref = find_active_run(run_ref)
     if ref is None:
-        click.echo(f"ailsa: {NO_RUN_MESSAGE}", err=True)
+        message = f"run not found: {run_ref}" if run_ref else NO_RUN_MESSAGE
+        click.echo(f"ailsa: {message}", err=True)
         raise SystemExit(1)
     if not withdraw and outcome is None:
         click.echo("ailsa: --outcome is required (or --withdraw)", err=True)

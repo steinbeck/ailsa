@@ -1,7 +1,8 @@
 """Find the active run of a tool call (standard library only).
 
 Order: explicit path or id, ``AILSA_RUN_DIR``, the session pointer keyed by
-``CLAUDE_CODE_SESSION_ID``, the nearest ``.ailsa-run`` marker above the working folder.
+``CLAUDE_CODE_SESSION_ID``, the nearest ``.ailsa-run`` marker above the working folder. An
+explicit path or id is final: if it does not resolve, nothing else is tried.
 
 D-07: outside any run nothing is printed. The one-line warning appears only when a record
 was expected (``AILSA_REQUIRE_RUN=1``, or ``AILSA_RUN_DIR`` / a session pointer exists but
@@ -80,9 +81,9 @@ def find_active_run(
 ) -> RunRef | None:
     environ = os.environ if env is None else env
     if explicit:
-        ref = _ref(find_run(workspace_root(create=False), explicit), "flag")
-        if ref:
-            return ref
+        # An explicit run that does not resolve is an error for the caller, never a reason to
+        # act on whatever run happens to be active (a close cannot be undone).
+        return _ref(find_run(workspace_root(create=False), explicit), "flag")
     env_dir = environ.get(RUN_DIR_ENV)
     if env_dir:
         ref = _ref(Path(env_dir).expanduser(), "env")
