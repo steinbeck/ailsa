@@ -2,7 +2,7 @@
 
 **When to read this.** Read this once LSD has produced structures (a `solutions.smi` file
 exists). It covers ranking the candidates by 13C prediction, judging them, deriving the
-identity with the tool, and writing `analysis/final_results.md`. Follow the sections in order.
+identity with the tool, and declaring the result. Follow the sections in order.
 
 ## 1. Rank
 
@@ -11,8 +11,8 @@ so each carbon's predicted shift is compared with the measured shift of that sam
 reads the measured shifts from your MULT comments and the solutions from `compound.sol`:
 
 ```
-ailsa lsd rank --assigned analysis/iteration_NN/compound.lsd -n 100 --format json > analysis/ranking_results.json
-ailsa lsd rank --assigned analysis/iteration_NN/compound.lsd
+ailsa lsd rank --assigned iteration_NN/compound.lsd -n 100 --format json > ranking_results.json
+ailsa lsd rank --assigned iteration_NN/compound.lsd
 ```
 
 The first saves the top 100 as the record, the second prints the top 10 to read. If it warns
@@ -24,7 +24,7 @@ never rank each run alone and pick the run you like.
 experimental line, whatever atom it belongs to:
 
 ```
-ailsa lsd rank analysis/iteration_NN/solutions.smi --shifts "S1,S2,S3"
+ailsa lsd rank iteration_NN/solutions.smi --shifts "S1,S2,S3"
 ```
 
 It cannot tell regioisomers apart well: a wrong structure borrows lines that belong to other
@@ -50,7 +50,7 @@ atoms. Use it only as a second opinion and report where the two disagree.
 
 ## 3. Check atom by atom
 
-For the top 3 to 5 candidates, read their `atoms` lists in `analysis/ranking_results.json`
+For the top 3 to 5 candidates, read their `atoms` lists in `ranking_results.json`
 (measured and predicted shift per LSD atom). For the prediction's confidence and radius of a
 single structure (6 = most specific match), run `ailsa predict c13 "SMILES"`.
 
@@ -87,7 +87,7 @@ fail, or check 6 says IMPLAUSIBLE).
 Long-range correlations, for the caveats:
 
 ```
-ailsa lsd analyze analysis/iteration_NN/compound.sol analysis/iteration_NN/compound.lsd --solution N --format json
+ailsa lsd analyze iteration_NN/compound.sol iteration_NN/compound.lsd --solution N --format json
 ```
 
 N is the candidate's `solution_index`. An HMBC with `j_coupling` 4 or more is a long-range
@@ -153,53 +153,34 @@ Write the literal `(tentative, unverified)` after every name that is not `confir
 claims an exact isomer (substituent positions, linkage, symmetry); if the data do not fix
 those, the name is tentative. A downgraded name never blocks the structural result.
 
-## 8. Write `analysis/final_results.md`
+## 8. Declare the result
 
-```markdown
-# CASE Results: <derived name if confirmed, else InChIKey or "novel structure">
+You do not write the report. You declare the result once with `ailsa run finalize`; the report
+(`final_results.md`) is generated from the declaration and the record.
 
-**Formula:** <formula>
-**Date:** <output of date -u>
-**Iterations:** <number of LSD runs>
-**Final solution count:** <count>
-
-## Identity
-- **Tool verdict:** <confirmed | confirmed-structure | tentative | novel>
-- **Primary identity:** <per section 7>
-- **InChIKey:** <derived.inchi_key>
-- **Canonical SMILES:** <derived.canonical_smiles>
-- **Trivial name:** <plain if confirmed, else "<name> (tentative, unverified)" or "none">
-- **Identity confidence:** <tool-confirmed | structure-only | unverified/novel>
-- **Warning:** <tool warning, else None>
-
-## Top Candidates
-| Rank | SMILES | Within 3 ppm | MAE atom by atom (ppm) | Max error (atom) | Plausibility |
-|---|---|---|---|---|---|
-| 1 | <smiles> | N/N | X.XX | X.X (C n) | PLAUSIBLE |
-
-## Confidence Assessment
-**Overall structure confidence:** <High/Medium/Low>
-
-### Per-Atom Confidence
-| Atom | 13C (ppm) | Resolution | Prediction | Correlations | Confidence |
-|---|---|---|---|---|---|
-
-### Ambiguities and Caveats
-<ambiguities, unexplained lines, long-range correlations, Low carbons>
-
-## Recommendation
-<1-2 sentences: accept rank 1, or what data would decide>
-
-**Structure determination confidence: <High/Medium/Low>**
+```
+ailsa run finalize --outcome proposal --ranking latest --candidate 1 --confidence medium \
+  --caveat "unexplained line at 128 ppm" --open-question "regiochemistry of the methyl" \
+  --next-step "acquire NOESY" --alternative 2:less_likely
 ```
 
-Iteration limit with more than 10 solutions: add "**Warning:** not fully converged; result may
-be under-determined" below the header and a `## Why Convergence Failed` section, and recommend
-more 2D spectra (COSY, NOESY/ROESY), an HRMS formula check and a manual peak review.
+- `--outcome`: `proposal` (one structure you stand behind), `proposal_under_determined` (the data
+  leave several), `inconclusive` (a ranking exists but you do not trust it), `no_structure_fits`,
+  `insufficient_data` (no candidate needed for these two), `handed_to_human`.
+- `--ranking latest` names the ranking `ailsa lsd rank --assigned` wrote last; `--candidate N` is
+  the rank you chose (section 5, not always 1).
+- `--confidence high|medium|low` follows section 6.
+- `--caveat`, `--open-question`, `--next-step`: one text each, repeat the option for more
+  (ambiguities, unexplained lines, long-range correlations, Low carbons, data that would decide).
+- `--alternative RANK:STATUS`: every other candidate worth naming, with `not_excluded`,
+  `less_likely` or `excluded`.
+- `--termination-reason`: why you stopped (iteration limit, converged, no data left).
 
-No structure at all: write `# CASE Failed` with formula, iterations, "Final solution count: 0",
-the likely causes (wrong formula, wrong peak assignments, one-bond artefacts among the HMBC
-peaks) and recommend manual review.
+An identity block comes from section 7: run `ailsa identify` and let `verdict` decide the name.
+Finalize refuses a ranking you wrote yourself and one older than your last solver run; run
+`ailsa lsd run` and `ailsa lsd rank --assigned` again, then finalize. Iteration limit with more
+than 10 solutions: use `proposal_under_determined` and name more 2D spectra, an HRMS formula
+check and a manual peak review as next steps.
 
-Then answer the user with the chosen SMILES, its identity as rendered above, the confidence,
-and the path of `analysis/final_results.md`.
+Then answer the user with the chosen SMILES, its identity as section 7 gives it, the confidence,
+and the run folder.

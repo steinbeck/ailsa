@@ -5,7 +5,7 @@
 Read this before you build the atom list. It turns the output of `ailsa pick`, `ailsa analyze`
 and `ailsa detect` into carbons with H counts, hybridisation, equivalences and assigned HSQC/HMBC
 correlations. The pick commands return raw peaks with solvent lines, artefacts and noise still in
-them; removing those is your job. "Record" means: write it into `analysis/setup.md`.
+them; removing those is your job. "Record" means: write it into `setup.md`.
 
 ## 1. Experiments and shift regions
 

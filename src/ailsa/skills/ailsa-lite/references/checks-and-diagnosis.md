@@ -3,12 +3,12 @@
 **When to read this.** You write every LSD file yourself, so you must check it yourself. Apply
 part 1 to every LSD file before every solver run, also after a one-line change. Read part 2 when
 LSD returns no structure, or far too many (thousands, a time-out, or more than 100 that barely
-shrink from run to run). Run all commands from the iteration folder, `analysis/iteration_NN/`.
+shrink from run to run). Run all commands from the iteration folder, `iteration_NN/`.
 
 Two grades are used below:
 
 - **FIX**: the solver aborts, or the true structure is excluded. Never run with one open.
-- **JUSTIFY**: allowed only with a one-line reason in `analysis/iterations.md`.
+- **JUSTIFY**: allowed only with a one-line reason in `iterations.md`.
 
 ## Part 1: before every run
 

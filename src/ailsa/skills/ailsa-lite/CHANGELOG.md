@@ -3,6 +3,22 @@
 Each entry says which skill it applies to (see docs/SKILLS.md) and, for a change of behaviour,
 which measurement supports it.
 
+## 0.3.0
+
+Applies to: ailsa-lite; the frontier skill follows when it is wired to the run record.
+
+- The record is created by `ailsa run init` as the first step; the work folder lies outside the
+  dataset and paths in the skill are relative to it.
+- Step summaries go in with `ailsa run note`.
+- The result is declared with `ailsa run finalize`, which refuses hand-made or stale rankings;
+  `final_results.md` and the progress log are generated, no longer written by hand.
+- Multiplicity variants run with `--purpose family`.
+- No frontmatter hooks: skill-frontmatter hooks fired only for PostToolUse and Stop in the
+  spike, so open sessions use `ailsa run hooks install`.
+- Measurement: recording changes no chemistry rule; the acceptance run (one lean run with a small
+  Claude model on the public example dataset) checks that a small model completes init, notes and
+  finalize.
+
 ## 0.2.1
 
 Applies to: both skills (frontier: LSD engineer, devil's advocate, diagnostic, solution analyst,

@@ -8,11 +8,11 @@ many, go to part 2 of that file.
 
 ## 1. Folders and files
 
-- One folder per solver run: `analysis/iteration_01/compound.lsd`, then `iteration_02/`, and so
+- One folder per solver run: `iteration_01/compound.lsd`, then `iteration_02/`, and so
   on (two digits). An alternative multiplicity model gets its own folder,
-  `analysis/iteration_NN_<model>/`.
+  `iteration_NN_<model>/`.
 - From iteration 2 on, copy the previous file and edit the copy:
-  `cp analysis/iteration_01/compound.lsd analysis/iteration_02/`. Never retype a file from
+  `cp iteration_01/compound.lsd iteration_02/`. Never retype a file from
   memory. Every constraint stays unless you record a reason for removing it.
 - `ailsa lsd run` writes `compound.sol`, `solncounter` (solutions found) and `solutions.smi`
   (one SMILES per solution) into the same folder.
@@ -263,7 +263,7 @@ full list forward, and the next batch is taken from the top.
 ## 8. Run and read the result
 
 ```bash
-cd analysis/iteration_NN && ailsa lsd run compound.lsd
+cd iteration_NN && ailsa lsd run compound.lsd
 ```
 
 The default time limit is 60 seconds; `--timeout 600` raises it. Read the text output:
@@ -340,7 +340,7 @@ Record `elim_budget` in the inventory.
 ## 11. Alternative multiplicity models
 
 When `setup.md` lists more than one multiplicity model, run every model in its own folder
-`analysis/iteration_NN_<model>/`. The files carry all the same constraints and differ only in
+`iteration_NN_<model>/`. The files carry all the same constraints and differ only in
 the MULT lines of the atoms in question (`C 3 3` for CH3, `C 3 2` for CH2, `C 3 1` for CH).
 Never run only the best-looking model and fall back to another when it disappoints. A model
 counts as searched once its run has finished, even if it gave too many structures to rank.
@@ -352,7 +352,7 @@ Rank all models together (`ranking.md`).
 Use it only if every element of the fragment is in the formula and its `atom_count` is smaller
 than the molecule's heavy atom count. Never copy the `DEFF` line the search prints (it uses F1,
 the ring filter's number). Run
-`ailsa fragment to-lsd "SMILES" --output-dir analysis/iteration_NN/ --format json`, add its
+`ailsa fragment to-lsd "SMILES" --output-dir iteration_NN/ --format json`, add its
 `deff_command` (`DEFF F3 "fragment_....lsd"`), and merge into the one FEXP line:
 `FEXP "F3 AND NOT F1 AND NOT F2"`. If that run gives 0 solutions, remove the F3 line and `F3`
 from FEXP; if structures return, discard the fragment and record why.
