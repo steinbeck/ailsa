@@ -33,6 +33,31 @@ END_EVENTS = ("run.finished", "session.ended", "run.attempt.ended")
 # out: the launcher and finalize write them too (older records stamp the transcript's model
 # reports with actor kind "hook"), so they never prove that the harness ran hooks (D-13).
 HOOK_EVIDENCE = HOOK_TYPES - {"agent.model_reported", "transcript.copied"}
+# Written after a session or attempt ended without meaning the run went on: transcript copies,
+# model reports, warnings, and the background spectra export started by init.
+_BOOKKEEPING = frozenset(
+    {
+        "transcript.copied",
+        "agent.model_reported",
+        "warning.raised",
+        "log.recovered",
+        "spectra.scanned",
+        "spectrum.processed",
+    }
+)
+
+
+def _revives(etype: str | None, actor: dict[str, Any]) -> bool:
+    """True if this event after a session.ended / run.attempt.ended shows the run went on.
+
+    A new session or prompt does, and so does tool or agent activity; a late hook event of the
+    ended session (e.g. an async PostToolUse) and bookkeeping do not.
+    """
+    if etype is None or etype in END_EVENTS or etype in _BOOKKEEPING:
+        return False
+    if actor.get("kind") == "hook":
+        return etype in ("session.started", "prompt.submitted")
+    return not str(actor.get("name") or "").startswith("ailsa spectra")
 HOOK_COUNT_TYPES = {
     "prompts": "prompt.submitted",
     "permission_waits": "human.waiting",
@@ -323,6 +348,13 @@ def fold(
     now: str | datetime | None = None,
 ) -> dict[str, Any]:
     events = [ev for ev in events if isinstance(ev, dict)]
+    # A closed run takes no more material (REC-23): the manifest ends at run.finished. Hook
+    # events the bound session writes afterwards stay in the log and the progress rendering
+    # but never change the manifest, so run verify stays clean after them (WR-10).
+    for i, ev in enumerate(events):
+        if ev.get("type") == "run.finished":
+            events = events[: i + 1]
+            break
     m: dict[str, Any] = {
         "schema": "ailsa.run-manifest",
         "schema_version": "1",
@@ -385,6 +417,9 @@ def fold(
             counts[by_type[str(etype)]] += 1
         if etype in END_EVENTS and not post_finish:
             end_ev = ev
+        elif end_ev is not None and end_ev.get("type") != "run.finished" and _revives(etype, actor):
+            # The session ended mid-run (e.g. /clear) and the run went on in a new session.
+            end_ev = None
         if etype == "run.finished":
             finished_seen = True
         try:

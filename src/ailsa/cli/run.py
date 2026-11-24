@@ -292,6 +292,15 @@ def _manifest_matches(run_dir: Path, expected: dict[str, Any]) -> tuple[bool, bo
         for key in _NOW_KEYS:
             (disk.get("status") or {}).pop(key, None)
             want["status"].pop(key, None)
+    if (run_dir / "finished.json").is_file():
+        # Hook events of the bound session may follow run.finished; they never change the
+        # manifest (it ends at run.finished) but move the log's length and head. The head at
+        # the close is checked against finished.json and the index below.
+        for manifest in (disk, want):
+            integrity = manifest.get("integrity")
+            if isinstance(integrity, dict):
+                integrity.pop("events", None)
+                integrity.pop("head", None)
     return disk == want, True
 
 

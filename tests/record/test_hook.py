@@ -369,3 +369,15 @@ def test_finished_run_takes_bound_session_stragglers(new_run, tmp_path):
     (turn,) = events_of(run, "agent.turn_ended")
     (end,) = events_of(run, "session.ended")
     assert turn["after_finish"] is False and end["after_finish"] is True
+
+
+def test_finished_run_heartbeat_is_left_alone(new_run, tmp_path):
+    """WR-10: a straggler hook after the close does not rewrite heartbeat.json."""
+    _, run = new_run
+    _bind_in_record(run, FIXTURE_SID)
+    run_hook(load("stop"), run, tmp_path)
+    before = (run / HEARTBEAT).read_bytes()
+    _finish(run)
+    run_hook(load("session_end"), run, tmp_path)
+    assert events_of(run, "session.ended")
+    assert (run / HEARTBEAT).read_bytes() == before

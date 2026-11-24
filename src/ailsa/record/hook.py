@@ -317,7 +317,9 @@ def _run(data: dict[str, Any]) -> None:
         return
     run_dir = found
     try:
-        write_heartbeat(run_dir, name)
+        if not (run_dir / FINISHED).exists():
+            # A finished run's heartbeat stays as it was at the close (manifest unchanged).
+            write_heartbeat(run_dir, name)
         actor_base = {"kind": "hook", "name": name}
         if (
             name == "SessionStart"

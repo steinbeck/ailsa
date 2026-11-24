@@ -311,6 +311,25 @@ def test_verify_clean(workspace: Path) -> None:
     assert _invoke(["verify", "--run", str(run_dir)]).stdout.strip() == "clean"
 
 
+def test_verify_clean_after_post_finish_hook_events(workspace: Path) -> None:
+    """WR-10: hook events of the bound session after the close keep verify clean."""
+    from ailsa.record.log import append_event
+
+    run_dir = _fixture(workspace)
+    assert _invoke(["close", "--run", str(run_dir)]).exit_code == 0
+    _invoke(["render", "--run", str(run_dir)])
+    append_event(
+        run_dir,
+        "session.ended",
+        {"reason": "other"},
+        actor={"kind": "hook", "name": "SessionEnd"},
+        allow_after_finish=True,
+    )
+    res = _invoke(["verify", "--run", str(run_dir), "--format", "json"])
+    assert res.exit_code == 0, res.output
+    assert json.loads(res.stdout)["manifest_matches"] is True
+
+
 def test_verify_flipped_byte(workspace: Path) -> None:
     run_dir = _fixture(workspace)
     log = run_dir / "events.jsonl"

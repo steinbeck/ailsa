@@ -199,6 +199,28 @@ def test_events_after_finish_change_no_classification(tmp_path: Path) -> None:
     assert after["harness"]["hook_counts"] == before["harness"]["hook_counts"]
     assert after["status"]["ended_utc"] == before["status"]["ended_utc"]
     assert after["status"]["state"] == before["status"]["state"]
+    # WR-10: the manifest ends at run.finished (only the log's length and head move).
+    for m in (before, after):
+        m["integrity"].pop("events")
+        m["integrity"].pop("head")
+    assert after == before
+
+
+def test_session_end_mid_run_is_not_the_end(tmp_path: Path) -> None:
+    """WR-10: /clear ends a session, the run goes on in a new one: not 'stopped'."""
+    run = _open_run(tmp_path)
+    hook = {"kind": "hook", "name": "SessionEnd"}
+    append_event(run, "session.ended", {"reason": "clear"}, actor=hook,
+                 utc="2026-01-01T11:58:00.000Z")
+    late = {"kind": "hook", "name": "PostToolUse"}
+    append_event(run, "tool.shell", {"command": "ls", "response_bytes": 0,
+                                     "response_sha256": ""}, actor=late,
+                 utc="2026-01-01T11:58:01.000Z")
+    assert _fold(run)["status"]["state"] == "stopped_before_result"
+    append_event(run, "session.started", {"source": "clear", "model": None},
+                 actor={"kind": "hook", "name": "SessionStart"}, utc="2026-01-01T11:59:00.000Z")
+    m = _fold(run)
+    assert m["status"]["state"] == "running" and m["status"]["ended_utc"] is None
 
 
 def test_unexpected_payload_types_are_anomalies_not_crashes(tmp_path: Path) -> None:
