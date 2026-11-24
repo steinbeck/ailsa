@@ -8,6 +8,7 @@ import jsonschema
 
 from ailsa.lsd import LSDRunner, LSDSolutionAnalyzer
 from ailsa.lsd.parser import LSDOutputParser
+from ailsa.lsd.runner import LSDResult
 from ailsa.prediction.resolver import resolve_c13_predictor
 from ailsa.processing import AdaptivePeakPicker
 from ailsa.ranking import SolutionRanker
@@ -41,7 +42,11 @@ def lsd_check() -> None:
 
 
 def _begin_record(
-    input_file: str, purpose: str, parent: str | None, timeout: int
+    input_file: str,
+    purpose: str,
+    parent: str | None,
+    timeout: int,
+    host: str | None = None,
 ) -> tuple[object | None, object | None]:
     """Register the input in the active run, if any. Returns (record, run)."""
     from ailsa.record.resolve import current_run_for_tool
@@ -53,7 +58,13 @@ def _begin_record(
 
     try:
         record = begin_solver_run(
-            run, input_file=input_file, purpose=purpose, parent=parent, timeout_s=timeout
+            run,
+            input_file=input_file,
+            purpose=purpose,
+            parent=parent,
+            timeout_s=timeout,
+            host=host,
+            remote=host is not None,
         )
     except ValueError as exc:
         if parent is not None and "parent" in str(exc):
@@ -67,18 +78,33 @@ def _begin_record(
     return record, run
 
 
-def _finish_record(record: object, result: object, output_dir: Path) -> dict[str, object] | None:
+def _finish_record(
+    record: object,
+    result: object,
+    output_dir: Path,
+    remote: object | None = None,
+) -> dict[str, object] | None:
     from ailsa.record.env import probe_lsd, probe_outlsd
     from ailsa.record.lsdrec import finish_solver_run
 
     try:
-        info = finish_solver_run(
-            record,  # type: ignore[arg-type]
-            result,
-            output_dir=output_dir,
-            lsd_info=probe_lsd(),
-            outlsd_info=probe_outlsd(),
-        )
+        if remote is not None:
+            info = finish_solver_run(
+                record,  # type: ignore[arg-type]
+                result,
+                output_dir=output_dir,
+                lsd_info=remote.lsd,  # type: ignore[attr-defined]
+                outlsd_info=remote.outlsd,  # type: ignore[attr-defined]
+                host=remote.host,  # type: ignore[attr-defined]
+            )
+        else:
+            info = finish_solver_run(
+                record,  # type: ignore[arg-type]
+                result,
+                output_dir=output_dir,
+                lsd_info=probe_lsd(),
+                outlsd_info=probe_outlsd(),
+            )
     except Exception as exc:
         click.echo(f"ailsa: record write failed: {exc}", err=True)
         return None
@@ -93,6 +119,82 @@ def _echo_outcome(info: dict[str, object] | None, outcome: str) -> None:
     """Text mode shows the outcome only in a run, so output outside a run stays as it was."""
     if info is not None:
         click.echo(f"  Outcome: {outcome}")
+
+
+def _solve_on_host(
+    host: str,
+    input_file: str,
+    output_dir: str | None,
+    timeout: int,
+    record: object | None,
+) -> tuple[LSDResult, object | None]:
+    """Solve on a compute host. Returns (LSDResult, RemoteResult | None).
+
+    A failure to reach the host or to stage the input records a ``not_run`` solve (when in a
+    run) and exits 1.
+    """
+    from ailsa.record.remote import RemoteError, RemoteUnreachable, solve_remote
+
+    src = Path(input_file)
+    out = Path(output_dir) if output_dir else src.parent
+    try:
+        remote = solve_remote(host, src, out, timeout_s=timeout)
+    except (RemoteError, ValueError) as exc:
+        if isinstance(exc, RemoteUnreachable):
+            message = f"cannot reach host {host}"
+        else:
+            message = str(exc)
+        if record is not None:
+            failed = LSDResult(
+                success=False,
+                solution_count=0,
+                stderr=message,
+                return_code=-1,
+                input_file=src,
+                output_dir=out,
+                outcome="not_run",
+                error_line=message,
+                smiles_absent_reason="not_run",
+            )
+            _finish_record(
+                record,
+                failed,
+                out,
+                _NoTools(host),
+            )
+        click.echo(f"Error: {message}", err=True)
+        raise SystemExit(1) from exc
+    files = sorted(out.glob("*.sol")) + sorted(out.glob("*.smi"))
+    result = LSDResult(
+        success=remote.outcome in ("solutions", "limit_reached"),
+        solution_count=remote.count,
+        output_files=files,
+        stdout=remote.stdout,
+        stderr=remote.stderr,
+        return_code=remote.exit_code if remote.exit_code is not None else -1,
+        input_file=src,
+        output_dir=out,
+        elapsed_s=remote.elapsed_s,
+        timed_out=remote.timed_out,
+        partial_count=remote.partial_count,
+        limit=remote.limit,
+        outcome=remote.outcome,
+        error_line=remote.error_line,
+        smiles_absent_reason=remote.smiles_absent_reason,
+        lsd_version=remote.lsd.get("version"),
+        lsd_sha256=remote.lsd.get("sha256"),
+        found_count=remote.count,
+    )
+    return result, remote
+
+
+class _NoTools:
+    """Stand-in remote result for a solve that never ran: host only, no binary identity."""
+
+    def __init__(self, host: str) -> None:
+        self.host = host
+        self.lsd: dict[str, object] | None = None
+        self.outlsd: dict[str, object] | None = None
 
 
 @lsd.command("run")
@@ -122,6 +224,12 @@ def _echo_outcome(info: dict[str, object] | None, outcome: str) -> None:
     help="Iteration this input derives from (default: the latest main iteration).",
 )
 @click.option(
+    "--host",
+    "host",
+    default=None,
+    help="Run the solve on this compute host (SSH alias) and record it here.",
+)
+@click.option(
     "--format",
     "output_format",
     type=click.Choice(["text", "json"]),
@@ -134,29 +242,49 @@ def lsd_run(
     output_dir: str | None,
     purpose: str,
     parent: str | None,
+    host: str | None,
     output_format: str,
 ) -> None:
     """Run LSD on an input file.
 
     INPUT_FILE is the path to the LSD input file.
     """
-    if not LSDRunner.is_available():
+    remote = None
+    if host is not None:
+        from ailsa.record.remote import validate_alias
+
+        try:
+            host = validate_alias(host)
+        except ValueError as exc:
+            click.echo(f"Error: {exc}", err=True)
+            raise SystemExit(1) from exc
+    elif not LSDRunner.is_available():
         click.echo("Error: LSD is not installed or not in PATH", err=True)
         raise SystemExit(1)
 
-    record, _run = _begin_record(input_file, purpose, parent, timeout)
+    record, _run = _begin_record(input_file, purpose, parent, timeout, host)
 
-    # Run LSD
-    runner = LSDRunner()
-    result = runner.run_file(
-        input_file=Path(input_file),
-        output_dir=Path(output_dir) if output_dir else None,
-        timeout=timeout,
-    )
+    if host is not None:
+        result, remote = _solve_on_host(
+            host, input_file, output_dir, timeout, record
+        )
+    else:
+        # Run LSD
+        runner = LSDRunner()
+        result = runner.run_file(
+            input_file=Path(input_file),
+            output_dir=Path(output_dir) if output_dir else None,
+            timeout=timeout,
+        )
 
     info = None
     if record is not None:
-        info = _finish_record(record, result, result.output_dir or Path(input_file).parent)
+        info = _finish_record(
+            record,
+            result,
+            result.output_dir or Path(input_file).parent,
+            remote,
+        )
 
     stopped_at_limit = result.outcome == "timeout"
     partial = result.partial_count if result.partial_count is not None else 0
@@ -174,6 +302,8 @@ def lsd_run(
         }
         if info is not None:
             data["iteration"] = info["iteration"]
+        if host is not None:
+            data["host"] = host
         click.echo(json.dumps(data, indent=2))
     else:
         if result.success:

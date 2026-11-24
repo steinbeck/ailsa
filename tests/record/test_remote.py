@@ -175,3 +175,82 @@ def test_extract_refuses_traversal(tmp_path: Path) -> None:
         tar.addfile(info, io.BytesIO(b"x"))
     with pytest.raises(remote.RemoteError):
         remote._extract_outputs(buf.getvalue(), tmp_path, {"lsd.out"})
+
+
+# --- ailsa lsd run --host -------------------------------------------------------------------
+
+
+@pytest.fixture
+def run_env(new_run, fake: Path, monkeypatch: pytest.MonkeyPatch):
+    _, run_dir = new_run
+    monkeypatch.setenv("AILSA_RUN_DIR", str(run_dir))
+    it = run_dir / "agent" / "iteration_01"
+    it.mkdir(parents=True)
+    (it / "compound.lsd").write_text(LSD_TEXT)
+    monkeypatch.chdir(it)
+    return run_dir, it
+
+
+def _lsd_run(*args: str):
+    from click.testing import CliRunner
+
+    from ailsa.cli.lsd import lsd
+
+    return CliRunner().invoke(lsd, ["run", *args])
+
+
+def _events(run_dir: Path) -> list[dict]:
+    from ailsa.record.log import read_events
+
+    return read_events(run_dir)["events"]
+
+
+def test_run_host_registers_locally(run_env, fake: Path) -> None:
+    run_dir, it = run_env
+    res = _lsd_run("compound.lsd", "--host", "fakehost", "--format", "json")
+    assert res.exit_code == 0, res.output
+    data = json.loads(res.stdout)
+    assert data["host"] == "fakehost" and data["outcome"] == "solutions"
+    assert data["iteration"] == "it01" and data["partial_count"] is None
+    assert data["elapsed_s"] >= 0 and data["solution_count"] == 3
+    for key in ("success", "return_code", "output_files", "stderr"):
+        assert key in data
+    events = _events(run_dir)
+    started = next(e for e in events if e["type"] == "solver.started")["payload"]
+    assert started["host"] == "fakehost" and started["remote"] is True
+    fin = next(e for e in events if e["type"] == "solver.finished")["payload"]
+    assert fin["host"] == "fakehost" and fin["outcome"] == "solutions" and fin["count"] == 3
+    assert fin["provenance"] == "run"
+    assert fin["lsd"]["version"] == "3.4.9" and len(fin["lsd"]["sha256"]) == 64
+    solver = json.loads((run_dir / "iterations" / "it01" / "solver.json").read_text())
+    assert solver["remote"] is True and solver["host"] == "fakehost"
+    assert (it / "compound.sol").is_file() and (it / "solutions.smi").is_file()
+    assert _scratch_dirs(fake) == []
+    # the fake remote side only ever touched its own root
+    assert not any(run_dir.rglob("ssh-calls.log"))
+
+
+def test_run_host_outside_run(fake: Path, work: Path, monkeypatch) -> None:
+    monkeypatch.delenv("AILSA_RUN_DIR", raising=False)
+    monkeypatch.chdir(work)
+    res = _lsd_run("compound.lsd", "--host", "fakehost", "--format", "json")
+    assert res.exit_code == 0, res.output
+    data = json.loads(res.stdout)
+    assert data["host"] == "fakehost" and "iteration" not in data
+
+
+def test_run_host_invalid_alias(run_env, fake: Path) -> None:
+    res = _lsd_run("compound.lsd", "--host", "-oProxyCommand=x")
+    assert res.exit_code == 1
+    assert _calls(fake) == []
+    assert not [e for e in _events(run_env[0]) if e["type"] == "solver.started"]
+
+
+def test_run_host_unreachable_records_not_run(run_env) -> None:
+    run_dir, _ = run_env
+    res = _lsd_run("compound.lsd", "--host", "unreachable")
+    assert res.exit_code == 1
+    assert "Error: cannot reach host unreachable" in res.stderr
+    fin = next(e for e in _events(run_dir) if e["type"] == "solver.finished")["payload"]
+    assert fin["outcome"] == "not_run" and fin["host"] == "unreachable"
+    assert fin["error_line"] == "cannot reach host unreachable"
