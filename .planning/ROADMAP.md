@@ -379,10 +379,10 @@ full decision recording only after measuring its effect on accuracy (D15).
 **Plans**: 20 plans in 8 waves (planned 2026-11-24)
 
 Plans:
-- [ ] 106.1-01-PLAN.md — lazy CLI startup (REC-04 prerequisite) and the four new command groups
-- [ ] 106.1-02-PLAN.md — hook payload spike on Sheldon; scrubbed real fixtures; open hook questions answered
-- [ ] 106.1-03-PLAN.md — public example dataset: processing and BMRB download scripts, credit (D-15)
-- [ ] 106.1-04-PLAN.md — record core: event vocabulary, workspace and run ids, hash-chained append-only log
+- [x] 106.1-01-PLAN.md — lazy CLI startup (REC-04 prerequisite) and the four new command groups
+- [x] 106.1-02-PLAN.md — hook payload spike on Sheldon; scrubbed real fixtures; open hook questions answered
+- [x] 106.1-03-PLAN.md — public example dataset: processing and BMRB download scripts, credit (D-15)
+- [x] 106.1-04-PLAN.md — record core: event vocabulary, workspace and run ids, hash-chained append-only log
 - [ ] 106.1-05-PLAN.md — active-run lookup, warning gate, artefact registration, tool calls record themselves
 - [ ] 106.1-06-PLAN.md — typed models and committed JSON Schemas for events, artefacts, declaration, manifest
 - [ ] 106.1-07-PLAN.md — manifest reducer and Markdown renderings (state, staleness, "not recorded", break marking)
