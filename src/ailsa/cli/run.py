@@ -575,6 +575,72 @@ def close_cmd(reason: str, run_ref: str | None, fmt: str) -> None:
     _emit(result, fmt, [f"closed: {result['state']}"])
 
 
+@run.group("hooks")
+def hooks_group() -> None:
+    """Recording hooks for an open Claude Code session (reversible).
+
+    The hooks are no-ops outside a run. The launcher (ailsa run start) needs no install.
+    An interactive session only runs hooks after the folder's workspace trust is accepted.
+    """
+
+
+_SETTINGS_OPTION = click.option(
+    "--settings",
+    "settings_path",
+    type=click.Path(path_type=Path),
+    default=None,
+    help="Settings file (default: ~/.claude/settings.json).",
+)
+
+
+def _settings_target(settings_path: Path | None) -> Path:
+    return settings_path if settings_path is not None else Path.home() / ".claude" / "settings.json"
+
+
+@hooks_group.command("show")
+def hooks_show() -> None:
+    """Print the settings block that ailsa run hooks install would merge."""
+    from ailsa.record.hooksettings import build_settings
+
+    click.echo(json.dumps(build_settings(sys.executable), indent=2, sort_keys=True))
+
+
+@hooks_group.command("install")
+@_SETTINGS_OPTION
+def hooks_install(settings_path: Path | None) -> None:
+    """Merge the recording hooks into the settings file (a backup is kept)."""
+    from ailsa.record.hooksettings import HOOK_EVENTS, install
+
+    target = _settings_target(settings_path)
+    existed = target.exists()
+    try:
+        backup = install(target)
+    except (OSError, ValueError) as exc:
+        click.echo(f"ailsa: {exc}", err=True)
+        raise SystemExit(1) from None
+    if existed and backup is None:
+        click.echo(f"already installed in {target}")
+        return
+    if backup is not None:
+        click.echo(f"backup: {backup}")
+    click.echo(f"installed {len(HOOK_EVENTS)} hook events in {target}")
+
+
+@hooks_group.command("uninstall")
+@_SETTINGS_OPTION
+def hooks_uninstall(settings_path: Path | None) -> None:
+    """Remove only the ailsa recording hooks from the settings file."""
+    from ailsa.record.hooksettings import uninstall
+
+    target = _settings_target(settings_path)
+    try:
+        removed = uninstall(target)
+    except (OSError, ValueError) as exc:
+        click.echo(f"ailsa: {exc}", err=True)
+        raise SystemExit(1) from None
+    click.echo(f"removed {removed} hook handlers from {target}")
+
+
 @run.command("index")
 @click.option("--rebuild", is_flag=True, help="Rescan the workspace first.")
 @_format_option
