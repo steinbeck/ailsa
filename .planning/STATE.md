@@ -2,15 +2,16 @@
 gsd_state_version: 1.0
 milestone: v11.0
 milestone_name: AILSA Rename
-status: executing
-last_updated: "2026-11-24T17:45:00.000Z"
-last_activity: 2026-11-24 -- Phase 106.1 planning complete (20 plans, 8 waves)
+status: ready_to_plan
+last_updated: 2026-11-24T22:57:27.737Z
+last_activity: 2026-11-24 -- Phase 106.1 run record core complete and verified
 progress:
   total_phases: 11
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 36
-  completed_plans: 16
+  completed_plans: 36
   percent: 18
+stopped_at: Phase 106.1 complete (20/20, verified) — next Phase 106 (skill rename), then 106.2
 ---
 
 # lucy-ng State
@@ -20,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-21)
 
 **Core value:** AI agent autonomously determines compound structures from NMR, with a multi-agent team that uses the intended solver pipeline — not a manual bypass
-**Current focus:** Phase 105.1 (lean skill `ailsa-lite` for small open-weight models, inserted 2026-10-31); then Phase 106 (frontier skill rebuild)
+**Current focus:** Phase 106 (freeze, rename and restructure the skill); Phase 106.2 (frontier skill writes the run record) depends on it
 
 ## Current Position
 
-Phase: 105 (documentation-and-outside-face) — COMPLETE, verified 2026-10-14
-Plan: 10 of 10
-Status: Phase 106.1 ready to execute (20 plans, 8 waves)
-Last activity: 2026-11-24 -- Phase 106.1 planning complete (20 plans, 8 waves)
+Phase: 106.1 (run-record-core) — COMPLETE, verified 2026-11-24
+Plan: 20 of 20
+Status: next Phase 106 (skill rename; not discussed yet), then 106.2
+Last activity: 2026-11-24 -- Phase 106.1 complete and verified
 
 **Resume here (2026-11-24):**
 
@@ -52,9 +53,17 @@ Last activity: 2026-11-24 -- Phase 106.1 planning complete (20 plans, 8 waves)
         `ailsa run start` plus a first skill step; warnings instead of aborts on bookkeeping gaps;
         an agent working corner; a note command for prose. Acceptance: one lean α-terpineol run with
         a small Claude model on Sheldon.
-      - **Planned 2026-11-24:** 20 plans in 8 waves (`106.1-01` … `106.1-20-PLAN.md`), plan check
-        passed. Sheldon work happens in a separate checkout `/mnt/raid_drive/chris/ailsa-106.1/` filled
-        by git bundle, never by push. **Next step: `/gsd-execute-phase 106.1`.**
+      - **COMPLETE and verified 2026-11-24** (20 plans, `106.1-VERIFICATION.md` passed 5/5, all 29
+        REC requirements). New: `src/ailsa/record/`, `ailsa run init|note|status|verify|render|index|
+        finalize|close|start|hooks`, `ailsa spectra export`, `ailsa peaks decide`, `ailsa model import`,
+        `ailsa lsd run --host`, lean skill 0.3.0, `docs/RUN-RECORD.md`. Code review: 7 critical + 16
+        warnings, all fixed with tests. Full suite on Sheldon: 1953 passed, the 5 failures identical at
+        baseline (webview extra missing). Acceptance (owner approved): haiku lean run on α-terpineol,
+        clean record, rank 1 correct (2 of 3 runs). Separate Sheldon area `/mnt/raid_drive/chris/ailsa-106.1/`
+        (own venv incl. pinned hosegen), runs in `/mnt/raid_drive/chris/ailsa-runs`.
+      - Open small items: set `host_alias` in the ailsa config on vitus and Sheldon (otherwise the short
+        hostname is recorded); todo for the 2D picker crash on empty spectra.
+      - **Next: Phase 106 (skill rename), then 106.2 (frontier skill writes the record).**
     - **Public example run (D18: α-terpineol, BMRB bmse000667): DONE 2026-11-24, solved de novo** in
       58 min (3 iterations, 336 → 20 → 1 solution, 13C MAE 0.68 ppm). Copy on vitus:
       `~/Dropbox/develop/data/nmrdata/ailsa-example-terpineol/terpineol-run-2026-11-24/`; the tmux
@@ -942,7 +951,7 @@ file on a host where several people have root; a technical account is being cons
 
 **Velocity:**
 
-- Total plans completed: 235 across 13 milestones (11 shipped + 1 abandoned + 1 partial) at v10.0 pause
+- Total plans completed: 255 across 13 milestones (11 shipped + 1 abandoned + 1 partial) at v10.0 pause
   - v9.2: 3 phases (90-92), 10 plans, shipped 2026-07-07; tests: 1174 passing at close
   - v9.1: 4 phases (86-89), 9 plans, shipped 2026-06-29; tests: 1131 passing at close
   - v9.3: 4 phases (93-96), 16 plans, shipped 2026-07-12 (~107 commits, +16,988/-287 lines)
