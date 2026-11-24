@@ -40,6 +40,8 @@ src/ailsa/
 ├── ranking/         # candidate solution ranking
 ├── lsd/             # LSD solver integration
 ├── fragments/       # bundled LSD fragment / ring-exclusion filter files
+├── record/          # run record: workspace, event log, manifest, hooks, launcher
+├── spectra/         # spectra view products for display
 ├── cli/             # ailsa Click CLI (all subcommands; --format json on all but setup commands and visualize)
 └── …                # database, visualization, nmrxiv, solvers, data
 tests/               # pytest suite

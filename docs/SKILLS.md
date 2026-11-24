@@ -138,9 +138,9 @@ One agent, three steps, the frontier skill's tools:
 
 | Step | What the model does | Reference file it loads |
 |---|---|---|
-| 1 | picks peaks, runs the statistical detection, writes the atom list (`analysis/setup.md`) | `nmr-analysis.md` |
+| 1 | picks peaks, runs the statistical detection, writes the atom list (`setup.md`) | `nmr-analysis.md` |
 | 2 | writes the LSD file, checks it, runs LSD, adds HMBC correlations in batches, diagnoses failures | `lsd-input.md`, `checks-and-diagnosis.md` |
-| 3 | ranks the candidates, checks identities, writes `analysis/final_results.md` | `ranking.md` |
+| 3 | ranks the candidates, checks identities, declares the result with `ailsa run finalize` | `ranking.md` |
 
 What the frontier team spreads over five agents (coordinator, NMR chemist, LSD engineer, solution
 analyst, devil's advocate, with a diagnostic specialist on escalation), the lean agent does in
@@ -148,7 +148,13 @@ turn; the devil's-advocate checks become a checklist it applies before every sol
 state of a run lives in files the agent writes (`setup.md`, `iterations.md`, one `compound.lsd`
 per iteration), because a small model must not rely on what it remembers.
 
-Left out on purpose: messages between agents, the progress log and dashboard, timing stamps,
+The lean skill writes the run record ([RUN-RECORD.md](RUN-RECORD.md)): `ailsa run init` is its
+first step, `ailsa run note` records step summaries and `ailsa run finalize` declares the result.
+Until the frontier skill is wired to the record, `run init`, `run note` and `run finalize` are the
+only commands the lean skill names that the frontier skill does not (an explicit allow-list in
+the contract test).
+
+Left out on purpose: messages between agents, the dashboard, timing stamps,
 model-disclosure gates.
 
 ## Version 0.1, withdrawn
