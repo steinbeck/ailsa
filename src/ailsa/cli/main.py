@@ -77,6 +77,12 @@ class LazyGroup(click.Group):
     def get_command(self, ctx: click.Context, cmd_name: str) -> click.Command | None:
         return self._load(cmd_name)
 
+    def invoke(self, ctx: click.Context) -> Any:
+        """Record the tool call in the active run, if any (no-op outside a run)."""
+        from ailsa.record.toolrec import invoke_recorded
+
+        return invoke_recorded(super().invoke, ctx)
+
 
 @click.group(cls=LazyGroup)
 @click.version_option(version=__version__, prog_name="ailsa")
