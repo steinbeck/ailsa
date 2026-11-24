@@ -85,7 +85,10 @@ def _describe(ev: dict[str, Any], first_prompt_seq: int | None) -> str:
     if template is None:
         return md_escape(etype)
     fields = _Fields({k: md_escape(v) for k, v in p.items()})
-    return template.format_map(fields)
+    text = template.format_map(fields)
+    if etype == "solver.finished" and p.get("provenance") == "imported":
+        text += ", imported, not run by ailsa"
+    return text
 
 
 def _who(ev: dict[str, Any]) -> str:
@@ -209,7 +212,14 @@ def render_final(
                 f"({md_escape(alt.get('reason') or 'no reason given')})"
             )
     if decl.get("iterations"):
-        lines += ["", "Iterations covered: " + ", ".join(md_escape(i) for i in decl["iterations"])]
+        iterations = manifest.get("iterations") or {}
+
+        def covered(name: Any) -> str:
+            entry = iterations.get(str(name)) if isinstance(iterations, dict) else None
+            imported = isinstance(entry, dict) and entry.get("provenance") == "imported"
+            return md_escape(name) + (" (imported, not run by ailsa)" if imported else "")
+
+        lines += ["", "Iterations covered: " + ", ".join(covered(i) for i in decl["iterations"])]
     ids = [i for i in manifest.get("identity", []) if isinstance(i, dict)]
     if ids:
         lines += ["", "### Identity", ""]

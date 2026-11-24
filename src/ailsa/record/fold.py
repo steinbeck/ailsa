@@ -185,6 +185,7 @@ def _h_lsd_input(m: dict[str, Any], ev: dict[str, Any], s: dict[str, Any]) -> No
 def _h_solver_started(m: dict[str, Any], ev: dict[str, Any], s: dict[str, Any]) -> None:
     p = _payload(ev)
     s["open_solver"][str(p.get("iteration"))] = ev.get("utc")
+    _iteration(m, p.get("iteration"))["remote"] = p.get("remote")
 
 
 def _h_solver_finished(m: dict[str, Any], ev: dict[str, Any], s: dict[str, Any]) -> None:
@@ -194,6 +195,9 @@ def _h_solver_finished(m: dict[str, Any], ev: dict[str, Any], s: dict[str, Any])
     it["outcome"] = p.get("outcome")
     it["count"] = p.get("count")
     it["partial_count"] = p.get("partial_count")
+    # "imported" = solver output ailsa did not produce (ailsa lsd import); never hide it.
+    it["provenance"] = p.get("provenance")
+    it["host"] = p.get("host")
     start = s["open_solver"].pop(name, None)
     m["spans"]["solver"].append(_span(name, start, ev.get("utc")))
     s["last_solver_seq"] = _int(ev.get("seq"))

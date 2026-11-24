@@ -52,6 +52,27 @@ def test_import_registers_iteration_as_imported(new_run, tmp_path, monkeypatch) 
     assert model.provenance == "imported" and model.elapsed_s is None
 
 
+def test_imported_provenance_reaches_manifest_and_renderings(
+    new_run, tmp_path, monkeypatch
+) -> None:
+    """WR-15: an imported iteration stays visibly imported in the manifest and renderings."""
+    from ailsa.record.fold import rebuild_manifest
+    from ailsa.record.render import render_final, render_progress
+
+    _, run_dir = new_run
+    monkeypatch.setenv("AILSA_RUN_DIR", str(run_dir))
+    assert _invoke(str(_folder(tmp_path)), "--format", "json").exit_code == 0
+    manifest = rebuild_manifest(run_dir)
+    it = manifest["iterations"]["it01"]
+    assert it["provenance"] == "imported" and it["remote"] is False
+    progress = render_progress(manifest, read_events(run_dir)["events"])
+    assert "imported, not run by ailsa" in progress
+    manifest["status"] = {"state": "result_declared"}
+    decl = {"outcome": "inconclusive", "iterations": ["it01"]}
+    final = render_final(manifest, None, decl)
+    assert "it01 (imported, not run by ailsa)" in final
+
+
 def test_only_solncounter_is_a_partial_result(new_run, tmp_path, monkeypatch) -> None:
     _, run_dir = new_run
     monkeypatch.setenv("AILSA_RUN_DIR", str(run_dir))
