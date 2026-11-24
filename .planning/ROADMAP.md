@@ -397,7 +397,7 @@ Plans:
 - [x] 106.1-16-PLAN.md — remote solves (`ailsa lsd run --host`) and the real vitus-to-Sheldon check (D-14)
 - [x] 106.1-17-PLAN.md — `ailsa run finalize|close|start|hooks` (strict declaration, launcher)
 - [x] 106.1-18-PLAN.md — lean skill 0.3.0 wired to the record; docs/RUN-RECORD.md
-- [ ] 106.1-19-PLAN.md — full suite, mypy and ruff on Sheldon in a separate checkout, compared with the baseline
+- [x] 106.1-19-PLAN.md — full suite, mypy and ruff on Sheldon in a separate checkout, compared with the baseline
 - [ ] 106.1-20-PLAN.md — acceptance: one lean α-terpineol run with a small Claude model on Sheldon (D-12, owner checkpoint)
 
 #### Phase 106.2: Frontier skill writes the run record (INSERTED 2026-11-24)
