@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v11.0
 milestone_name: AILSA Rename
 status: executing
-last_updated: "2026-11-23T09:00:00.000Z"
-last_activity: 2026-11-23
+last_updated: "2026-11-24T13:39:46.623Z"
+last_activity: 2026-11-24 -- web-interface decisions, spec 2.3, Phase 106.1 inserted, public example run started
 progress:
-  total_phases: 8
+  total_phases: 10
   completed_phases: 2
   total_plans: 16
   completed_plans: 16
-  percent: 25
+  percent: 20
 ---
 
 # lucy-ng State
@@ -27,9 +27,55 @@ See: .planning/PROJECT.md (updated 2026-07-21)
 Phase: 105 (documentation-and-outside-face) — COMPLETE, verified 2026-10-14
 Plan: 10 of 10
 Status: Phase 105 verified (15/15 after closing the deck-PDF gap); pushed to GitHub `steinbeck/ailsa`
-Last activity: 2026-11-23 -- paper audit answers (leaks, log check); C20H32O2 confirmed by Nils; Qwen concluded
+Last activity: 2026-11-24 -- web-interface decisions, spec 2.3, Phase 106.1 inserted, public example run started
 
-**Resume here (2026-11-23):**
+**Resume here (2026-11-24):**
+
+000. **Web interface, 2026-11-23/24.**
+    - **Done and pushed:**
+      - all 22 owner decisions (summary in "Open decisions (b)" below; details in SPEC §13);
+      - spec draft 2.3 (PDF in `background/`, private Artifact link in the auto-memory);
+      - `PRODUCT.md`, `DESIGN.md` and `.impeccable/` (`6768d85`); last push `5ed443a`.
+    - **Clickable prototype (local only, it embeds an unpublished run):** in
+      `.planning/research/webview-redesign/prototype/` (README there). It has the chemist and expert
+      views, zoomable spectra, a replay of the run, a Team section with every agent message, and the
+      data-use notice.
+    - **Phase 106.1 "Run record core" inserted (2026-11-24):** this is release R0a of the spec, and the
+      roadmap entry carries its goal and success criteria. It is not planned yet; the next step is
+      `/gsd-discuss-phase 106.1`.
+    - **Public example run (D18: α-terpineol, BMRB bmse000667), running since 2026-11-24 ~14:20 UTC.**
+      - It runs in an interactive session on Sheldon, tmux session `ailsa-terpineol`, started via
+        `/mnt/raid_drive/chris/ailsa-example/launch-terpineol.sh`.
+      - It is a de novo run; Opus 5.5 with xhigh effort.
+      - Check it with `ssh sheldon 'tmux capture-pane -p -t ailsa-terpineol | tail -30'` and
+        `ls /mnt/raid_drive/chris/ailsa-example/terpineol-run/analysis/`. It is done when
+        `final_results.md` exists.
+    - **Dataset:**
+      - BMRB holds only FIDs. They were processed with nmrglue by
+        `.planning/research/webview-redesign/example-terpineol/process_fid.py`.
+      - The valid output is `~/Dropbox/develop/data/nmrdata/ailsa-example-terpineol/run-data-v3`;
+        `run-data` and `run-data-v2` are discarded attempts.
+      - Referencing: 1H on TMS, 13C on acetone-d6. The HSQC is in magnitude mode, because the edited
+        phase could not be phased reliably with 128 increments; the title says so, and multiplicities
+        come from DEPT.
+      - BMRB names no formal licence, only asks to be acknowledged. The raw data therefore stay out of
+        the repo; a download script plus credit come instead (to settle in 106.1).
+    - **After the run:**
+      1. Build the shareable prototype variant from it. Run `build_data.py` on the run folder; it may
+         need small adaptations to the new data.
+      2. Prepare the paper-prototype sessions with chemists and an NMR facility person (spec release P).
+    - **Traps:**
+      - nmrglue and TopSpin reference via `SF` (SR folded in), not `OFFSET`.
+      - Never copy text fields from template `procs` files: they leaked "CDCl3", "HMBC" and
+        "[REDACTED]" into the new data.
+      - Sheldon's venv is built with uv (`uv pip install --python .venv/bin/python -e .`), not pip.
+      - Claude Code on Sheldon needed `/login`; the login URL was read with `tmux capture-pane` and
+        handed over as a file. Opus 5.5 needs Claude Code ≥ 2.1.280, and a session restart activates
+        an update.
+      - Headless Chrome clamps windows below about 500 px. For phone widths use
+        `impeccable shot "file://…#route" --viewport 390x844`.
+
+**Earlier (2026-11-23):**
 
 0000. **Since 2026-11-19 (details in the private notes; identities never in this file).**
     - **Qwen test concluded (2026-11-22, user decision), commit `cfe4c94` pushed.** Lean skill 0.2.1 on
@@ -37,6 +83,7 @@ Last activity: 2026-11-23 -- paper audit answers (leaks, log check); C20H32O2 co
       the Sheldon harness (`~/llm/run_lite.sh` auto-"Continue.", `batch.sh` `LLM_OUTPUT`). Both Qwen
       containers on Sheldon are stopped. Kuhn informed (mail sent by Christoph 2026-11-22): the paper
       reports the negative open-weight result.
+
     - **Paper audit answers written** to `~/Dropbox/develop/ailsa-paper/.planning/`:
       `answers-from-lucy-ng-2026-11-22.md` (blindness audit, toolkit defects, LSD facts, Qwen,
       availability) and `answers-from-lucy-ng-2026-11-22-logcheck.md` (31 runs of 30 exposed datasets).
@@ -45,20 +92,25 @@ Last activity: 2026-11-23 -- paper audit answers (leaks, log check); C20H32O2 co
       (dereplication, flagged by its own coordinator); CASE121 reported a hand-built structure; the
       transcript archive covers 169 runs = 163 datasets; in every benchmark toolkit state `pick hsqc`
       omitted negative CH2 cross-peaks and `lsd run` turned "no solution" into a false ring-filter error.
+
     - **C20H32O2 (Schlörer) is now solved and confirmed:** Nils confirmed on 2026-11-23 that structure A
       of the JCAMP run (`<data>/active-lucy-ng-testprojects/C20H32O2-jcamp/`) is his structure. The
       July hypothesis compiled into `src/ailsa/nus/qc.py` (`KNOWN_QUATERNARY_SHIFTS`,
       `PROTONATED_REFERENCE`, `GUIDE_S10_C13`) is wrong in five places (PROV-01). Reply draft to Nils in
       uni-jena Drafts.
+
     - **External blind test (Jablonka group, SECS):** set 1 (10 small molecules), 1H round 7/10 right
       skeleton at rank 1; 13C round sent 2026-11-19, no reply yet. Set 2 (10 larger, 17-22 heavy atoms)
       ready in `~/Dropbox/Public/AILSA-Blindtest-NMR-2/`, not sent. Keys only on the MBP2019
       (`~/case-eval/share-secs/`).
+
     - **Figshare DB version 4 prepared, not uploaded:** zip + text in `~/Dropbox/AILSA-figshare-v4/`
       (schema-7 DB; the public file is the 2026-01-17 version without detection statistics). After the
       upload, `DATABASE_URL`/`DATABASE_SIZE_MB` in `src/ailsa/cli/database.py` must point to the new file.
+
     - **Hygiene on Sheldon:** the NUTMEG answer tables (`~/nutmeg-validation-private/selection/`) were
       deleted with the user's OK (copies on the Mac); the faulon-ng clone there is gone.
+
     - **PROV-01 resolved (`6e32c5a`, user decision 2026-11-23: remove):** no compound-specific data
       left in `nus/qc.py`/`postprocess.py`; without DEPT, `quaternary_exclusion` and `hsqc_coverage`
       are "not checkable" (verdict capped at PARTIAL); `ppm_calibration` uses the dataset's own 13C
@@ -68,6 +120,7 @@ Last activity: 2026-11-23 -- paper audit answers (leaks, log check); C20H32O2 co
       absurd peak list is the agents' job (the C20 run's chemist did it unprompted). Details in
       `todos/completed/2026-07-31-prov-01-*.md`. Also `de3f871`: CLI tests run on click 8.2+ (24
       JCAMP tests had been failing with a `mix_stderr` TypeError).
+
     - **Open decisions:**
       (b) ~~Web view stale-state fix~~ superseded 2026-11-23: the user decided to rebuild the web
       interface from scratch. Six analyst reports + an independent review + SPEC draft 2.2 in
@@ -91,6 +144,7 @@ Last activity: 2026-11-23 -- paper audit answers (leaks, log check); C20H32O2 co
       a 68-minute gap unrecorded.
       (c) Figshare upload is Christoph's browser step; then the code URL update needs a push (public repo:
       ask).
+
     - **Traps that cost time:** zsh does not split `$var` in `for` loops (use bash or arrays); `pkill -f`
       can match the calling ssh shell; `grep -r` over the binary NMR data runs >20 min on the MBP2019
       (scan text files in Python instead); `LSD` without arguments waits on stdin; archived transcripts
@@ -103,11 +157,14 @@ Last activity: 2026-11-23 -- paper audit answers (leaks, log check); C20H32O2 co
       skill's tools and leave the agentic work to it (the model writes the LSD files). Scripts
       that decide are out. Rules in `docs/SKILLS.md` (rule 1: same instruments, the agent decides;
       lean text derived from the frontier skill; a test enforces lean ⊆ frontier commands).
+
     - **Why:** v0.1 (`ailsa case` pipeline) with Qwen3.8-27B on 40 blind benchmark datasets found 2,
       exactly the 2 the commands found without any model (hard 20: 0/20; easy 20, all solved by the
       full skill: 2/20). The scripts' atom table set the limit.
+
     - **0.2:** `src/ailsa/skills/ailsa-lite/SKILL.md` + `references/` (nmr-analysis, lsd-input,
       checks-and-diagnosis, ranking), about 19 000 Qwen tokens, condensed from the frontier agents.
+
     - **Tool fixes (both skills):** `pick hsqc` lists the negative CH2 cross-peaks of an edited
       HSQC; `lsd run` reports LSD's own error line and "no structure fits" instead of a false
       ring-filter message. **New:** `lsd rank --assigned compound.lsd` compares each carbon with the
@@ -115,8 +172,10 @@ Last activity: 2026-11-23 -- paper audit answers (leaks, log check); C20H32O2 co
       without `DUPL 1`. On a blind dev dataset it put the right structure at rank 1 where the
       nearest-line ranking had it at 3. Both skills now rank this way, write `DUPL 1` + `MAXS 20000`
       and put the shift first in carbon MULT comments; the devil's advocate checks both.
+
     - **Tests:** 1444 passed; the 27 known old failures remain (JCAMP 24, dereplicate SD 1, click
       `mix_stderr` 2).
+
     - **Done 2026-11-19 (`6a80d9e`):** the frontier-skill LSD bugs found while condensing are
       fixed, each tested against LSD 3.4.9 on butanone/pyrrole first: one FEXP line (error 402),
       one HSQC per atom (234), pyrrole `N 3 1` (390), PROP exact, `j_coupling` = path + 1,
@@ -124,17 +183,20 @@ Last activity: 2026-11-23 -- paper audit answers (leaks, log check); C20H32O2 co
       grouped HMBC carbon side only (116), HSQC/HMBC order only a convention. The devil's
       advocate had two contradictory fragment rules (DEFF/FEXP before MULT vs ring block after
       the correlations) and fragment greps that also matched F1/F2; both fixed. Lean skill 0.2.1.
+
     - **Qwen test CONCLUDED 2026-11-22 (user decision):** lean skill 0.2.1 on three simple dev cases
       (CASE1-3), 6 h each, own GPU, 128k context, reply limit raised to 32k (the earlier "stops" were
       replies cut at OpenCode's 16k output cap) and an automatic "Continue." resume: 0/3. Failure
       analysis in the private notes. Verdict sent to the partner lab: the AILSA paper reports that a
       locally installable open-weight model was tested and did not perform. Qwen servers on Sheldon
       stopped. The rerun on the 40 blind datasets below is dropped.
+
     - **Dropped:** (2) Qwen rerun of 0.2 on the 40
       blind datasets (setup on Sheldon `~/llm/`, private prep/grading in `~/case-eval/qwen-blind/` on
       the MBP2019): first copy the schema-7 DB to Sheldon (its DB is schema 3, `detect neighbours`
       fails), raise the time limit well above 2 h or disable Qwen's thinking mode (probe: about
       2 min per step, still in step 1 after 1 h, context compaction near 46k).
+
     - **Benchmark blindness (for the paper):** the dataset sanitisation left name fragments inside
       words in 76/258 datasets, compound names in file names (5), authors' spin simulations (10), an
       earlier CASE result inside one dataset, and never touched the `##$TI` title field (filled in
@@ -147,12 +209,15 @@ Last activity: 2026-11-23 -- paper audit answers (leaks, log check); C20H32O2 co
     practices but tuned for Anthropic's top models, (3) the measured skill archived as the paper
     skill. Maintenance rules for the two skills: `docs/SKILLS.md` (share code, not prose; the CLI
     is the contract; a skill ships with its CLI).
+
     - **Paper skill frozen:** annotated tags `paper-skill-v1` (`f9aa7b3`) and `paper-skill-v2`
       (`6d2d126`), pushed with Phase 105.1 on 2026-11-08. The skill files on master are
       byte-identical to v2.
+
     - **Built (Phase 105.1, v0.1):** `src/ailsa/case/` + `ailsa case scan/setup/check/edit/show/
       solve/rank/report`; skill `src/ailsa/skills/ailsa-lite/` (SKILL.md about 1 000 tokens plus a
       fixing guide); `ailsa skill list/install`; guide `docs/AILSA-LITE.md`; 38 new tests.
+
     - **Key mechanisms:** solvent multiplets detected from the data (labels are sometimes wrong,
       referencing offsets up to 1.4 ppm); HSQC cross-peaks from local maxima, clustered per proton
       multiplet; DEPT/edited-HSQC signs calibrated against sp2 CH; CH/CH2/CH3 chosen jointly with
@@ -160,11 +225,13 @@ Last activity: 2026-11-23 -- paper audit answers (leaks, log check); C20H32O2 co
       proton column against t1 noise; LSD runs escalate ELIM to the first level with structures
       plus one more; ranking compares predicted and observed 13C atom by atom (LSD keeps the atom
       numbering), which is much sharper than nearest-line matching.
+
     - **Measured on the development datasets (no model):** truth at rank 1 for 4 of 9 (MAE
       margins 0.5-4.5 ppm). Misses: a 13C spectrum with only the solvent in it, a dispersive APT
       as the only carbon spectrum, the count of sp2 heteroatoms (needs variants), too few HMBC
       peaks surviving the filters, and one dataset not yet diagnosed. **With a small Claude model following the skill: 2 of 2 right**,
       8 turns, under a minute and about one cent each.
+
     - **Later the same day (commits up to `5706905`):** sp2-heteroatom variants run by solve;
       LSD with DUPL 1 (every atom assignment, needed for atom-by-atom ranking) and MAXS 20000;
       prominence filter for 13C lines on broad humps; counts chosen by a dynamic programme over
@@ -173,12 +240,14 @@ Last activity: 2026-11-23 -- paper audit answers (leaks, log check); C20H32O2 co
       processed spectrum exists (a third of the benchmark has HSQC or HMBC only raw); 2D carbon
       tolerances from the measured F1 increments; non-numeric experiment folders shown as aliases
       (folder names can name the compound).
+
     - **Commands alone on the first 60 blind benchmark datasets** (private evaluation scripts and
       results outside the repo, path in the auto-memory): truth at rank 1 for 3 of 58 before the
       HMBC fix; the diagnosis against the truth shows the atom table is the main gap (wrong
       multiplicities, hybridisation or heteroatom hydrogens in most failures), then HMBC
       correlations the truth violates (18 % before, 13 % after the fix). Real data are much harder
       than the development set. A rerun with all fixes was still running at the end of the session.
+
     - **Next:** the atom table on real data (multiplicity from 1H integrals, HSQC-only and noise
       lines, heteroatom hydrogens), then a small-model run on benchmark data to see what the model's
       edits recover; then the partner lab and a Qwen run.
@@ -187,27 +256,36 @@ Last activity: 2026-11-23 -- paper audit answers (leaks, log check); C20H32O2 co
 
 00. **13C prediction without the current COCONUT shifts (2026-10-18..29).** Full record with every
     number, script and file in the private status file outside the repo (path in the auto-memory).
+
     - The user rejected the CSP5 replacement plan (2026-10-18); the worst-carbon threshold question
       (item 1d) is therefore moot.
+
     - NMRexp (Sci. Data 2025) covers only 0.9 % of COCONUT with a 13C spectrum, almost all small
       molecules, so it cannot replace the COCONUT shifts.
+
     - Assigning NMRexp spectra with NMRNet++ (arXiv 2601.18524; code MIT, weights CC BY 4.0) and
       discarding uncertain ones keeps 10 % of the spectra. A cross-check against NMRShiftDB2
       assignments the model never saw gives 99.5 % of carbons within 0.5 ppm, but almost only for
       molecules up to 15 heavy atoms.
+
     - A measured-only HOSE table barely improves with them (3.49 -> 3.43 ppm on the strict referee),
       so that route is closed.
+
     - NMRNet++ was run over all COCONUT (883,072 molecules). It agrees with the current shifts as
       closely as CSP5 does (MAE 1.77 ppm) and is on par with them against measured natural-product
       spectra.
+
     - **It is, however, geometry-dependent.** With the 3D recipe in its own code (RDKit ETKDG + MMFF)
       the prenyl =CH carbon is predicted around 25 ppm instead of ~122 ppm in 99 % of COCONUT cases
       (about 40,000 carbons in 3.9 % of the molecules). With the authors' stored training-set geometry
       (undocumented generator) it is correct, so evaluations on their stored test data flatter it.
+
     - The user (2026-10-29): 13C prediction needs no 3D coordinates; NMRNet++ asks for them only
       because it also predicts 1H.
+
     - **Next:** measure a graph-based (2D) 13C model, then the benchmark re-ranking test, i.e. HOSE
       tables built from each candidate source and the truth's own entries left out.
+
     - Answers to the paper session's host-side questions were delivered in its private planning
       folder.
 
@@ -863,6 +941,7 @@ file on a host where several people have root; a technical account is being cons
 - v9.3 roadmap created (2026-07-07): phases 93-96. Derived from 8 requirements (LOG-01, TAB-01, TBL-01..03, SP1-01, SP2-01, SP-02) with authoritative override: spectra = **real Bruker traces + peak overlay** (not peak-only sticks). Research HIGH confidence across all phases; no research gate needed for any phase.
 - v10.0 roadmap created (2026-07-12): phases 97-100, continuing numbering from the last shipped phase (96). Derived from 20 requirements (NUS-01..05, RECON-01..05, QC-01..03, PICK-01..03, PORT-01..02, VAL-01..02), following the research-converged build order (SUMMARY.md § Implications for Roadmap): backend+params/schedule → reconstruction+processing (highest-uncertainty) → peak-pick bridge+QC gate+CLI (crux-risk mitigation as its own deliverable) → cross-platform hardening+end-to-end validation. 20/20 requirements mapped, no orphans. Closed 2026-07-20 as PARTIAL (VAL-01/02 blocked by SMILE memory abort; see VALIDATION.md).
 - v10.1 roadmap created (2026-07-21): phases 101-103, continuing numbering from the last v10.0 phase (100). Derived from 8 requirements (JC-01..04, JCLI-01..02, JVAL-01..02) following the suggested three-stage shape from the milestone brief: reader (no external binary, highest-risk = ppm-axis correctness) → CLI/bridge/QC reuse (mechanically low-risk — reuses Phase-99 unchanged) → end-to-end validation on `C20H32O2-jcamp` (partly human-gated). 8/8 requirements mapped, no orphans. v10.0's Phase-100 PARTIAL section is preserved unchanged as historical record; v10.1 does not touch or supersede it.
+- Phase 106.1 inserted after Phase 106: Run record core: release R0a of the web-interface specification (structured run record, workspace per run); must land before Phases 109 and 110
 
 ### Key Decisions (2026-08, outside any milestone)
 
