@@ -86,6 +86,7 @@ def _finish_record(
     result: object,
     output_dir: Path,
     remote: object | None = None,
+    runner: LSDRunner | None = None,
 ) -> dict[str, object] | None:
     from ailsa.record.env import probe_lsd, probe_outlsd
     from ailsa.record.lsdrec import finish_solver_run
@@ -101,12 +102,13 @@ def _finish_record(
                 host=remote.host,  # type: ignore[attr-defined]
             )
         else:
+            # REC-31: identify the binaries the runner executed, not the first one on PATH.
             info = finish_solver_run(
                 record,  # type: ignore[arg-type]
                 result,
                 output_dir=output_dir,
-                lsd_info=probe_lsd(),
-                outlsd_info=probe_outlsd(),
+                lsd_info=probe_lsd(runner.lsd_path if runner is not None else None),
+                outlsd_info=probe_outlsd(runner.outlsd_path if runner is not None else None),
             )
     except Exception as exc:
         click.echo(f"ailsa: record write failed: {exc}", err=True)
@@ -267,6 +269,7 @@ def lsd_run(
 
     record, _run = _begin_record(input_file, purpose, parent, timeout, host, output_dir)
 
+    runner: LSDRunner | None = None
     if host is not None:
         result, remote = _solve_on_host(
             host, input_file, output_dir, timeout, record
@@ -287,6 +290,7 @@ def lsd_run(
             result,
             result.output_dir or Path(input_file).parent,
             remote,
+            runner,
         )
 
     # The time-limit wording is part of the run record's output; outside a run the text stays

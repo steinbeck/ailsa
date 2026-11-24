@@ -176,6 +176,23 @@ def test_outside_a_run_nothing_is_recorded(new_run, tmp_path, monkeypatch) -> No
     assert "Outcome" not in text.stdout and "Solutions found: 2" in text.stdout
 
 
+def test_recorded_lsd_identity_is_the_binary_that_ran(run_env, tmp_path, monkeypatch) -> None:
+    """WR-11: the runner's binary is recorded, not the first LSD/lsd on PATH."""
+    import hashlib
+
+    from ailsa.lsd.runner import LSDRunner
+
+    run_dir, it = run_env
+    other = install_fake_lsd(tmp_path / "other", "solutions", count=3)
+    ran = other / "lsd"
+    ran.write_text(ran.read_text() + "# the binary the runner found\n")
+    monkeypatch.setattr(LSDRunner, "_find_lsd", classmethod(lambda cls: ran))
+    monkeypatch.chdir(it)
+    assert _invoke("compound.lsd").exit_code == 0
+    fin = next(e for e in _events(run_dir) if e["type"] == "solver.finished")["payload"]
+    assert fin["lsd"]["sha256"] == hashlib.sha256(ran.read_bytes()).hexdigest()
+
+
 def _outside(tmp_path, monkeypatch, mode: str, **params) -> Path:
     monkeypatch.delenv("AILSA_RUN_DIR", raising=False)
     bin_dir = install_fake_lsd(tmp_path / "bin", mode, **params)

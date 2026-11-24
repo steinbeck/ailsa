@@ -45,34 +45,39 @@ def _run(cmd: list[str], cwd: str | None = None) -> str:
     return (proc.stdout or "") + "\n" + (proc.stderr or "")
 
 
-def probe_binary(names: tuple[str, ...], *, banner: bool) -> dict[str, Any]:
-    path = None
-    for name in names:
-        path = shutil.which(name)
-        if path:
-            break
-    if not path:
+def probe_binary(
+    names: tuple[str, ...], *, banner: bool, path: str | os.PathLike[str] | None = None
+) -> dict[str, Any]:
+    """Version and sha256 of ``path`` (the binary that ran), or of the first of ``names``
+    on PATH when no path is given."""
+    found: str | None = str(path) if path else None
+    if found is None:
+        for name in names:
+            found = shutil.which(name)
+            if found:
+                break
+    if not found or not os.path.isfile(found):
         return {"path": None, "version": None, "sha256": None}
     version = None
     if banner:
         try:
             with tempfile.TemporaryDirectory() as tmp:
-                version = parse_lsd_banner(_run([path], cwd=tmp))
+                version = parse_lsd_banner(_run([found], cwd=tmp))
         except (OSError, subprocess.SubprocessError):
             version = None
     try:
-        digest: str | None = sha256_file(path)
+        digest: str | None = sha256_file(found)
     except OSError:
         digest = None
-    return {"path": path, "version": version, "sha256": digest}
+    return {"path": found, "version": version, "sha256": digest}
 
 
-def probe_lsd() -> dict[str, Any]:
-    return probe_binary(("LSD", "lsd"), banner=True)
+def probe_lsd(path: str | os.PathLike[str] | None = None) -> dict[str, Any]:
+    return probe_binary(("LSD", "lsd"), banner=True, path=path)
 
 
-def probe_outlsd() -> dict[str, Any]:
-    return probe_binary(("outlsd",), banner=False)
+def probe_outlsd(path: str | os.PathLike[str] | None = None) -> dict[str, Any]:
+    return probe_binary(("outlsd",), banner=False, path=path)
 
 
 def _package_root() -> Path:
