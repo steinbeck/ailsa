@@ -155,6 +155,16 @@ def test_interrupt_kills_remote_and_removes_scratch(
     assert _scratch_dirs(fake) == []
 
 
+def test_login_shell_banner_does_not_break_the_fetch(fake: Path, work: Path) -> None:
+    """WR-05: stdout from the login profile (module or conda banners) precedes the tar stream."""
+    profile = fake / ".bash_profile"
+    profile.write_text(profile.read_text() + 'echo "Welcome: modules loaded"\nprintf "\\x00x"\n')
+    res = solve_remote("fakehost", work / "compound.lsd", work, timeout_s=30)
+    assert res.outcome == "solutions" and res.count == 3
+    assert (work / "compound.sol").is_file()
+    assert _scratch_dirs(fake) == []
+
+
 def test_error_outcome(fake: Path, work: Path) -> None:
     install_fake_lsd(fake / "bin", "error", code=420)
     res = solve_remote("fakehost", work / "compound.lsd", work, timeout_s=30)

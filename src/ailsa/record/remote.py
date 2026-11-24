@@ -12,6 +12,7 @@ from __future__ import annotations
 import io
 import os
 import re
+import secrets
 import shlex
 import signal
 import subprocess
@@ -70,6 +71,13 @@ def _ssh(
     stdin: bytes | None = None,
     timeout: float = 60,
 ) -> subprocess.CompletedProcess[bytes]:
+    """Run ``script`` in a login shell on the host; stdout holds only what the script printed.
+
+    A login shell may print banners (conda, module systems, echo in a profile) before the
+    script runs. The script first prints a marker line unique to this call, and everything up
+    to it is dropped, so the probe, the poll and the fetched tar stream are never corrupted.
+    """
+    marker = f"AILSA-OUT-{secrets.token_hex(8)}"
     argv = [
         "ssh",
         "-o",
@@ -78,10 +86,10 @@ def _ssh(
         "ConnectTimeout=15",
         "--",
         validate_alias(alias),
-        "bash -lc " + shlex.quote(script),
+        "bash -lc " + shlex.quote(f"printf '%s\\n' {marker}\n{script}"),
     ]
     try:
-        return subprocess.run(
+        proc = subprocess.run(
             argv,
             input=stdin if stdin is not None else b"",
             capture_output=True,
@@ -89,6 +97,11 @@ def _ssh(
         )
     except subprocess.TimeoutExpired:
         return subprocess.CompletedProcess(argv, 255, b"", b"ssh call timed out")
+    token = marker.encode("ascii") + b"\n"
+    at = proc.stdout.find(token)
+    if at >= 0:
+        proc.stdout = proc.stdout[at + len(token) :]
+    return proc
 
 
 def _text(data: bytes) -> str:
