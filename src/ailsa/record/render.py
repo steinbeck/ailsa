@@ -73,7 +73,8 @@ class _Fields(dict[str, str]):
 
 def _describe(ev: dict[str, Any], first_prompt_seq: int | None) -> str:
     etype = str(ev.get("type"))
-    p = ev.get("payload") if isinstance(ev.get("payload"), dict) else {}
+    raw_p = ev.get("payload")
+    p: dict[str, Any] = raw_p if isinstance(raw_p, dict) else {}
     if etype == "prompt.submitted":
         return "Invocation prompt" if ev.get("seq") == first_prompt_seq else "Message from a human"
     if etype == "note.added":
@@ -88,7 +89,8 @@ def _describe(ev: dict[str, Any], first_prompt_seq: int | None) -> str:
 
 
 def _who(ev: dict[str, Any]) -> str:
-    actor = ev.get("actor") if isinstance(ev.get("actor"), dict) else {}
+    raw_actor = ev.get("actor")
+    actor: dict[str, Any] = raw_actor if isinstance(raw_actor, dict) else {}
     name = actor.get("role") or actor.get("name") or actor.get("kind") or "?"
     return md_escape(name)
 

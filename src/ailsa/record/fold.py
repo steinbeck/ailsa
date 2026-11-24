@@ -12,7 +12,7 @@ import json
 from collections.abc import Callable
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from ailsa.record.events import HEARTBEAT, MANIFEST
 from ailsa.record.fsutil import atomic_write_json
@@ -59,7 +59,7 @@ def _exp(value: Any) -> str:
 
 def _payload(ev: dict[str, Any]) -> dict[str, Any]:
     p = ev.get("payload")
-    return p if isinstance(p, dict) else {}
+    return cast("dict[str, Any]", p) if isinstance(p, dict) else {}
 
 
 def _iteration(m: dict[str, Any], name: Any) -> dict[str, Any]:
@@ -352,7 +352,8 @@ def fold(
 
     for ev in events:
         etype = ev.get("type")
-        actor = ev.get("actor") if isinstance(ev.get("actor"), dict) else {}
+        raw_actor = ev.get("actor")
+        actor: dict[str, Any] = raw_actor if isinstance(raw_actor, dict) else {}
         if actor.get("kind") == "hook":
             hooks = True
         if etype in by_type:

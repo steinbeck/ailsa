@@ -16,6 +16,7 @@ import sqlite3
 import subprocess
 import sys
 import tempfile
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
@@ -197,12 +198,12 @@ def skill_info(skill_dir: Path | None) -> dict[str, Any]:
     return {"name": name or root.name, "version": version, "files": skill_file_hashes(root)}
 
 
-def detect_harness(env: dict[str, str] | None = None) -> str:
-    env = os.environ if env is None else env
-    named = env.get("AILSA_HARNESS")
+def detect_harness(env: Mapping[str, str] | None = None) -> str:
+    env_map: Mapping[str, str] = os.environ if env is None else env
+    named = env_map.get("AILSA_HARNESS")
     if named in ("claude-code", "opencode", "other"):
         return named
-    if env.get("CLAUDECODE") == "1":
+    if env_map.get("CLAUDECODE") == "1":
         return "claude-code"
     return "other"
 

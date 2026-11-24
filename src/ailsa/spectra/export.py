@@ -75,7 +75,7 @@ def pool_max_abs(a: np.ndarray[Any, Any], f: int) -> np.ndarray[Any, Any]:
         raise ValueError("pooling factor must be at least 1")
     a = np.asarray(a)
     if f == 1:
-        return a.copy()
+        return np.asarray(a.copy())
     h, w = a.shape
     ph, pw = (-h) % f, (-w) % f
     if ph or pw:

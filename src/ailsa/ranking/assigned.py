@@ -15,7 +15,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Protocol
+from typing import Any, Protocol
 
 from rdkit import Chem, RDLogger
 
@@ -72,7 +72,7 @@ class AssignedRanking:
     warnings: list[str] = field(default_factory=list)
     # Per candidate (by InChIKey): atom map, per-atom prediction basis, mapping status.
     # Kept apart from AssignedCandidate so the CLI JSON stays unchanged.
-    details: dict[str, dict] = field(default_factory=dict)
+    details: dict[str, dict[str, Any]] = field(default_factory=dict)
 
 
 def observed_shifts(lsd_text: str) -> dict[int, float]:
@@ -107,14 +107,14 @@ def _mult_atoms(lsd_text: str) -> dict[int, tuple[str, int]]:
 
 def _atom_map(
     mol: Chem.Mol, lsd_order: list[int], mult: dict[int, tuple[str, int]]
-) -> tuple[list[dict], str]:
+) -> tuple[list[dict[str, Any]], str]:
     """Depiction atom (position in the canonical SMILES) -> LSD atom, with a sanity check.
 
     Element and implicit hydrogen count must agree with the atom's MULT line; otherwise the
     map is withheld ("unavailable") rather than guessed. Molecules carry no explicit H.
     """
     order = [int(i) for i in mol.GetProp("_smilesAtomOutputOrder").strip("[],").split(",") if i]
-    entries: list[dict] = []
+    entries: list[dict[str, Any]] = []
     for position, mol_index in enumerate(order):
         atom = mol.GetAtomWithIdx(mol_index)
         lsd = lsd_order[position]
@@ -146,7 +146,7 @@ def rank_assigned(
     """
     RDLogger.DisableLog("rdApp.*")  # type: ignore[attr-defined]
     best: dict[str, AssignedCandidate] = {}
-    details: dict[str, dict] = {}
+    details: dict[str, dict[str, Any]] = {}
     predicted: dict[str, PredictionResult] = {}
     observed_all: dict[int, float] = {}
     warnings: list[str] = []

@@ -400,15 +400,15 @@ def record_ranking(
     lines: dict[str, list[dict[str, Any]]] = {}
     correlations: dict[int, list[dict[str, Any]]] = {}
     for c in result.candidates[:CORRELATIONS_CAP]:
-        f = files.get(c.source)
-        if f is None:
+        src = files.get(c.source)
+        if src is None:
             continue
         if c.source not in graphs:
-            sol = f.with_suffix(".sol")
+            sol = src.with_suffix(".sol")
             graphs[c.source] = {
                 g.solution_number: g for g in LSDSolutionAnalyzer.parse_sol_file(sol)
             }
-            lines[c.source] = parse_correlations(f.read_text(errors="replace"))
+            lines[c.source] = parse_correlations(src.read_text(errors="replace"))
         graph = graphs[c.source].get(c.solution)
         if graph is not None:
             correlations[c.rank] = correlation_paths(lines[c.source], graph)

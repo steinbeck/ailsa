@@ -309,7 +309,7 @@ def _smiles_ok(path: Path) -> bool:
     try:
         from rdkit import Chem, RDLogger
 
-        RDLogger.DisableLog("rdApp.*")
+        RDLogger.DisableLog("rdApp.*")  # type: ignore[attr-defined]
         return Chem.MolFromSmiles(first.split()[0]) is not None
     except ImportError:
         return True

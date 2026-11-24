@@ -108,7 +108,7 @@ def record_pick(
     with log_session(run.run_dir) as lg:
         n = lg.next_counter("pick:" + expno)
         pid = pick_id(expno, n)
-        entries = []
+        entries: list[Any] = []
         for i, p in enumerate(peaks, start=1):
             entry: dict[str, Any] = {"id": peak_id(expno, n, i)}
             for key in ("ppm", "ppm_f2", "ppm_f1", "intensity", "snr"):

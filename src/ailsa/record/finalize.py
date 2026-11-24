@@ -79,7 +79,8 @@ def resolve_ranking(
         raise FinalizeRefused(NOT_BY_TOOL)
     for ev in reversed(computed):
         if _payload(ev).get("ranking_id") == ref:
-            return ev
+            found: dict[str, Any] = ev
+            return found
     raise FinalizeRefused(NOT_BY_TOOL)
 
 

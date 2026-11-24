@@ -1,6 +1,7 @@
 """CLI commands for LSD structure elucidation."""
 
 import json
+from collections.abc import Sequence
 from pathlib import Path
 
 import click
@@ -1152,7 +1153,7 @@ def lsd_rank(
 
 
 def _record_analysis(
-    results: list[object], sol_file: str, lsd_file: str, solution: int | None
+    results: Sequence[object], sol_file: str, lsd_file: str, solution: int | None
 ) -> None:
     """Save the correlation analysis in an active run; failures only print one stderr line."""
     from ailsa.record.resolve import current_run_for_tool

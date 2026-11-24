@@ -11,7 +11,7 @@ import os
 import re
 import sys
 from pathlib import Path
-from typing import Any
+from typing import Any, NoReturn
 
 import click
 
@@ -20,7 +20,7 @@ MAX_TABLE_ROWS = 10_000
 _PEAK_RE = re.compile(r"^pk:[^:\s]+:\d+:\d+$")
 
 
-def _fail(message: str) -> None:
+def _fail(message: str) -> NoReturn:
     click.echo(f"Error: {message}", err=True)
     sys.exit(1)
 
