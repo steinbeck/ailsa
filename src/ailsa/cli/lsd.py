@@ -201,6 +201,82 @@ def lsd_run(
             _echo_outcome(info, result.outcome)
 
 
+@lsd.command("import")
+@click.argument("iteration_dir", type=click.Path(exists=True, file_okay=False))
+@click.option(
+    "--input",
+    "input_file",
+    type=click.Path(exists=True, dir_okay=False),
+    default=None,
+    help="LSD input file (default: the single *.lsd in the folder).",
+)
+@click.option(
+    "--purpose",
+    type=click.Choice(["main", "family", "diagnostic", "control"]),
+    default="main",
+    help="Why this solve was run.",
+)
+@click.option("--parent", default=None, help="Iteration this input derives from.")
+@click.option(
+    "--format",
+    "output_format",
+    type=click.Choice(["text", "json"]),
+    default="text",
+    help="Output format.",
+)
+def lsd_import(
+    iteration_dir: str,
+    input_file: str | None,
+    purpose: str,
+    parent: str | None,
+    output_format: str,
+) -> None:
+    """Register solver output produced elsewhere in the active run, marked imported.
+
+    ITERATION_DIR holds the LSD input and what the solver left behind.
+    """
+    from ailsa.record.resolve import current_run_for_tool
+
+    run = current_run_for_tool("lsd import")
+    if run is None:
+        click.echo("Error: lsd import needs an active run", err=True)
+        raise SystemExit(1)
+    folder = Path(iteration_dir)
+    if input_file is None:
+        found = sorted(folder.glob("*.lsd"))
+        if len(found) != 1:
+            click.echo(
+                f"Error: expected exactly one .lsd file in {folder}, found {len(found)}; "
+                "use --input",
+                err=True,
+            )
+            raise SystemExit(1)
+        input_file = str(found[0])
+    from ailsa.record.lsdrec import import_solver_outputs
+
+    try:
+        info = import_solver_outputs(
+            run, folder, input_file=input_file, purpose=purpose, parent=parent
+        )
+    except Exception as exc:
+        click.echo(f"Error: {exc}", err=True)
+        raise SystemExit(1) from exc
+    if output_format == "json":
+        click.echo(
+            json.dumps(
+                {
+                    "iteration": info["iteration"],
+                    "outcome": info["outcome"],
+                    "count": info["count"],
+                    "provenance": "imported",
+                },
+                indent=2,
+            )
+        )
+    else:
+        click.echo(f"Imported as {info['iteration']} ({info['outcome']}, {info['count']} solutions)")
+
+
 def _get_default_table_path() -> Path:
     """Get the default HOSE lookup table path."""
     import ailsa

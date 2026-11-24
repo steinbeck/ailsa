@@ -272,25 +272,27 @@ def finish_solver_run(
     elapsed = result.elapsed_s if elapsed_s is None else elapsed_s
     code = result.return_code if exit_code is None and provenance == "run" else exit_code
     where = host or record.host
-    model = SolverRun(
-        iteration=record.iteration,
-        purpose=record.purpose,
-        parent=record.parent,
-        host=where,
-        remote=record.remote,
-        provenance=provenance,
-        outcome=outcome,
-        count=count,
-        partial_count=partial,
-        limit=result.limit,
-        elapsed_s=elapsed if provenance == "run" else None,
-        timeout_s=record.timeout_s,
-        exit_code=code,
-        error_line=result.error_line,
-        lsd=_tool_info(lsd_info),
-        outlsd=_tool_info(outlsd_info),
-        files=files,
-        smiles_absent_reason=absent,
+    model = SolverRun.model_validate(
+        dict(
+            iteration=record.iteration,
+            purpose=record.purpose,
+            parent=record.parent,
+            host=where,
+            remote=record.remote,
+            provenance=provenance,
+            outcome=outcome,
+            count=count,
+            partial_count=partial,
+            limit=result.limit,
+            elapsed_s=elapsed if provenance == "run" else None,
+            timeout_s=record.timeout_s,
+            exit_code=code,
+            error_line=result.error_line,
+            lsd=_tool_info(lsd_info),
+            outlsd=_tool_info(outlsd_info),
+            files=files,
+            smiles_absent_reason=absent,
+        )
     )
     blob = (
         json.dumps(model.model_dump(mode="json", by_alias=True), sort_keys=True, indent=2) + "\n"
