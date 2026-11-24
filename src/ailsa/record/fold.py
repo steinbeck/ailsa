@@ -63,10 +63,11 @@ def _payload(ev: dict[str, Any]) -> dict[str, Any]:
 
 
 def _iteration(m: dict[str, Any], name: Any) -> dict[str, Any]:
-    return m["iterations"].setdefault(
+    it: dict[str, Any] = m["iterations"].setdefault(
         str(name),
         {"purpose": None, "parent": None, "outcome": None, "count": None, "partial_count": None},
     )
+    return it
 
 
 # Handlers: (manifest, event, scratch) -> None
