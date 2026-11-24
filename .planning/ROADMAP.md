@@ -392,8 +392,8 @@ Plans:
 - [x] 106.1-11-PLAN.md — peak-pick and identity artefacts; NUS/JCAMP outputs out of the dataset
 - [x] 106.1-12-PLAN.md — batch recording commands (`ailsa peaks decide`, `ailsa model import`)
 - [x] 106.1-13-PLAN.md — solver outcome enum, iteration registration, `ailsa lsd import`
-- [ ] 106.1-14-PLAN.md — `ailsa run init|note|status|verify|render|index`
-- [ ] 106.1-15-PLAN.md — ranking artefact with atom map and prediction basis; correlation analysis with ELIM drops
+- [x] 106.1-14-PLAN.md — `ailsa run init|note|status|verify|render|index`
+- [x] 106.1-15-PLAN.md — ranking artefact with atom map and prediction basis; correlation analysis with ELIM drops
 - [ ] 106.1-16-PLAN.md — remote solves (`ailsa lsd run --host`) and the real vitus-to-Sheldon check (D-14)
 - [ ] 106.1-17-PLAN.md — `ailsa run finalize|close|start|hooks` (strict declaration, launcher)
 - [ ] 106.1-18-PLAN.md — lean skill 0.3.0 wired to the record; docs/RUN-RECORD.md
