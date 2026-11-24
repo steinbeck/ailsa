@@ -55,6 +55,59 @@ def _detect_multiplicity_edited(data: "np.ndarray[Any, Any]") -> tuple[bool, int
     return multiplicity_edited, negative_crosspeak_count
 
 
+def _record_pick(
+    sub: str,
+    path: str,
+    picker: str,
+    parameters: dict[str, Any],
+    peaks: Any,
+    two_d: bool,
+) -> str | None:
+    """Record the pick as a run artefact when a run is active; return its pick id.
+
+    Never raises: a failed record write prints one stderr line and the pick output
+    stays as it was (REC-17).
+    """
+    import sys
+
+    try:
+        from ailsa.record.resolve import current_run_for_tool
+
+        run = current_run_for_tool(f"pick {sub}")
+        if run is None:
+            return None
+        from ailsa.record.tooldata import record_pick
+
+        if two_d:
+            rows = [
+                {
+                    "ppm_f2": p.f2_position,
+                    "ppm_f1": p.f1_position,
+                    "intensity": p.intensity,
+                    "snr": getattr(p, "snr", None),
+                }
+                for p in peaks.peaks
+            ]
+        else:
+            rows = [
+                {"ppm": p.position, "intensity": p.intensity, "snr": p.snr} for p in peaks.peaks
+            ]
+        return record_pick(
+            run,
+            path=path,
+            picker=picker,
+            parameters=parameters,
+            referencing=None,
+            noise_sigma=getattr(peaks, "noise_sigma", None),
+            peaks=rows,
+            two_d=two_d,
+            command=f"pick {sub}",
+        )
+    except Exception as exc:
+        print(f"ailsa: record write failed: {exc}", file=sys.stderr)
+        return None
+
+
 @pick.command("1d")
 @click.argument("path", type=click.Path(exists=True))
 @click.option(
@@ -131,8 +184,23 @@ def pick_1d(
     else:
         snr_floor_used = 5.0
 
+    pick_ref = _record_pick(
+        "1d",
+        path,
+        "AdaptivePeakPicker",
+        {
+            "threshold": threshold,
+            "snr_floor": snr_floor,
+            "snr_floor_used": snr_floor_used,
+            "use_snr": use_snr,
+            "detect_negative": has_significant_negative,
+        },
+        peaks,
+        False,
+    )
+
     if output_format == "json":
-        data = {
+        data: dict[str, Any] = {
             "count": len(peaks.peaks),
             "noise_sigma": peaks.noise_sigma,  # None for legacy/explicit-threshold callers
             "negative_detected": has_significant_negative,
@@ -146,6 +214,8 @@ def pick_1d(
                 for p in peaks.peaks
             ],
         }
+        if pick_ref:
+            data["pick_id"] = pick_ref
         click.echo(json.dumps(data, indent=2))
     else:
         if has_significant_negative:
@@ -181,9 +251,10 @@ def pick_2d(path: str, threshold: float, output_format: str) -> None:
     """
     spectrum = BrukerReader.read_2d(path)
     peaks = PeakPicker2D.pick_peaks(spectrum, threshold=threshold)
+    pick_ref = _record_pick("2d", path, "PeakPicker2D", {"threshold": threshold}, peaks, True)
 
     if output_format == "json":
-        data = {
+        data: dict[str, Any] = {
             "experiment_type": spectrum.experiment_type,
             "count": len(peaks.peaks),
             "peaks": [
@@ -195,6 +266,8 @@ def pick_2d(path: str, threshold: float, output_format: str) -> None:
                 for p in peaks.peaks
             ],
         }
+        if pick_ref:
+            data["pick_id"] = pick_ref
         click.echo(json.dumps(data, indent=2))
     else:
         click.echo(f"Found {len(peaks.peaks)} peaks in {spectrum.experiment_type}:")
@@ -241,9 +314,17 @@ def pick_hsqc(path: str, threshold: float, output_format: str) -> None:
     peaks = PeakPicker2D.pick_peaks(
         spectrum, threshold=threshold, detect_negative=multiplicity_edited
     )
+    pick_ref = _record_pick(
+        "hsqc",
+        path,
+        "PeakPicker2D",
+        {"threshold": threshold, "detect_negative": multiplicity_edited},
+        peaks,
+        True,
+    )
 
     if output_format == "json":
-        data = {
+        data: dict[str, Any] = {
             "experiment_type": spectrum.experiment_type,
             "count": len(peaks.peaks),
             "multiplicity_edited": multiplicity_edited,
@@ -257,6 +338,8 @@ def pick_hsqc(path: str, threshold: float, output_format: str) -> None:
                 for p in peaks.peaks
             ],
         }
+        if pick_ref:
+            data["pick_id"] = pick_ref
         click.echo(json.dumps(data, indent=2))
     else:
         edit_note = (
@@ -329,8 +412,22 @@ def pick_hmbc(
     else:
         snr_floor_used = 5.0
 
+    pick_ref = _record_pick(
+        "hmbc",
+        path,
+        "PeakPicker2D",
+        {
+            "threshold": threshold,
+            "snr_floor": snr_floor,
+            "snr_floor_used": snr_floor_used,
+            "use_snr": use_snr,
+        },
+        peaks,
+        True,
+    )
+
     if output_format == "json":
-        data = {
+        data: dict[str, Any] = {
             "experiment_type": spectrum.experiment_type,
             "count": len(peaks.peaks),
             "snr_floor_used": snr_floor_used,
@@ -344,6 +441,8 @@ def pick_hmbc(
                 for p in peaks.peaks
             ],
         }
+        if pick_ref:
+            data["pick_id"] = pick_ref
         click.echo(json.dumps(data, indent=2))
     else:
         mode = f"SNR floor k={snr_floor_used}" if use_snr else "fraction-of-max"
