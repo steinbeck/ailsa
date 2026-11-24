@@ -81,8 +81,8 @@ Last activity: 2026-11-23 -- paper audit answers (leaks, log check); C20H32O2 co
       PDF `background/AILSA-Web-Interface-Specification-Draft2.3.pdf`. Example molecule chosen (D18):
       α-terpineol from BMRB bmse000667, outside every benchmark, development, blind and teaching
       set; licence to confirm before it enters the repo. Notifications (D20): Claude-app push needs
-      Remote Control, so headless runs use ntfy. Open: account data terms before the next
-      collaborator run (D22).
+      Remote Control, so headless runs use ntfy. Data licences (D22): not checked by AILSA; the
+      interface's documentation, help and data-path line carry a data-use notice (HELP-06).
       Clickable prototype (same folder, `prototype/index.html`, local only because it embeds an
       unpublished run): chemist and expert views, zoomable spectra, a replay of the run and a Team
       section with every agent message. Design record committed: `PRODUCT.md`, `DESIGN.md`,
