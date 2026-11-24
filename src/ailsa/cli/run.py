@@ -451,6 +451,113 @@ def finalize_cmd(
     _emit(result, fmt, lines)
 
 
+@run.command("start", context_settings={"ignore_unknown_options": True})
+@click.argument("dataset", type=click.Path(path_type=Path))
+@click.option(
+    "--harness", type=click.Choice(["claude", "opencode"]), default="claude", show_default=True
+)
+@click.option("--model", required=True, help="Model the harness is asked to use.")
+@click.option(
+    "--headless/--interactive",
+    default=True,
+    show_default=True,
+    help="Headless runs treat the run folder as trusted. An interactive launched run shows "
+    "Claude Code's workspace-trust dialog once per new folder; hooks only run after it is "
+    "accepted.",
+)
+@click.option("--prompt", default=None, help="Prompt to give the agent (default: the skill).")
+@click.option("--time-limit", type=int, default=3600, show_default=True, help="Seconds.")
+@click.option(
+    "--class",
+    "run_class",
+    type=click.Choice(["public", "internal", "confidential"]),
+    default="internal",
+    show_default=True,
+    help="Data class. Confidential removes the web tools from Claude Code.",
+)
+@click.option("--label", default=None, help="Dataset label (ignored in blind mode).")
+@click.option("--formula", default=None, help="Molecular formula, if known.")
+@click.option("--source", default=None, help="Where the data come from.")
+@click.option("--licence", default=None, help="Licence or acknowledgement of the data.")
+@click.option("--blind", is_flag=True, help="Blind run: refuse when earlier results are readable.")
+@click.option("--allow-prior-runs", is_flag=True, help="Start a blind run anyway (marked).")
+@click.option(
+    "--context-file",
+    "context_files",
+    multiple=True,
+    type=click.Path(path_type=Path),
+    help="Copy this file into the agent's context/ folder (repeatable).",
+)
+@click.option("--no-transcript", is_flag=True, help="Do not copy the harness transcripts.")
+@click.option("--no-views", is_flag=True, help="Do not export the spectra view products.")
+@_format_option
+@click.argument("extra", nargs=-1, type=click.UNPROCESSED)
+def start_cmd(
+    dataset: Path,
+    harness: str,
+    model: str,
+    headless: bool,
+    prompt: str | None,
+    time_limit: int,
+    run_class: str,
+    label: str | None,
+    formula: str | None,
+    source: str | None,
+    licence: str | None,
+    blind: bool,
+    allow_prior_runs: bool,
+    context_files: tuple[Path, ...],
+    no_transcript: bool,
+    no_views: bool,
+    fmt: str,
+    extra: tuple[str, ...],
+) -> None:
+    """Create a run for DATASET, start the harness in it and end the run when it exits.
+
+    Arguments after -- go to the harness. The harness runs with permission prompts off
+    (--dangerously-skip-permissions) inside the run's own work folder; the dataset is added
+    as a readable folder.
+    """
+    from ailsa.record.launcher import LauncherError, launch, prepare_run
+
+    try:
+        prepared = prepare_run(
+            dataset,
+            harness=harness,
+            model=model,
+            headless=headless,
+            time_limit_s=time_limit,
+            run_class=run_class,
+            label=label,
+            formula=formula,
+            source=source,
+            licence=licence,
+            blind=blind,
+            allow_prior_runs=allow_prior_runs,
+            prompt=prompt,
+            context_files=list(context_files),
+            views=not no_views,
+            transcript=not no_transcript,
+            extra_args=list(extra),
+        )
+    except LauncherError as exc:
+        click.echo(f"ailsa: {exc}", err=True)
+        raise SystemExit(2) from None
+    for warning in prepared["warnings"]:
+        click.echo(f"ailsa: warning: {warning}", err=True)
+    result = launch(prepared)
+    _emit(
+        result,
+        fmt,
+        [
+            f"RUN: {result['run_id']}",
+            f"WORK: {result['run_dir']}",
+            f"exit code: {result['exit_code']}",
+            f"state: {result['state']}",
+        ],
+    )
+
+
 @run.command("close")
 @click.option("--reason", default="closed by user", show_default=True)
 @_run_option

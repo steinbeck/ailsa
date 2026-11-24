@@ -275,9 +275,10 @@ def init_run(
     harness: str | None = None,
     prompt: str | None = None,
     args: Sequence[str] = (),
-    context_files: Sequence[str] = (),
+    context_files: Sequence[Any] = (),
     time_limit_s: int | None = None,
     web_tools: str = "unknown",
+    web_tools_enforced: bool = False,
     views: bool = True,
     env: Mapping[str, str] | None = None,
     now: datetime | None = None,
@@ -420,7 +421,8 @@ def init_run(
 
     # 5. Environment (outside the lock).
     effective_web = web_tools
-    if run_class == "confidential":
+    web_unknown = run_class == "confidential" and not web_tools_enforced
+    if web_unknown:
         effective_web = "unknown"
         warnings.append(OPEN_SESSION_WEB_WARNING)
 
@@ -442,7 +444,7 @@ def init_run(
 
     _step(run_dir, "env", capture_env, warnings)
 
-    if run_class == "confidential":
+    if web_unknown:
         _step(
             run_dir,
             "web_tools",

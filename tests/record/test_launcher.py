@@ -1,0 +1,360 @@
+"""`ailsa run start`: the launcher, with a fake `claude` shim on PATH (never the real one)."""
+
+from __future__ import annotations
+
+import json
+import os
+import sys
+import time
+from pathlib import Path
+from typing import Any
+
+import pytest
+from click.testing import CliRunner
+
+from ailsa.cli.run import run
+from ailsa.record import env as record_env
+from ailsa.record import launcher
+from ailsa.record.hooksettings import build_settings
+from ailsa.record.launcher import build_argv, default_prompt
+from ailsa.record.log import read_events
+
+from .conftest import make_shim
+from .test_spectra_export import make_1d
+
+SHIM = f"""#!{sys.executable}
+import json, os, signal, subprocess, sys, time
+argv = sys.argv[1:]
+if argv == ["--version"]:
+    print("9.9.9 (fake)")
+    sys.exit(0)
+keep = ("AILSA", "CLAUDE", "PATH")
+info = {{
+    "argv": sys.argv[1:],
+    "cwd": os.getcwd(),
+    "pid": os.getpid(),
+    "env": {{k: v for k, v in os.environ.items() if k.startswith(keep)}},
+}}
+with open(os.environ["FAKE_CLAUDE_OUT"], "w") as fh:
+    json.dump(info, fh)
+modes = os.environ.get("FAKE_CLAUDE_MODE", "").split(",")
+sid = argv[argv.index("--session-id") + 1] if "--session-id" in argv else None
+if "transcript" in modes and sid:
+    folder = os.path.join(os.environ["AILSA_CLAUDE_PROJECTS"], "p")
+    os.makedirs(folder, exist_ok=True)
+    line = {{"type": "assistant", "message": {{"model": "claude-fake"}}, "requestedModel": "fake"}}
+    with open(os.path.join(folder, sid + ".jsonl"), "w") as fh:
+        fh.write(json.dumps(line) + "\\n")
+if "hook" in modes and sid:
+    payload = {{"hook_event_name": "SessionEnd", "session_id": sid, "reason": "other"}}
+    subprocess.run(
+        [sys.executable, "-m", "ailsa.record.hook"],
+        input=json.dumps(payload).encode(),
+        env=os.environ,
+    )
+if "ignore_term" in modes:
+    signal.signal(signal.SIGTERM, signal.SIG_IGN)
+if "sleep" in modes or "ignore_term" in modes:
+    time.sleep(60)
+sys.exit(int(os.environ.get("FAKE_CLAUDE_EXIT", "0")))
+"""
+
+
+@pytest.fixture(autouse=True)
+def _isolated(monkeypatch: pytest.MonkeyPatch, tmp_path: Path, workspace: Path) -> None:
+    monkeypatch.setattr(record_env, "resolve_database_path", lambda: None)
+    monkeypatch.setenv("XDG_CACHE_HOME", str(tmp_path / "cache"))
+    monkeypatch.setenv("AILSA_CLAUDE_PROJECTS", str(tmp_path / "projects"))
+    monkeypatch.setenv("FAKE_CLAUDE_OUT", str(tmp_path / "shim.json"))
+    monkeypatch.delenv("FAKE_CLAUDE_MODE", raising=False)
+
+
+@pytest.fixture
+def claude(shim_path: Path) -> Path:
+    return make_shim(shim_path, "claude", SHIM)
+
+
+@pytest.fixture
+def dataset(tmp_path: Path) -> Path:
+    ds = tmp_path / "example"
+    make_1d(ds, "1")
+    return ds
+
+
+def _start(dataset: Path, *args: str) -> Any:
+    base = ["start", str(dataset), "--no-views", "--format", "json"]
+    return CliRunner().invoke(run, [*base, *args])
+
+
+def _result(res: Any) -> dict[str, Any]:
+    assert res.exit_code == 0, res.output + str(res.exception)
+    return json.loads(res.stdout)
+
+
+def _events(run_dir: str | Path) -> list[dict[str, Any]]:
+    return read_events(run_dir)["events"]
+
+
+def _of(events: list[dict[str, Any]], kind: str) -> list[dict[str, Any]]:
+    return [e for e in events if e["type"] == kind]
+
+
+def _shim(tmp_path: Path) -> dict[str, Any]:
+    return json.loads((tmp_path / "shim.json").read_text())
+
+
+# ---------------------------------------------------------------------------- argv
+
+
+def test_build_argv_headless(tmp_path: Path) -> None:
+    argv = build_argv(
+        harness="claude",
+        model="haiku",
+        prompt="P",
+        headless=True,
+        run_dir=tmp_path / "r",
+        dataset=tmp_path / "d",
+        session_id="sid",
+    )
+    assert argv == [
+        "claude",
+        "-p",
+        "P",
+        "--model",
+        "haiku",
+        "--session-id",
+        "sid",
+        "--settings",
+        str(tmp_path / "r" / "hooks.json"),
+        "--add-dir",
+        str(tmp_path / "d"),
+        "--dangerously-skip-permissions",
+    ]
+
+
+def test_build_argv_confidential_extra_interactive_opencode(tmp_path: Path) -> None:
+    common: dict[str, Any] = {
+        "model": "m",
+        "prompt": "P",
+        "run_dir": tmp_path / "r",
+        "dataset": tmp_path / "d",
+        "session_id": "sid",
+    }
+    conf = build_argv(headless=True, confidential=True, extra=["--x"], **common)
+    assert conf[-4:] == ["--disallowedTools", "WebFetch", "WebSearch", "--x"][-4:]
+    assert "--disallowedTools" in conf and conf.index("WebFetch") == conf.index("WebSearch") - 1
+    inter = build_argv(headless=False, **common)
+    assert "-p" not in inter and inter[1] == "P"
+    oc = build_argv(harness="opencode", headless=True, **common)
+    assert oc == ["opencode", "run", "--model", "m", "P"]
+
+
+def test_default_prompt_follows_slash_answer() -> None:
+    assert default_prompt("/data/x", True) == "/ailsa-lite /data/x"
+    assert "ailsa-lite skill" in default_prompt("/data/x", False)
+    assert launcher.SLASH_PROMPT_WORKS is True
+
+
+# ------------------------------------------------------------------------- runs
+
+
+def test_headless_start_end_to_end(
+    claude: Path, dataset: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("FAKE_CLAUDE_MODE", "transcript")
+    res = _result(
+        _start(
+            dataset,
+            "--model",
+            "haiku",
+            "--headless",
+            "--time-limit",
+            "30",
+            "--class",
+            "public",
+            "--label",
+            "example",
+        )
+    )
+    assert set(res) >= {"run_id", "run_dir", "exit_code", "state"}
+    assert res["exit_code"] == 0
+    run_dir = Path(res["run_dir"])
+    ev = _events(run_dir)
+    types = [e["type"] for e in ev]
+    assert types.index("run.created") < types.index("env.captured")
+    assert types.index("run.attempt.started") < types.index("run.attempt.ended")
+    assert types[-1] == "run.finished"
+    created = _of(ev, "run.created")[0]["payload"]
+    assert created["request"]["mode"] == "headless"
+    assert created["request"]["harness"] == "claude-code"
+    assert created["request"]["options"]["time_limit_s"] == 30
+    assert created["request"]["prompt"] == f"/ailsa-lite {dataset.resolve()}"
+    env = _of(ev, "env.captured")[0]["payload"]
+    assert env["web_tools"] == "enabled"
+    assert env["harness"]["version"] == "9.9.9 (fake)"
+    started = _of(ev, "run.attempt.started")[0]["payload"]
+    assert started["attempt"] == 1 and started["time_limit_s"] == 30
+    ended = _of(ev, "run.attempt.ended")[0]["payload"]
+    assert ended["exit_code"] == 0 and ended["reason"] == "exited"
+    reported = [e["payload"] for e in _of(ev, "agent.model_reported")]
+    assert {"agent": "main", "requested": "haiku", "actual": None, "source": "launcher"} in reported
+    assert any(p["source"] == "transcript" for p in reported)
+    copied = _of(ev, "transcript.copied")
+    assert copied and copied[0]["payload"]["via"] == "launcher"
+    assert json.loads((run_dir / "hooks.json").read_text()) == build_settings(
+        sys.executable, auto_memory=False
+    )
+    assert (run_dir / "agent" / ".claude" / "skills" / "ailsa-lite" / "SKILL.md").is_file()
+    assert (run_dir / "finished.json").is_file()
+    assert (run_dir / "renderings" / "final_results.md").is_file()
+    assert res["state"] == "stopped_before_result"
+    info = _shim(tmp_path)
+    assert info["cwd"] == str((run_dir / "agent").resolve())
+    assert info["env"]["AILSA_RUN_DIR"] == str(run_dir)
+    assert info["env"]["AILSA_REQUIRE_RUN"] == "1"
+    assert info["env"]["AILSA_HOOKS_VIA_SETTINGS"] == "1"
+    assert info["env"]["CLAUDE_CODE_SESSIONEND_HOOKS_TIMEOUT_MS"] == "15000"
+    assert info["env"]["PATH"].startswith(str(Path(sys.executable).parent))
+    assert info["argv"][0] == "-p" and "--session-id" in info["argv"]
+    assert "--disallowedTools" not in info["argv"]
+
+
+def test_launcher_is_not_bound_to_a_session(
+    claude: Path, dataset: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("CLAUDE_CODE_SESSION_ID", "outer-session-12345")
+    res = _result(_start(dataset, "--model", "haiku"))
+    ev = _events(res["run_dir"])
+    assert not _of(ev, "run.bound")
+    assert "CLAUDE_CODE_SESSION_ID" not in _shim(tmp_path)["env"]
+
+
+def test_confidential_removes_web_tools(claude: Path, dataset: Path, tmp_path: Path) -> None:
+    res = _result(_start(dataset, "--model", "haiku", "--class", "confidential"))
+    ev = _events(res["run_dir"])
+    assert _of(ev, "env.captured")[0]["payload"]["web_tools"] == "disabled"
+    assert not [
+        e for e in _of(ev, "warning.raised") if e["payload"]["code"] == "web_tools_unknown"
+    ]
+    argv = _shim(tmp_path)["argv"]
+    i = argv.index("--disallowedTools")
+    assert argv[i + 1 : i + 3] == ["WebFetch", "WebSearch"]
+
+
+def test_opencode_run(shim_path: Path, dataset: Path, tmp_path: Path) -> None:
+    make_shim(shim_path, "opencode", SHIM)
+    res = _result(_start(dataset, "--harness", "opencode", "--model", "prov/model"))
+    run_dir = Path(res["run_dir"])
+    ev = _events(run_dir)
+    assert _of(ev, "env.captured")[0]["payload"]["web_tools"] == "unknown"
+    assert (run_dir / "agent" / ".opencode" / "skills" / "ailsa-lite" / "SKILL.md").is_file()
+    assert not (run_dir / "hooks.json").exists()
+    argv = _shim(tmp_path)["argv"]
+    assert argv[:3] == ["run", "--model", "prov/model"]
+
+
+def test_hook_in_the_child_reaches_the_run(
+    claude: Path, dataset: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("FAKE_CLAUDE_MODE", "hook")
+    res = _result(_start(dataset, "--model", "haiku"))
+    types = [e["type"] for e in _events(res["run_dir"])]
+    assert "session.ended" in types
+    assert types[-1] == "run.finished"
+
+
+def test_time_limit_kills_the_process_group(
+    claude: Path, dataset: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("FAKE_CLAUDE_MODE", "sleep")
+    started = time.monotonic()
+    res = _result(_start(dataset, "--model", "haiku", "--time-limit", "2"))
+    assert time.monotonic() - started < 30
+    ev = _events(res["run_dir"])
+    ended = _of(ev, "run.attempt.ended")[0]["payload"]
+    assert ended["reason"] == "time_limit"
+    assert _of(ev, "run.finished")[0]["payload"]["reason"] == "time limit"
+    pid = _shim(tmp_path)["pid"]
+    with pytest.raises(ProcessLookupError):
+        os.kill(pid, 0)
+
+
+def test_term_ignoring_child_is_killed(
+    claude: Path, dataset: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("FAKE_CLAUDE_MODE", "ignore_term")
+    monkeypatch.setattr(launcher, "KILL_GRACE_S", 1)
+    res = _result(_start(dataset, "--model", "haiku", "--time-limit", "1"))
+    assert _of(_events(res["run_dir"]), "run.attempt.ended")[0]["payload"]["reason"] == "time_limit"
+    with pytest.raises(ProcessLookupError):
+        os.kill(_shim(tmp_path)["pid"], 0)
+
+
+def test_prompt_override_and_context_files(claude: Path, dataset: Path, tmp_path: Path) -> None:
+    note = tmp_path / "hint.txt"
+    note.write_text("the sample is a terpene\n")
+    res = _result(
+        _start(
+            dataset,
+            "--model",
+            "haiku",
+            "--prompt",
+            "Do it your way.",
+            "--context-file",
+            str(note),
+        )
+    )
+    run_dir = Path(res["run_dir"])
+    created = _of(_events(run_dir), "run.created")[0]["payload"]["request"]
+    assert created["prompt"] == "Do it your way."
+    files = created["context_files"]
+    assert files[0]["name"] == "hint.txt" and len(files[0]["sha256"]) == 64
+    assert (run_dir / "agent" / "context" / "hint.txt").read_text() == note.read_text()
+    assert _shim(tmp_path)["argv"][1] == "Do it your way."
+
+
+def test_no_transcript_skips_both_copies(
+    claude: Path, dataset: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("FAKE_CLAUDE_MODE", "transcript,hook")
+    res = _result(_start(dataset, "--model", "haiku", "--no-transcript"))
+    ev = _events(res["run_dir"])
+    assert not _of(ev, "transcript.copied")
+    assert _shim(tmp_path)["env"]["AILSA_NO_TRANSCRIPT"] == "1"
+
+
+def test_spawn_failure_still_closes_the_run(
+    dataset: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("PATH", "/nonexistent-dir")
+    res = _result(_start(dataset, "--model", "haiku"))
+    assert res["exit_code"] is None
+    ev = _events(res["run_dir"])
+    assert _of(ev, "run.attempt.ended")[0]["payload"]["reason"].startswith("spawn_failed")
+    assert ev[-1]["type"] == "run.finished"
+
+
+def test_nonzero_exit_is_recorded(
+    claude: Path, dataset: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("FAKE_CLAUDE_EXIT", "3")
+    res = _result(_start(dataset, "--model", "haiku"))
+    assert res["exit_code"] == 3
+    assert _of(_events(res["run_dir"]), "run.attempt.ended")[0]["payload"]["exit_code"] == 3
+
+
+def test_blind_refusal_exits_2(claude: Path, dataset: Path) -> None:
+    assert CliRunner().invoke(run, ["init", str(dataset), "--no-views"]).exit_code == 0
+    res = _start(dataset, "--model", "haiku", "--blind")
+    assert res.exit_code == 2 and "--allow-prior-runs" in res.stderr
+
+
+def test_missing_context_file(claude: Path, dataset: Path, tmp_path: Path) -> None:
+    res = _start(dataset, "--model", "haiku", "--context-file", str(tmp_path / "nope.txt"))
+    assert res.exit_code == 2 and "context file not found" in res.stderr
+
+
+def test_extra_args_go_to_the_harness(claude: Path, dataset: Path, tmp_path: Path) -> None:
+    res = _start(dataset, "--model", "haiku", "--", "--max-turns", "7")
+    _result(res)
+    assert _shim(tmp_path)["argv"][-2:] == ["--max-turns", "7"]
