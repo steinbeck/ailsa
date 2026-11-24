@@ -27,6 +27,7 @@ _MULT = re.compile(
     r"^\s*MULT\s+(\d+)\s+C\s+\d\s+\d\s*;\s*(-?\d+(?:\.\d+)?)", re.IGNORECASE | re.MULTILINE
 )
 _DUPL1 = re.compile(r"^\s*DUPL\s+1\b", re.IGNORECASE | re.MULTILINE)
+_MULT_ATOM = re.compile(r"^\s*MULT\s+(\d+)\s+([A-Za-z]{1,2})\s+\d+\s+(\d+)", re.MULTILINE)
 
 
 class Predictor(Protocol):
@@ -69,6 +70,9 @@ class AssignedRanking:
     observed: dict[int, float]
     candidates: list[AssignedCandidate]
     warnings: list[str] = field(default_factory=list)
+    # Per candidate (by InChIKey): atom map, per-atom prediction basis, mapping status.
+    # Kept apart from AssignedCandidate so the CLI JSON stays unchanged.
+    details: dict[str, dict] = field(default_factory=dict)
 
 
 def observed_shifts(lsd_text: str) -> dict[int, float]:
@@ -96,6 +100,42 @@ def _molecule(graph: SolutionGraph) -> tuple[Chem.Mol, str, list[int]] | None:
     return mol, smiles, [lsd_of[i] for i in order]
 
 
+def _mult_atoms(lsd_text: str) -> dict[int, tuple[str, int]]:
+    """LSD atom number -> (element, hydrogen count) from the MULT lines."""
+    return {int(n): (el, int(h)) for n, el, h in _MULT_ATOM.findall(lsd_text)}
+
+
+def _atom_map(
+    mol: Chem.Mol, lsd_order: list[int], mult: dict[int, tuple[str, int]]
+) -> tuple[list[dict], str]:
+    """Depiction atom (position in the canonical SMILES) -> LSD atom, with a sanity check.
+
+    Element and implicit hydrogen count must agree with the atom's MULT line; otherwise the
+    map is withheld ("unavailable") rather than guessed. Molecules carry no explicit H.
+    """
+    order = [int(i) for i in mol.GetProp("_smilesAtomOutputOrder").strip("[],").split(",") if i]
+    entries: list[dict] = []
+    for position, mol_index in enumerate(order):
+        atom = mol.GetAtomWithIdx(mol_index)
+        lsd = lsd_order[position]
+        known = mult.get(lsd)
+        if (
+            known is None
+            or known[0].upper() != atom.GetSymbol().upper()
+            or known[1] != atom.GetTotalNumHs()
+        ):
+            return [], "unavailable"
+        entries.append(
+            {
+                "depiction_index": position,
+                "lsd_atom": lsd,
+                "element": atom.GetSymbol(),
+                "h_count": atom.GetTotalNumHs(),
+            }
+        )
+    return entries, "ok"
+
+
 def rank_assigned(
     lsd_files: list[Path], predictor: Predictor, tolerance: float = 3.0
 ) -> AssignedRanking:
@@ -106,6 +146,7 @@ def rank_assigned(
     """
     RDLogger.DisableLog("rdApp.*")  # type: ignore[attr-defined]
     best: dict[str, AssignedCandidate] = {}
+    details: dict[str, dict] = {}
     predicted: dict[str, PredictionResult] = {}
     observed_all: dict[int, float] = {}
     warnings: list[str] = []
@@ -124,6 +165,7 @@ def rank_assigned(
                 "add DUPL 1 to compare every assignment"
             )
         observed_all.update(observed)
+        mult = _mult_atoms(text)
         sol = lsd_file.with_suffix(".sol")
         if not sol.exists():
             raise FileNotFoundError(f"{sol} not found (run LSD on {lsd_file.name} first)")
@@ -164,6 +206,24 @@ def rank_assigned(
             old = best.get(key)
             if old is None or cand.mae < old.mae:
                 best[key] = cand
+                atom_map, status = _atom_map(mol, lsd_order, mult)
+                details[key] = {
+                    "atom_map": atom_map,
+                    "mapping_status": status,
+                    "basis": {
+                        lsd_order[p.atom_index]: {
+                            "hose_code": p.hose_code,
+                            "radius_used": p.radius_used,
+                            "match_count": p.match_count,
+                            "std_dev": p.std_dev,
+                            "min_shift": p.min_shift,
+                            "max_shift": p.max_shift,
+                            "confidence": p.confidence,
+                        }
+                        for p in predicted[smiles].predictions
+                        if lsd_order[p.atom_index] in observed
+                    },
+                }
     ranked = sorted(best.values(), key=lambda c: (c.mae, -c.within_tolerance, c.max_error))
     for i, cand in enumerate(ranked, start=1):
         cand.rank = i
@@ -174,4 +234,5 @@ def rank_assigned(
         observed=dict(sorted(observed_all.items())),
         candidates=ranked,
         warnings=warnings,
+        details=details,
     )

@@ -371,6 +371,36 @@ def _extract_inventory_block(content: str) -> str | None:
     return "\n".join(json_lines)
 
 
+def _record_nearest_line(
+    smiles_file: str | Path,
+    result: object,
+    shifts: list[float],
+    tolerance: float,
+    predictor: object,
+) -> str | None:
+    from ailsa.record.resolve import current_run_for_tool
+
+    run = current_run_for_tool("lsd rank")
+    if run is None:
+        return None
+    try:
+        from ailsa.record.rankrec import predictor_info, record_nearest_line
+
+        ranking_id = record_nearest_line(
+            run,
+            result,
+            smiles_file=Path(smiles_file),
+            shifts=shifts,
+            tolerance=tolerance,
+            predictor_info=predictor_info(predictor),
+        )
+    except Exception as exc:
+        click.echo(f"ailsa: record write failed: {exc}", err=True)
+        return None
+    _ranking_hint(ranking_id)
+    return ranking_id
+
+
 def _perform_ranking(
     smiles_file: str | Path,
     experimental_shifts: list[float],
@@ -381,6 +411,7 @@ def _perform_ranking(
     _silent: bool = False,
     db: str | Path | None = None,
     max_radius: int = 6,
+    _record: bool = False,
 ) -> dict | None:
     """Rank LSD solutions by 13C spectrum similarity.
 
@@ -447,6 +478,12 @@ def _perform_ranking(
 
     result = ranker.rank(solutions, experimental_shifts, top_n=top)
 
+    ranking_id: str | None = None
+    if _record:
+        ranking_id = _record_nearest_line(
+            smiles_file, result, experimental_shifts, tolerance, predictor
+        )
+
     # Output results
     if output_format == "json":
         data = {
@@ -476,6 +513,8 @@ def _perform_ranking(
             ],
             "warnings": result.warnings,
         }
+        if ranking_id is not None:
+            data["ranking_id"] = ranking_id
         if not _silent:
             click.echo(json.dumps(data, indent=2))
         return data
@@ -741,6 +780,41 @@ def lsd_validate_inventory(lsd_file: str, output_format: str) -> None:
         raise SystemExit(1)
 
 
+def _ranking_hint(ranking_id: str) -> None:
+    click.echo(
+        f"Recorded ranking {ranking_id} "
+        f"(use: ailsa run finalize --ranking latest or --ranking {ranking_id})",
+        err=True,
+    )
+
+
+def _record_assigned(
+    lsd_files: tuple[str, ...], result: object, tolerance: float, predictor: object
+) -> str | None:
+    """Write the ranking artefact in an active run; a record problem never changes the output."""
+    from ailsa.record.resolve import current_run_for_tool
+
+    run = current_run_for_tool("lsd rank")
+    if run is None:
+        return None
+    try:
+        from ailsa.record.rankrec import predictor_info, record_ranking
+
+        ranking_id = record_ranking(
+            run,
+            result,
+            lsd_files=[Path(f) for f in lsd_files],
+            method="assigned",
+            tolerance=tolerance,
+            predictor_info=predictor_info(predictor),
+        )
+    except Exception as exc:
+        click.echo(f"ailsa: record write failed: {exc}", err=True)
+        return None
+    _ranking_hint(ranking_id)
+    return ranking_id
+
+
 def _rank_assigned_cli(
     lsd_files: tuple[str, ...],
     top: int,
@@ -761,8 +835,9 @@ def _rank_assigned_cli(
     except (ValueError, FileNotFoundError) as e:
         click.echo(f"Error: {e}", err=True)
         raise SystemExit(1) from None
+    ranking_id = _record_assigned(lsd_files, result, tolerance, predictor)
     if output_format == "json":
-        data = {
+        data: dict[str, object] = {
             "mode": "assigned",
             "total_solutions": result.total,
             "distinct_structures": result.distinct,
@@ -772,6 +847,8 @@ def _rank_assigned_cli(
             "warnings": result.warnings,
             "candidates": [asdict(c) for c in result.candidates[:top]],
         }
+        if ranking_id is not None:
+            data["ranking_id"] = ranking_id
         click.echo(json.dumps(data, indent=2))
         return
     click.echo(
@@ -940,7 +1017,36 @@ def lsd_rank(
         output_format,
         db=db,
         max_radius=max_radius,
+        _record=True,
     )
+
+
+def _record_analysis(
+    results: list[object], sol_file: str, lsd_file: str, solution: int | None
+) -> None:
+    """Save the correlation analysis in an active run; failures only print one stderr line."""
+    from ailsa.record.resolve import current_run_for_tool
+
+    run = current_run_for_tool("lsd analyze")
+    if run is None:
+        return
+    try:
+        from ailsa.record.rankrec import record_analysis
+
+        rel = record_analysis(
+            run,
+            results,
+            sol_file=Path(sol_file),
+            lsd_file=Path(lsd_file),
+            total=len(results) if solution is None else None,
+        )
+    except Exception as exc:
+        click.echo(f"ailsa: record write failed: {exc}", err=True)
+        return
+    if rel is None:
+        click.echo("ailsa: analysis not recorded: input not registered by ailsa lsd run", err=True)
+    else:
+        click.echo(f"Recorded analysis {rel}", err=True)
 
 
 @lsd.command("analyze")
@@ -1005,6 +1111,8 @@ def lsd_analyze(
     if not results:
         click.echo("No solutions found or solution number not in file.", err=True)
         raise SystemExit(1)
+
+    _record_analysis(results, sol_file, lsd_file, solution)
 
     if output_format == "json":
         solutions_data = []
