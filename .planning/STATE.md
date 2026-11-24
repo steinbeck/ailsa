@@ -74,7 +74,10 @@ Last activity: 2026-11-23 -- paper audit answers (leaks, log check); C20H32O2 co
       `.planning/research/webview-redesign/` (local only: report 06 holds host and account details);
       PDF `background/AILSA-Web-Interface-Specification-Draft2.2.pdf` (gitignored). Core finding: a
       CLI-written run record (manifest, event log, declared result) must come first (R0a/R0b, with the
-      skill rebuild). 22 owner decisions open in SPEC §13.
+      skill rebuild). All 22 owner decisions answered 2026-11-24 (SPEC §13, "Owner answers"):
+      local only, single user, read-only; structured run record strict for the final result;
+      separate run workspace. Open follow-ups: example molecule (D18), Claude-app push check (D20),
+      account data terms before the next collaborator run (D22); spec draft 2.3 to fold them in.
       Clickable prototype (same folder, `prototype/index.html`, local only because it embeds an
       unpublished run): chemist and expert views, zoomable spectra, a replay of the run and a Team
       section with every agent message. Design record committed: `PRODUCT.md`, `DESIGN.md`,
