@@ -299,7 +299,11 @@ def _run(data: dict[str, Any]) -> None:
                     append_event(
                         run_dir,
                         "run.bound",
-                        {"session_id": session_id, "harness": "claude-code", "via": "session_start"},
+                        {
+                            "session_id": session_id,
+                            "harness": "claude-code",
+                            "via": "session_start",
+                        },
                         actor=actor_base,
                         after_finish=True,
                     )
