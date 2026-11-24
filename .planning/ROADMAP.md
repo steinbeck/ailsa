@@ -383,10 +383,10 @@ Plans:
 - [x] 106.1-02-PLAN.md — hook payload spike on Sheldon; scrubbed real fixtures; open hook questions answered
 - [x] 106.1-03-PLAN.md — public example dataset: processing and BMRB download scripts, credit (D-15)
 - [x] 106.1-04-PLAN.md — record core: event vocabulary, workspace and run ids, hash-chained append-only log
-- [ ] 106.1-05-PLAN.md — active-run lookup, warning gate, artefact registration, tool calls record themselves
-- [ ] 106.1-06-PLAN.md — typed models and committed JSON Schemas for events, artefacts, declaration, manifest
-- [ ] 106.1-07-PLAN.md — manifest reducer and Markdown renderings (state, staleness, "not recorded", break marking)
-- [ ] 106.1-08-PLAN.md — dataset fingerprint and prior-run scan, environment probe, experiment inventory
+- [x] 106.1-05-PLAN.md — active-run lookup, warning gate, artefact registration, tool calls record themselves
+- [x] 106.1-06-PLAN.md — typed models and committed JSON Schemas for events, artefacts, declaration, manifest
+- [x] 106.1-07-PLAN.md — manifest reducer and Markdown renderings (state, staleness, "not recorded", break marking)
+- [x] 106.1-08-PLAN.md — dataset fingerprint and prior-run scan, environment probe, experiment inventory
 - [ ] 106.1-09-PLAN.md — Claude Code hook, hook settings install, transcript copy, model reports
 - [ ] 106.1-10-PLAN.md — spectra view products (`ailsa spectra export`)
 - [ ] 106.1-11-PLAN.md — peak-pick and identity artefacts; NUS/JCAMP outputs out of the dataset
