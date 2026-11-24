@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import errno
 import hashlib
 import json
 import os
@@ -9,6 +10,16 @@ import stat
 import tempfile
 from pathlib import Path
 from typing import Any
+
+
+def write_all(fd: int, data: bytes) -> None:
+    """Write every byte of ``data`` to ``fd``; ``os.write`` may write fewer (ENOSPC, FUSE)."""
+    view = memoryview(data)
+    while view:
+        written = os.write(fd, view)
+        if written <= 0:
+            raise OSError(errno.EIO, "short write: no bytes written")
+        view = view[written:]
 
 
 def atomic_write_bytes(
@@ -19,7 +30,7 @@ def atomic_write_bytes(
     fd, tmp = tempfile.mkstemp(dir=target.parent, prefix=f".{target.name}.", suffix=".tmp")
     try:
         try:
-            os.write(fd, data)
+            write_all(fd, data)
             if fsync:
                 os.fsync(fd)
         finally:

@@ -109,3 +109,34 @@ def test_heartbeat_does_not_touch_log(new_run: tuple[str, Path]) -> None:
     beat = json.loads((run_dir / "heartbeat.json").read_text())
     assert beat["source"] == "hook" and beat["utc"].endswith("Z")
     assert (run_dir / "events.jsonl").read_bytes() == before
+
+
+def test_short_writes_are_completed(new_run: tuple[str, Path], monkeypatch) -> None:
+    """WR-02: os.write may write fewer bytes; the writer loops until the line is on disk."""
+    import os
+
+    _, run_dir = new_run
+    real_write = os.write
+    monkeypatch.setattr(os, "write", lambda fd, data: real_write(fd, bytes(data[:7])))
+    append_event(run_dir, "note.added", {"text": "a" * 50, "sender": "t"}, actor=ACTOR)
+    fin = append_event(run_dir, "run.finished", {"state": "x", "reason": "y"}, actor=ACTOR)
+    monkeypatch.setattr(os, "write", real_write)
+    result = read_events(run_dir)
+    assert result["integrity"]["clean"] is True
+    assert [e["seq"] for e in result["events"]] == [1, 2]
+    assert json.loads((run_dir / "finished.json").read_text())["seq"] == fin["seq"]
+
+
+def test_write_without_progress_raises_and_writes_no_finished(
+    new_run: tuple[str, Path], monkeypatch
+) -> None:
+    """WR-02: a write that makes no progress raises; finished.json is not written."""
+    import os
+
+    import pytest
+
+    _, run_dir = new_run
+    monkeypatch.setattr(os, "write", lambda fd, data: 0)
+    with pytest.raises(OSError):
+        append_event(run_dir, "run.finished", {"state": "x", "reason": "y"}, actor=ACTOR)
+    assert not (run_dir / "finished.json").exists()

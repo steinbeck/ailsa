@@ -32,7 +32,7 @@ from ailsa.record.events import (
     MARKER,
     SCHEMA_VERSION,
 )
-from ailsa.record.fsutil import atomic_write_json, sha256_bytes
+from ailsa.record.fsutil import atomic_write_json, sha256_bytes, write_all
 from ailsa.record.workspace import host_alias
 
 _TAIL_WINDOW = 64 * 1024
@@ -159,7 +159,7 @@ class LockedLog:
                     host=host,
                 )
                 line = self._dump(recovered)
-                os.write(fd, b"\n" + line + b"\n")
+                write_all(fd, b"\n" + line + b"\n")
                 seq = recovered["seq"]
                 prev = sha256_bytes(line)
             ev = self._envelope(
@@ -176,7 +176,9 @@ class LockedLog:
                 host=host,
             )
             line = self._dump(ev)
-            os.write(fd, line + b"\n")
+            # A short write raises, so finished.json below only ever names a line that is
+            # fully on disk.
+            write_all(fd, line + b"\n")
             if fsync or type == "run.finished":
                 os.fsync(fd)
         finally:
