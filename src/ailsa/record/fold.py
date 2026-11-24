@@ -14,7 +14,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, cast
 
-from ailsa.record.events import HEARTBEAT, MANIFEST
+from ailsa.record.events import HEARTBEAT, HOOK_TYPES, MANIFEST
 from ailsa.record.fsutil import atomic_write_json
 from ailsa.record.log import read_events
 
@@ -29,6 +29,10 @@ STATE_LABELS: dict[str, str] = {
 }
 
 END_EVENTS = ("run.finished", "session.ended", "run.attempt.ended")
+# Event types only a running hook writes. agent.model_reported and transcript.copied are left
+# out: the launcher and finalize write them too (older records stamp the transcript's model
+# reports with actor kind "hook"), so they never prove that the harness ran hooks (D-13).
+HOOK_EVIDENCE = HOOK_TYPES - {"agent.model_reported", "transcript.copied"}
 HOOK_COUNT_TYPES = {
     "prompts": "prompt.submitted",
     "permission_waits": "human.waiting",
@@ -375,7 +379,7 @@ def fold(
         post_finish = finished_seen
         raw_actor = ev.get("actor")
         actor: dict[str, Any] = raw_actor if isinstance(raw_actor, dict) else {}
-        if actor.get("kind") == "hook":
+        if actor.get("kind") == "hook" and etype in HOOK_EVIDENCE:
             hooks = True
         if etype in by_type and not post_finish:
             counts[by_type[str(etype)]] += 1

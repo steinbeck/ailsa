@@ -195,7 +195,8 @@ def record_transcript_models(run_dir: str | os.PathLike[str], files: list[Path])
                     run,
                     "agent.model_reported",
                     payload,
-                    actor={"kind": "hook", "name": "transcript"},
+                    # Read from a transcript file, not written by a hook (D-13).
+                    actor={"kind": "tool", "name": "transcript"},
                     allow_after_finish=True,
                 )
             except RecordWriteRefused:

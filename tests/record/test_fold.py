@@ -49,6 +49,27 @@ def test_withdrawn(tmp_path: Path) -> None:
     assert m["final"]["withdrawn"] is True
 
 
+def test_transcript_model_reports_are_not_hook_evidence(tmp_path: Path) -> None:
+    """WR-09: a hook-less run whose transcript models were read still shows hooks absent."""
+    from ailsa.record.transcript import record_transcript_models
+
+    run = build_fixture_record(tmp_path / "rh", hooks=False)
+    transcript = tmp_path / "t.jsonl"
+    line = {"type": "assistant", "message": {"model": "m-actual"}, "requestedModel": "m"}
+    transcript.write_text(json.dumps(line) + "\n")
+    assert record_transcript_models(run, [transcript]) == 1
+    # Records written before the fix stamped the transcript's report with actor kind "hook".
+    append_event(
+        run,
+        "agent.model_reported",
+        {"agent": "sub", "requested": None, "actual": "m", "source": "transcript"},
+        actor={"kind": "hook", "name": "transcript"},
+        allow_after_finish=True,
+    )
+    m = _fold(run)
+    assert m["harness"]["hooks_recorded"] is False
+
+
 def _open_run(tmp_path: Path) -> Path:
     run = build_fixture_record(tmp_path / "r5")
     lines = (run / "events.jsonl").read_bytes().splitlines(keepends=True)
