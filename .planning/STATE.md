@@ -54,8 +54,9 @@ Last activity: 2026-11-24 -- Phase 106.1 complete and verified
        (`docs/SKILLS.md`). Afterwards 106.2 (frontier skill writes the record, team + headless proof,
        old web view removed). Four older decisions from the rebuild plan (paper timing, ablation arms,
        figshare re-upload, fragment DB) belong to Phases 108/110 — serve them fully there.
-    - **Unpushed:** `1accdd9` (host aliases in this file) and the handover commit; push needs the
-      user's OK (public repo).
+    - **Pushed 2026-11-25** (user: "alles Pushen"), including the faulon-bridge fix: `lsd2sml.py` now
+      drops grouped correlations with a warning instead of splitting them into mandatory peaks.
+      Known limit left as is: it reads proton shifts only in the comment form `(H 5.375)`.
     - **Nothing running.** On Sheldon only the idle tmux session `ailsa-terpineol` (Opus example run,
       finished); its old web-view server and a runaway `cat` from an earlier loop test were killed
       2026-11-24.
