@@ -341,76 +341,41 @@
       <phase>0</phase>
     </signal>
     <signal id="hetcorlr.p6">
-      <location role="f1">4.6130</location>
-      <location role="f2">148.8300</location>
-      <intensity type="relative">0.0</intensity>
-      <normalizefactor>1.0</normalizefactor>
-      <phase>0</phase>
-    </signal>
-    <signal id="hetcorlr.p7">
-      <location role="f1">4.6130</location>
-      <location role="f2">148.3800</location>
-      <intensity type="relative">0.0</intensity>
-      <normalizefactor>1.0</normalizefactor>
-      <phase>0</phase>
-    </signal>
-    <signal id="hetcorlr.p8">
-      <location role="f1">8.8920</location>
-      <location role="f2">148.8300</location>
-      <intensity type="relative">0.0</intensity>
-      <normalizefactor>1.0</normalizefactor>
-      <phase>0</phase>
-    </signal>
-    <signal id="hetcorlr.p9">
       <location role="f1">8.6530</location>
       <location role="f2">164.9600</location>
       <intensity type="relative">0.0</intensity>
       <normalizefactor>1.0</normalizefactor>
       <phase>0</phase>
     </signal>
-    <signal id="hetcorlr.p10">
+    <signal id="hetcorlr.p7">
       <location role="f1">8.8920</location>
       <location role="f2">166.7800</location>
       <intensity type="relative">0.0</intensity>
       <normalizefactor>1.0</normalizefactor>
       <phase>0</phase>
     </signal>
-    <signal id="hetcorlr.p11">
+    <signal id="hetcorlr.p8">
       <location role="f1">4.6130</location>
       <location role="f2">15.4300</location>
       <intensity type="relative">0.0</intensity>
       <normalizefactor>1.0</normalizefactor>
       <phase>0</phase>
     </signal>
-    <signal id="hetcorlr.p12">
-      <location role="f1">8.6530</location>
-      <location role="f2">148.8300</location>
-      <intensity type="relative">0.0</intensity>
-      <normalizefactor>1.0</normalizefactor>
-      <phase>0</phase>
-    </signal>
-    <signal id="hetcorlr.p13">
-      <location role="f1">8.6530</location>
-      <location role="f2">148.3800</location>
-      <intensity type="relative">0.0</intensity>
-      <normalizefactor>1.0</normalizefactor>
-      <phase>0</phase>
-    </signal>
-    <signal id="hetcorlr.p14">
+    <signal id="hetcorlr.p9">
       <location role="f1">8.6530</location>
       <location role="f2">178.8000</location>
       <intensity type="relative">0.0</intensity>
       <normalizefactor>1.0</normalizefactor>
       <phase>0</phase>
     </signal>
-    <signal id="hetcorlr.p15">
+    <signal id="hetcorlr.p10">
       <location role="f1">7.3930</location>
       <location role="f2">164.9600</location>
       <intensity type="relative">0.0</intensity>
       <normalizefactor>1.0</normalizefactor>
       <phase>0</phase>
     </signal>
-    <signal id="hetcorlr.p16">
+    <signal id="hetcorlr.p11">
       <location role="f1">7.3930</location>
       <location role="f2">25.5200</location>
       <intensity type="relative">0.0</intensity>

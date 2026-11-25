@@ -51,11 +51,14 @@ Writing atom shifts at one decimal and signal locations at four makes *every* pe
 unassignable — the run completes and returns pure noise. Both are written at four
 decimals now.
 
-**Grouped correlations.** A line like `HMBC (4 5) 10` is one observed peak whose F1
-could not be resolved between two carbons. The midpoint is tidier but matches no atom
-under that tolerance, so the peak vanishes. One signal per candidate is emitted instead;
-grading them is exactly what a scoring engine is for. The branch where the proton sits
-on the candidate carbon itself is skipped — that would be a 1J.
+**Grouped correlations are dropped, with a warning.** A line like `HMBC (4 5) 10` is one
+observed peak whose F1 could not be resolved between two carbons: carbon 4 *or* 5. SENECA
+has no "or". The midpoint matches no atom under that tolerance, and one signal per
+candidate turns "4 or 5" into "4 and 5": faulon-ng scores every signal as mandatory, so
+the true structure loses points or, as in CASE13, an invented 5J pushes it out (see the
+result below). Until faulon-ng can score alternatives, `lsd2sml.py` leaves such lines out
+and names them on stderr. (Fixed 2026-11-25 after the faulon-ng session found 9 of its
+10 test cases affected; the first version emitted one signal per candidate.)
 
 ## Result of the spike
 

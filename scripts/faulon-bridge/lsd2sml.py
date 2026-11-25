@@ -152,58 +152,44 @@ def build(atoms, corrs, formula, title):
 
     # --- 2D correlations -----------------------------------------------------
     def two_d(kind, sid, stype, f1_nuc, f2_nuc):
-        sigs, dropped = [], 0
+        sigs, dropped, grouped = [], 0, []
         n = 0
         for k, targets, hside in corrs:
             if k != kind:
+                continue
+            if len(targets) > 1:
+                # A grouped line "HMBC (8 7) 9" is ONE peak whose carbon is 8 OR 7
+                # (F1 could not separate them). SENECA has no "or": one signal per
+                # candidate turns it into "8 AND 7", and faulon-ng scores every signal
+                # as mandatory, so the true structure loses points or is pushed out by
+                # an invented 4J/5J (CASE13, August 2026). Drop the line and say so.
+                grouped.append(f"{kind} ({' '.join(map(str, targets))}) {hside}")
                 continue
             h = atoms.get(hside)
             if h is None or h.hshift is None:
                 dropped += 1
                 continue
-            if kind == "COSY":
-                partner = atoms.get(targets[0])
-                if partner is None or partner.hshift is None:
-                    dropped += 1
-                    continue
-                f2 = partner.hshift
-            else:
-                # A grouped C-side "(4 5)" is ONE observed peak whose F1 could not
-                # be resolved between two carbons. The midpoint would be tidier but
-                # matches NO atom under eps = 1e-06, so the peak would be dropped
-                # entirely -- the worst outcome. Emit one signal per candidate
-                # instead: that is what the data actually says (either carbon may
-                # own this peak) and grading them is precisely faulon-ng's job.
-                shifts = [atoms[t].cshift for t in targets
-                          if t in atoms and atoms[t].cshift is not None]
-                if not shifts:
-                    dropped += 1
-                    continue
-                for t, f2 in zip(
-                    [t for t in targets if t in atoms and atoms[t].cshift is not None],
-                    shifts,
-                ):
-                    # Skip the carbon this proton sits on: that branch of a grouped
-                    # correlation would be a 1J, not an nJ. faulon-ng rejects it
-                    # anyway (D-02 skip); not emitting it keeps the log clean.
-                    if kind == "HMBC" and t == hside:
-                        continue
-                    sigs.append(signal(f"{sid}.p{n}", [("f1", h.hshift), ("f2", f2)]))
-                    n += 1
+            partner = atoms.get(targets[0])
+            f2 = None if partner is None else (partner.hshift if kind == "COSY" else partner.cshift)
+            if f2 is None:
+                dropped += 1
                 continue
             sigs.append(signal(f"{sid}.p{n}", [("f1", h.hshift), ("f2", f2)]))
             n += 1
-        return spectrum(sid, stype, 2, [("f1", f1_nuc), ("f2", f2_nuc)], sigs), len(sigs), dropped
+        return spectrum(sid, stype, 2, [("f1", f1_nuc), ("f2", f2_nuc)], sigs), len(sigs), dropped, grouped
 
     for kind, sid, stype, n1, n2 in (
         ("HSQC", "hetcor", "1JCH correlation", "1H", "13C"),
         ("HMBC", "hetcorlr", "nJCH correlation", "1H", "13C"),
         ("COSY", "hhcosy", "HH correlation", "1H", "1H"),
     ):
-        block, kept, dropped = two_d(kind, sid, stype, n1, n2)
+        block, kept, dropped, grouped = two_d(kind, sid, stype, n1, n2)
         specs.append(block)
         note = f" ({dropped} ohne ppm verworfen)" if dropped else ""
         print(f"  {sid:10} {kept:3} Signale{note}", file=sys.stderr)
+        if grouped:
+            print(f"  WARNUNG: {len(grouped)} gruppierte {kind}-Zeile(n) weggelassen "
+                  f"(\"oder\" ist in SENECA nicht darstellbar): {', '.join(grouped)}", file=sys.stderr)
 
     return (
         '<?xml version="1.0" ?>\n'
