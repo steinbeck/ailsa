@@ -30,7 +30,32 @@ Plan: 20 of 20
 Status: next Phase 106 (skill rename; not discussed yet), then 106.2
 Last activity: 2026-11-24 -- Phase 106.1 complete and verified
 
-**Resume here (2026-11-24):**
+**Resume here (2026-11-25):**
+
+00. **Next steps (agreed with the user 2026-11-25; all open questions answered with my recommendations):**
+    1. **Shareable prototype variant — outside GSD** (spec release P; artefacts stay in the local,
+       git-excluded `.planning/research/webview-redesign/prototype/`). Run `build_data.py` (README in
+       that folder: run dir → `data.json`, then `build.py`) on the public Opus example run copied to
+       `~/Dropbox/develop/data/nmrdata/ailsa-example-terpineol/terpineol-run-2026-11-24/` (legacy
+       files: `analysis/CASE-PROGRESS.md`, `final_results.md`, `timing.json(l)`, iterations, peaks;
+       spectra = the Bruker folders `1`–`7` next to `analysis/`). Adapt the script where the new data
+       differ; build a separate output (e.g. `prototype/terpineol/`) so the private C20H32O2 page stays
+       untouched; the Team section's messages come from the Sheldon session's transcript (tmux
+       `ailsa-terpineol`, still open, idle). Publish it as a private Artifact (allowed: public data and
+       molecule; credit BMRB bmse000667 and carry the data-use notice). Then prepare the paper-prototype
+       sessions with two or three chemists and one NMR facility person.
+    2. **Then GSD: `/gsd-discuss-phase 106`** (freeze, rename and restructure the skill), then
+       `/gsd-plan-phase 106 --chain`. Prior research (local, uncommitted):
+       `.planning/research/skill-rebuild/ailsa-skill-rebuild-plan.md` and
+       `ailsa-skills-best-practices-review.md` (12 Oct). The paper-skill tags already exist
+       (`docs/SKILLS.md`). Afterwards 106.2 (frontier skill writes the record, team + headless proof,
+       old web view removed). Four older decisions from the rebuild plan (paper timing, ablation arms,
+       figshare re-upload, fragment DB) belong to Phases 108/110 — serve them fully there.
+    - **Unpushed:** `1accdd9` (host aliases in this file) and the handover commit; push needs the
+      user's OK (public repo).
+    - **Nothing running.** On Sheldon only the idle tmux session `ailsa-terpineol` (Opus example run,
+      finished); its old web-view server and a runaway `cat` from an earlier loop test were killed
+      2026-11-24.
 
 000. **Web interface, 2026-11-23/24.**
     - **Done and pushed:**
@@ -69,26 +94,19 @@ Last activity: 2026-11-24 -- Phase 106.1 complete and verified
       58 min (3 iterations, 336 → 20 → 1 solution, 13C MAE 0.68 ppm). Copy on vitus:
       `~/Dropbox/develop/data/nmrdata/ailsa-example-terpineol/terpineol-run-2026-11-24/`; the tmux
       session on Sheldon is left open (its transcript feeds the prototype's Team section).
-      - It runs in an interactive session on Sheldon, tmux session `ailsa-terpineol`, started via
-        `/mnt/raid_drive/chris/ailsa-example/launch-terpineol.sh`.
-      - It is a de novo run; Opus 5.5 with xhigh effort.
-      - Check it with `ssh sheldon 'tmux capture-pane -p -t ailsa-terpineol | tail -30'` and
-        `ls /mnt/raid_drive/chris/ailsa-example/terpineol-run/analysis/`. It is done when
-        `final_results.md` exists.
+      - Interactive session on Sheldon (tmux `ailsa-terpineol`, launcher
+        `/mnt/raid_drive/chris/ailsa-example/launch-terpineol.sh`), de novo, Opus 5.5 xhigh, legacy
+        files only (no run record: it used the old frontier skill).
     - **Dataset:**
-      - BMRB holds only FIDs. They were processed with nmrglue by
-        `.planning/research/webview-redesign/example-terpineol/process_fid.py`.
+      - BMRB holds only FIDs. They were processed with nmrglue by `process_fid.py`, now in the repo at
+        `scripts/example-terpineol/` with `download_bmrb.py` and the BMRB credit (citation checked
+        2026-11-24 against doi 10.1093/nar/gkac1050).
       - The valid output is `~/Dropbox/develop/data/nmrdata/ailsa-example-terpineol/run-data-v3`;
         `run-data` and `run-data-v2` are discarded attempts.
       - Referencing: 1H on TMS, 13C on acetone-d6. The HSQC is in magnitude mode, because the edited
         phase could not be phased reliably with 128 increments; the title says so, and multiplicities
         come from DEPT.
-      - BMRB names no formal licence, only asks to be acknowledged. The raw data therefore stay out of
-        the repo; a download script plus credit come instead (to settle in 106.1).
-    - **After the run:**
-      1. Build the shareable prototype variant from it. Run `build_data.py` on the run folder; it may
-         need small adaptations to the new data.
-      2. Prepare the paper-prototype sessions with chemists and an NMR facility person (spec release P).
+      - BMRB names no formal licence, only asks to be acknowledged: raw data stay out of the repo.
     - **Traps:**
       - nmrglue and TopSpin reference via `SF` (SR folded in), not `OFFSET`.
       - Never copy text fields from template `procs` files: they leaked "CDCl3", "HMBC" and
@@ -99,6 +117,18 @@ Last activity: 2026-11-24 -- Phase 106.1 complete and verified
         an update.
       - Headless Chrome clamps windows below about 500 px. For phone widths use
         `impeccable shot "file://…#route" --viewport 390x844`.
+      - GSD state tools (`state.record-session`, `state.planned-phase`, `phase.insert`) mangle this
+        file (blank lines inside nested lists, wrong status/next phase) and put inserted roadmap
+        entries in the wrong place: check `git diff` after each, revert and edit by hand.
+      - Run GSD executors sequentially on the main checkout, not in worktrees: the venv's editable
+        install points at the main `src/`, and `python -I` subprocesses ignore `PYTHONPATH`.
+      - `tests/record` alone now takes ~70 s on vitus: run subsets locally, the whole suite on Sheldon
+        (separate area `/mnt/raid_drive/chris/ailsa-106.1/`, never the main Sheldon checkout).
+      - Fresh venvs lack hosegen (prediction/ranking fail, the lean skill's pre-check stops the run):
+        `uv pip install --no-deps git+https://github.com/Ratsemaat/HOSE_code_generator.git@e4ae6c9a103e29e49d678d3bd7d73190274e11ee`.
+      - The old web view runs as `ailsa webview _run`, not `webview serve` — search for both.
+      - Run the code review before declaring a GSD phase done: in 106.1 it found 7 critical defects
+        after all plans and the acceptance had passed.
 
 **Earlier (2026-11-23):**
 
