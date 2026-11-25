@@ -33,7 +33,10 @@ Last activity: 2026-11-24 -- Phase 106.1 complete and verified
 **Resume here (2026-11-25):**
 
 00. **Next steps (agreed with the user 2026-11-25; all open questions answered with my recommendations):**
-    1. **Shareable prototype variant — outside GSD** (spec release P; artefacts stay in the local,
+    1. **DONE 2026-11-25 except the last sentence:** variant built in `prototype/terpineol/` (README
+       there), published as a private Artifact (link in the auto-memory), session transcript copied to
+       `…/ailsa-example-terpineol/transcript-2026-11-24/`. Still open: prepare the paper-prototype
+       sessions. Original plan: **Shareable prototype variant — outside GSD** (spec release P; artefacts stay in the local,
        git-excluded `.planning/research/webview-redesign/prototype/`). Run `build_data.py` (README in
        that folder: run dir → `data.json`, then `build.py`) on the public Opus example run copied to
        `~/Dropbox/develop/data/nmrdata/ailsa-example-terpineol/terpineol-run-2026-11-24/` (legacy
