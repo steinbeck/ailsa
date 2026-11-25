@@ -61,8 +61,9 @@ Last activity: 2026-11-24 -- Phase 106.1 complete and verified
         baseline (webview extra missing). Acceptance (owner approved): haiku lean run on α-terpineol,
         clean record, rank 1 correct (2 of 3 runs). Separate Sheldon area `/mnt/raid_drive/chris/ailsa-106.1/`
         (own venv incl. pinned hosegen), runs in `/mnt/raid_drive/chris/ailsa-runs`.
-      - Open small items: set `host_alias` in the ailsa config on vitus and Sheldon (otherwise the short
-        hostname is recorded); todo for the 2D picker crash on empty spectra.
+      - `host_alias` set 2026-11-25 in `~/.config/ailsa/config.json` on vitus (`vitus`) and Sheldon
+        (`sheldon`, plus `workspace` = `/mnt/raid_drive/chris/ailsa-runs`). Open: todo for the 2D picker
+        crash on empty spectra.
       - **Next: Phase 106 (skill rename), then 106.2 (frontier skill writes the record).**
     - **Public example run (D18: α-terpineol, BMRB bmse000667): DONE 2026-11-24, solved de novo** in
       58 min (3 iterations, 336 → 20 → 1 solution, 13C MAE 0.68 ppm). Copy on vitus:
