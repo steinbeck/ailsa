@@ -35,8 +35,8 @@ Last activity: 2026-11-24 -- Phase 106.1 complete and verified
 00. **Next steps (agreed with the user 2026-11-25; all open questions answered with my recommendations):**
     1. **DONE 2026-11-25 except the last sentence:** variant built in `prototype/terpineol/` (README
        there), published as a private Artifact (link in the auto-memory), session transcript copied to
-       `…/ailsa-example-terpineol/transcript-2026-11-24/`. Still open: prepare the paper-prototype
-       sessions. Original plan: **Shareable prototype variant — outside GSD** (spec release P; artefacts stay in the local,
+       `…/ailsa-example-terpineol/transcript-2026-11-24/`. **The paper-prototype sessions are
+       dropped (user decision 2026-11-26: skip them, continue with the skill).** Original plan: **Shareable prototype variant — outside GSD** (spec release P; artefacts stay in the local,
        git-excluded `.planning/research/webview-redesign/prototype/`). Run `build_data.py` (README in
        that folder: run dir → `data.json`, then `build.py`) on the public Opus example run copied to
        `~/Dropbox/develop/data/nmrdata/ailsa-example-terpineol/terpineol-run-2026-11-24/` (legacy
@@ -47,7 +47,13 @@ Last activity: 2026-11-24 -- Phase 106.1 complete and verified
        `ailsa-terpineol`, still open, idle). Publish it as a private Artifact (allowed: public data and
        molecule; credit BMRB bmse000667 and carry the data-use notice). Then prepare the paper-prototype
        sessions with two or three chemists and one NMR facility person.
-    2. **Then GSD: `/gsd-discuss-phase 106`** (freeze, rename and restructure the skill), then
+    2. **Phase 106 context gathered 2026-11-26** (`phases/106-freeze-rename-and-restructure-the-skill/106-CONTEXT.md`,
+       all recommendations accepted: model reported not compared; rationale instead of capitals; no
+       named compounds in examples; team flow only reordered; skill moves into the package with
+       `ailsa skill install ailsa` (link mode on our machines); one blind run plus a rule inventory;
+       watchdog on vitus in a herdr pane instead of the LaunchAgent; main Sheldon checkout updated
+       after the restructuring; acceptance run on Opus 5.5). **Next: `/gsd-plan-phase 106`.**
+       Original step: `/gsd-discuss-phase 106` (freeze, rename and restructure the skill), then
        `/gsd-plan-phase 106 --chain`. Prior research (local, uncommitted):
        `.planning/research/skill-rebuild/ailsa-skill-rebuild-plan.md` and
        `ailsa-skills-best-practices-review.md` (12 Oct). The paper-skill tags already exist
