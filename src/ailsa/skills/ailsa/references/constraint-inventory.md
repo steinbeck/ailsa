@@ -157,5 +157,5 @@ applied to the inventory itself: what is rebuilt from memory gets dropped.
 ## One write for inventory and commands
 
 The constraint inventory and the LSD commands are written as a single Write operation. The
-inventory counts match the actual commands in the same file. Do not write the inventory
+inventory counts must match the actual commands in the same file. Do not write the inventory
 separately from the commands.

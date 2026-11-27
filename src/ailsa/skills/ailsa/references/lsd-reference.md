@@ -342,7 +342,7 @@ FEXP "F3 AND NOT F1 AND NOT F2"
 - Exception: remove the DEFF F1 ring3 exclusion only if the 13C spectrum shows 45-55 ppm and the
   formula has O (possible epoxide; let LSD explore). Adjust the FEXP line to `FEXP "NOT F2"`
   (with a fragment: `FEXP "F3 AND NOT F2"`).
-- The DEFF and FEXP lines persist across all iterations. Dropping them is a well-documented
+- The DEFF and FEXP lines must persist across all iterations. Dropping them is a well-documented
   constraint-loss failure mode.
 - `DEFF NOT C1CC1` (SMARTS syntax) is not native and aborts LSD (`error 150`). Do not write
   `DEFF NOT`.
