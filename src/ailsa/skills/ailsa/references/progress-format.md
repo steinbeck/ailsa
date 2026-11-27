@@ -35,12 +35,12 @@ are produced from that log at the end of the run.
 ## Setup
 
 ### Team Models
-<One line per teammate, from each agent's [MODEL] disclosure line. Format: `**<agent>:** <reported runtime model id> (intended: claude-opus-4-8)`. If reported != intended, prefix the line with `⚠ MODEL MISMATCH —`. Also record the coordinator's own runtime model (the orchestrator inherits the session model; no pin).>
-- **coordinator (orchestrator):** <orchestrator's own runtime model id> (inherits session model)
-- **nmr-chemist:** <reported> (intended: claude-opus-4-8)
-- **lsd-engineer:** <reported> (intended: claude-opus-4-8)
-- **solution-analyst:** <reported> (intended: claude-opus-4-8)
-- **devils-advocate:** <reported> (intended: claude-opus-4-8)
+<One line per teammate, from each agent's [MODEL] disclosure line. Format: `**<agent>:** <reported runtime model id>`. Also record the coordinator's own runtime model.>
+- **coordinator:** <coordinator's own runtime model id>
+- **nmr-chemist:** <reported>
+- **lsd-engineer:** <reported>
+- **solution-analyst:** <reported>
+- **devils-advocate:** <reported>
 
 ### NMR-Chemist
 **Reported (UTC):** <phase_end stamp for peak-picking, when [SETUP-COMPLETE] arrived>

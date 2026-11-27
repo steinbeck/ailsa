@@ -49,6 +49,7 @@ PENDING: frozenset[str] = frozenset(
     "agents/ailsa-lsd-engineer.md",
     "agents/ailsa-diagnostic.md",
     "agents/ailsa-devils-advocate.md",
+    "commands/case.md",
 }
 _ACTIVE_PENDING: frozenset[str] = (
     frozenset() if os.environ.get("AILSA_LINT_IGNORE_PENDING") == "1" else PENDING
