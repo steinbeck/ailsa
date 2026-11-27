@@ -258,7 +258,7 @@ blocks nothing.
 
 expected: The phase's work reaches GitHub only after your decision, because the repository is
 public.
-result: [pending — awaiting the user's decision]
+result: decided 2026-11-27 by the user — option (a): commits pushed (52e5ab3..1ea7253), tag `frontier-skill-pre-106` kept local
 
 **State.** All commits of this phase are local only (50 before this last plan, all from this
 phase). The local tag `frontier-skill-pre-106` marks the skill as it stood at the start of the
