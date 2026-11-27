@@ -30,7 +30,32 @@ Plan: 20 of 20
 Status: next Phase 106 (skill rename; not discussed yet), then 106.2
 Last activity: 2026-11-24 -- Phase 106.1 complete and verified
 
-**Resume here (2026-11-25):**
+**Resume here (2026-11-27, after Phase 106):**
+
+0. **Phase 106 COMPLETE and pushed (`e3c2f7a`).** Next: `/gsd-discuss-phase 106.2` (frontier skill
+   writes the run record, team + headless proof, old web view removed). Details of 106 in item 00.2
+   below and in `phases/106-freeze-rename-and-restructure-the-skill/` (VERIFICATION, HUMAN-UAT,
+   REVIEW-FIX). Nothing running (Sheldon idle from our side; acceptance results in
+   `/mnt/raid_drive/chris/case-uat-results-106/`).
+   - **Laptop, still to do there (not reachable from vitus):**
+     `~/Dropbox/develop/lucy-ng/.venv/bin/ailsa skill install ailsa --target claude --link` and
+     `cd ~/Dropbox/Documents/Projects/Claude-Code\ Session-Manager && ./claude-md-verteilen.sh`.
+   - **Open decision for the user:** the June todo
+     `todos/pending/2026-06-25-case4-azulene-regiochemistry-enumeration-gap.md` names, in its title and
+     text, a compound that is the answer of two benchmark datasets (both already counted non-blind).
+     That breaks the rule "no compound identities in tracked files". Scrubbing it (generic title, keep
+     the task) makes the current tree clean; git history keeps the name anyway. Leaving it costs
+     nothing but keeps the breach visible. Recommendation: scrub it in the next working session.
+   - **Traps from the 106 run:** (1) an `rm` attempted by a subagent raised a permission prompt that
+     stalled the unattended run for 12 h; every subagent prompt now forbids rm/rmdir/git clean.
+     (2) `prompt_answer_scan.py` exits 0 even with hits — read its output before any push, never
+     chain `&& git push` after it. (3) GSD execute defaults to worktrees: `workflow.use_worktrees` is
+     now `false` in `.planning/config.json`; `workflow.test_command` = quick skill tests (full suite only
+     on Sheldon). (4) GSD state/roadmap mutators were not used; tracking edited by hand.
+     (5) Sheldon's Claude Code pin is `~/opt/claude-2.1.332/claude` (updater deletes old versions).
+     (6) The pre-commit hook (`scripts/git-hooks/pre-commit`) runs ~8 s on skill-touching commits.
+
+**Earlier (2026-11-25):**
 
 00. **Next steps (agreed with the user 2026-11-25; all open questions answered with my recommendations):**
     1. **DONE 2026-11-25 except the last sentence:** variant built in `prototype/terpineol/` (README
