@@ -35,12 +35,14 @@ A coordinator command runs the workflow and hands the chemistry to four speciali
 - [diagnose-solution-explosion](references/diagnose-solution-explosion.md): the diagnostic specialist's five checks when LSD returns 1000+ solutions
 - [diagnose-zero-solutions](references/diagnose-zero-solutions.md): the diagnostic specialist's five checks when LSD returns no solution
 - [diagnostic-report](references/diagnostic-report.md): template and file name of `DIAGNOSTIC-REPORT.md`
+- [inventory-validation](references/inventory-validation.md): the devil's advocate's inventory checks: extraction, reconciliation with the file and the previous iteration, ELIM budget, the gates G7 and G-PROP-EVIDENCE
 - [loop-patterns](references/loop-patterns.md): iteration and stopping patterns
 - [lsd-reference](references/lsd-reference.md): LSD commands, filter block, running LSD and the checklist before every run
 - [lsd-search](references/lsd-search.md): what LSD searches: DUPL/MAXS, fragment goodlist, per-family multiplicity search
 - [multiplicity-ambiguity](references/multiplicity-ambiguity.md): searching every aliphatic multiplicity family when the spectra leave it open
 - [nmr-basics](references/nmr-basics.md): NMR facts the agents rely on
 - [progress-format](references/progress-format.md): format of the progress log
+- [validation-checks](references/validation-checks.md): the devil's advocate's pre-solver checks on every LSD file, each with its severity
 
 ## Install
 
