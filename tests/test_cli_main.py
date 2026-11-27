@@ -78,8 +78,7 @@ class TestNusImportSafe:
 
     Phase 97's nus/ submodules only use core dependencies (nmrglue, pydantic,
     click stdlib), so this is a plain "does the process exit 0" smoke check --
-    there is no optional third-party package to detect a leak of (unlike the
-    webview extra's fastapi/uvicorn leak check).
+    there is no optional third-party package to detect a leak of.
     """
 
     def test_cli_import_without_nus_extra(self) -> None:

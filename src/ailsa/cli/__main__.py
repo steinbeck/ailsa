@@ -4,9 +4,8 @@ Allows the ailsa CLI to be invoked as::
 
     python -m ailsa.cli <command> [args...]
 
-This is used as a subprocess-launch fallback by
-:func:`ailsa.webview.server._build_launcher` when the ``ailsa`` script is
-not on PATH (e.g. in an editable/dev install).
+This lets tools and tests start the CLI with the current interpreter when
+the ``ailsa`` script is not on PATH (e.g. in an editable/dev install).
 """
 
 from ailsa.cli import cli

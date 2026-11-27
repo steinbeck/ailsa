@@ -21,7 +21,7 @@ from ailsa.record.events import ARGV_ITEM_CAP, artefact_id
 from ailsa.record.log import log_session, read_events
 from ailsa.record.resolve import RunRef, current_run_for_tool
 
-EXCLUDED = frozenset({"run", "skill", "database", "webview"})
+EXCLUDED = frozenset({"run", "skill", "database"})
 ARGV_MAX_ITEMS = 40
 LOCK_TIMEOUT = 5.0
 # Output trees only tools write into (REC-05 redirects): files a call writes there are

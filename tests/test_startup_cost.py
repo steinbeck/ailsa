@@ -97,7 +97,7 @@ def test_registry_entries_resolve() -> None:
     expected = {
         "analyze", "case", "database", "dereplicate", "detect", "fetch",
         "fragment", "identify", "jcamp", "lsd", "nus", "pick", "predict",
-        "pylsd", "read", "skill", "visualize", "webview", "run", "spectra",
+        "pylsd", "read", "skill", "visualize", "run", "spectra",
         "peaks", "model",
     }  # fmt: skip
     assert expected <= set(cli.commands)

@@ -28,7 +28,6 @@ _COMMANDS: dict[str, str] = {
     "read": "ailsa.cli.read:read",
     "skill": "ailsa.cli.skill:skill",
     "visualize": "ailsa.cli.visualize:visualize",
-    "webview": "ailsa.cli.webview:webview",
     "run": "ailsa.cli.run:run",
     "spectra": "ailsa.cli.spectra:spectra",
     "peaks": "ailsa.cli.peaks:peaks",
@@ -108,7 +107,6 @@ def cli() -> None:
       fetch       Fetch data from external sources
       database    Database management (build, info)
       fragment    Fragment library (build, search, info)
-      webview     Dashboard server for live CASE runs
       nus         NUS (Non-Uniform Sampling) 2D reconstruction
       jcamp       JCAMP-DX ingestion (read -> pick -> QC -> write)
       skill       Install the agent skills that ship with ailsa
