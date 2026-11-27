@@ -60,3 +60,29 @@ def test_watchdog_pins():
 
 def test_watchdog_abort_pattern():
     assert "[c]laude -p /ailsa:case" in _read("scripts/uat_watchdog.py")
+
+
+def test_host_scripts_have_no_old_name():
+    for rel in (
+        "scripts/bootstrap_case_host.sh",
+        "scripts/uat_run_remaining.sh",
+        "scripts/uat_run_baseline_opus5.sh",
+    ):
+        assert _old_name_lines(_read(rel)) == [], rel
+
+
+def test_launchagent_retired():
+    plist = ROOT / "scripts/launchd/de.doktor-steinbeck.lucyng-uat-watchdog.plist"
+    assert not plist.exists()
+
+
+def test_watchdog_readme():
+    text = _read("scripts/README.md")
+    assert "herdr pane split" in text
+    assert "externalUsageWritePath" in text
+
+
+def test_bootstrap_installs_packaged_skill():
+    text = _read("scripts/bootstrap_case_host.sh")
+    assert "ailsa skill install ailsa" in text
+    assert ".claude/commands" not in text

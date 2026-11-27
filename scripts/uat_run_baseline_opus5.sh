@@ -11,7 +11,7 @@
 #
 #   ./scripts/uat_run_baseline_opus5.sh              # start, detached
 #   ./scripts/uat_run_baseline_opus5.sh --dry-run    # show what it would launch
-#   ./scripts/uat_run_baseline_opus5.sh --foreground # BECOME the watchdog (launchd)
+#   ./scripts/uat_run_baseline_opus5.sh --foreground # BECOME the watchdog (in a herdr pane)
 #
 # Safe to re-run: pending_cases() intersects the request with what is genuinely
 # unfinished *in the new directory*, so nothing runs twice.
@@ -35,7 +35,7 @@ SSH=(ssh -o BatchMode=yes -o ConnectTimeout=15 -p 2222 "$REMOTE")
 RESULTS=/mnt/raid_drive/chris/case-uat-results-opus5-baseline
 # NOT /tmp: macOS clears it on reboot, and on 2026-09-18 that took the log with
 # it — so why the run had stopped two days earlier could no longer be shown.
-LOG="$HOME/Library/Logs/lucyng-uat-baseline.log"
+LOG="$HOME/Library/Logs/ailsa-uat-baseline.log"
 
 CASES=$("${SSH[@]}" 'python3 - <<PY
 import csv, glob, json, os, sys
@@ -93,17 +93,13 @@ fi
 
 if pgrep -f "uat_watch""dog\.py" >/dev/null; then
   echo "A watchdog is already running (PID $(pgrep -f 'uat_watch''dog\.py' | head -1)). Not starting a second."
-  # Under launchd this is usually the OLD job still dying after a
-  # `launchctl kickstart -k`: exiting 0 here tells launchd "done, all good" and
-  # KeepAlive (SuccessfulExit=false) never starts another one -- seen
-  # 2026-09-29, two restarts in a row left no watchdog at all. A non-zero exit
-  # makes launchd retry after its throttle interval, by which time the old
-  # process is gone.
+  # In a herdr pane this is usually the OLD watchdog still dying after a
+  # restart: exit non-zero so the pane shows the failure instead of "done".
   [[ "$1" == "--foreground" ]] && exit 75
   exit 0
 fi
 
-# caffeinate -i keeps this Mac out of idle sleep; without it the watchdog pauses
+# caffeinate -i keeps this machine out of idle sleep; without it the watchdog pauses
 # with the machine and the usage snapshot goes stale.
 WATCHDOG=(caffeinate -i -m python3 -u scripts/uat_watchdog.py
           --cases ${=CASES}
@@ -112,14 +108,9 @@ WATCHDOG=(caffeinate -i -m python3 -u scripts/uat_watchdog.py
           --max-snapshot-age 7200 --poll 600)
 
 if [[ "$1" == "--foreground" ]]; then
-  # Under launchd the watchdog must BE the job, not a child of it. Backgrounding
-  # it and exiting looks like it works -- the script prints a PID and returns 0 --
-  # but launchd treats the job as finished and reaps the process group, so the
-  # watchdog is dead seconds later. Demonstrated 2026-09-22 with a throwaway agent
-  # using the same shape: the child was gone before the next poll. It cost the
-  # night of 2026-09-21: the machine rebooted, the agent started correctly, logged
-  # "watchdog started (PID 1540)", and that watchdog never wrote a single line.
-  echo "$(date '+%H:%M:%S') becoming the watchdog in the foreground (launchd)" >> "$LOG"
+  # In a herdr pane the watchdog must run in the pane's own terminal, not as a
+  # backgrounded child, so the pane shows its output and its lifetime.
+  echo "$(date '+%H:%M:%S') becoming the watchdog in the foreground (herdr pane)" >> "$LOG"
   exec "${WATCHDOG[@]}" >> "$LOG" 2>&1
 fi
 

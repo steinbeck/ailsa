@@ -30,7 +30,7 @@
 - [ ] **SKILL-01**: A user runs `/ailsa:case`, `/ailsa:dereplicate`, `/ailsa:predict`, `/ailsa:sanitise` and `/ailsa:status`; the `/lucy-ng:*` commands are gone and the symlinks under `~/.claude/commands` point at the new directory.
 - [ ] **SKILL-02**: The agents are `ailsa-nmr-chemist`, `ailsa-lsd-engineer`, `ailsa-solution-analyst`, `ailsa-devils-advocate` and `ailsa-diagnostic`; the unused supervisor agent is removed; the SHA-256 guard references the new files, and the `~/.claude/agents` symlinks are updated.
 - [ ] **SKILL-03**: One blind CASE run on the compute host, started through the renamed command with the renamed agents, completes and grades — the proof that the restructured chain still works.
-- [ ] **SKILL-04**: The blind runner script and the watchdog scripts call the new command and paths, and the LaunchAgent (label, program path, log name) is re-registered under the new name.
+- [ ] **SKILL-04**: The blind runner script and the watchdog scripts call the new command and paths; the watchdog runs on vitus in a herdr pane, and the LaunchAgent is retired (decision D-08 of Phase 106).
 - [ ] **SKILL-05**: Every skill file follows Anthropic's skill-authoring best practices in form: body under 500 lines with details in one-level reference files (one shared LSD reference), a table of contents in files over 100 lines, no dead references, no project history or defect numbers, no dataset numbers, no fixed model IDs, one term per role, rationale instead of capital-letter emphasis.
 - [ ] **SKILL-06**: An automated skill-lint check enforces SKILL-05 on every commit, and a local check (answer key never in the repository) finds no benchmark compound by name or structure in any skill file.
 

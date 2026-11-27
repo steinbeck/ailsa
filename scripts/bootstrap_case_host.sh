@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
 #
 # bootstrap_case_host.sh — provision a headless host (e.g. sheldon) to run the
-# full autonomous CASE skill `/lucy-ng:case`. See docs/SERVER_BOOTSTRAP.md.
+# full autonomous CASE skill `/ailsa:case`. See docs/SERVER_BOOTSTRAP.md.
 #
-# Idempotent + fail-loud. Run from INSIDE a cloned lucy-ng checkout:
-#   git clone https://github.com/steinbeck/lucy-ng.git && cd lucy-ng
+# Idempotent + fail-loud. Run from INSIDE a cloned ailsa checkout:
+#   git clone https://github.com/steinbeck/ailsa.git && cd ailsa
 #   bash scripts/bootstrap_case_host.sh
 #
 # The LSD solver (step 2) is an external download whose archive name/version
 # changes; if it is not already on PATH this script stops and tells you what to
-# do — `lucy lsd check` is the authoritative gate either way.
+# do — `ailsa lsd check` is the authoritative gate either way.
 #
 set -euo pipefail
 
@@ -23,7 +23,7 @@ warn() { printf '\033[1;33mWARN: %s\033[0m\n' "$*" >&2; }
 die() { printf '\033[1;31mFATAL: %s\033[0m\n' "$*" >&2; exit 1; }
 
 # ---------------------------------------------------------------------------
-say "1/6  Python ${PY_VERSION} + lucy-ng (uv, reproducible from uv.lock)"
+say "1/6  Python ${PY_VERSION} + ailsa (uv, reproducible from uv.lock)"
 if ! command -v uv >/dev/null 2>&1; then
   curl -LsSf https://astral.sh/uv/install.sh | sh
   export PATH="$HOME/.local/bin:$PATH"
@@ -35,17 +35,17 @@ source .venv/bin/activate
 say "1b   hose-code-generator (13C prediction; --no-deps avoids the 3.12 xmlrunner break)"
 uv pip install "git+https://github.com/Ratsemaat/HOSE_code_generator.git" --no-deps
 
-say "1c   expose lucy on PATH for CASE runs (which start outside this repo)"
+say "1c   expose ailsa on PATH for CASE runs (which start outside this repo)"
 # A CASE run starts from an NMR data dir OUTSIDE this repo with the venv NOT
-# activated, so `lucy` must be reachable without activation. ~/.local/bin is on
+# activated, so `ailsa` must be reachable without activation. ~/.local/bin is on
 # PATH by default on Linux, and the venv console-script has an absolute shebang,
 # so a plain symlink works without sourcing the venv.
 mkdir -p "$HOME/.local/bin"
-ln -sfn "$REPO/.venv/bin/lucy" "$HOME/.local/bin/lucy"
+ln -sfn "$REPO/.venv/bin/ailsa" "$HOME/.local/bin/ailsa"
 
 # ---------------------------------------------------------------------------
 say "2/6  LSD solver (LSD + outlsd on PATH)"
-if lucy lsd check 2>/dev/null | grep -qi "outlsd: available"; then
+if ailsa lsd check 2>/dev/null | grep -qi "outlsd: available"; then
   echo "LSD + outlsd already available."
 elif [ -n "$LSD_URL" ]; then
   mkdir -p "$HOME/opt"; ( cd "$HOME/opt"
@@ -73,30 +73,26 @@ done
 
 # ---------------------------------------------------------------------------
 say "3/6  Reference database (pre-built SQLite from Figshare)"
-DB="data/reference/lucy-ng-derep.db"
+DB="data/reference/ailsa-derep.db"
 if [ -f "$DB" ]; then
   echo "DB already present: $DB"
 else
   mkdir -p data/reference
-  lucy database download -o "$DB"
+  ailsa database download -o "$DB"
 fi
-lucy database info "$DB" || warn "lucy database info failed — verify the DB download."
+ailsa database info "$DB" || warn "ailsa database info failed — verify the DB download."
 
 # Make the DB discoverable from any CWD: DatabaseFinder checks ~/.lucy/ (step 3
 # of its search order) regardless of the working directory. Without this, a CASE
 # run from a data dir silently falls back to a tiny bundled HOSE table
 # (~11 matches) instead of the full 928k-compound DB.
 mkdir -p "$HOME/.lucy"
-ln -sfn "$REPO/$DB" "$HOME/.lucy/lucy-ng-derep.db"
+ln -sfn "$REPO/$DB" "$HOME/.lucy/ailsa-derep.db"
 
 # ---------------------------------------------------------------------------
-say "4/6  CASE skill: symlink commands + the 4 team agents into ~/.claude"
-mkdir -p "$HOME/.claude/agents" "$HOME/.claude/commands"
-ln -sfn "$REPO/.claude/commands/lucy-ng" "$HOME/.claude/commands/lucy-ng"
-for a in "$REPO"/.claude/agents/lucy-*.md; do
-  ln -sfn "$a" "$HOME/.claude/agents/$(basename "$a")"
-done
-echo "Linked commands + agents: $(ls "$REPO"/.claude/agents/lucy-*.md | wc -l | tr -d ' ') agent files."
+say "4/6  CASE skill: install the packaged skill (commands + team agents) into ~/.claude"
+AILSA="$REPO/.venv/bin/ailsa"
+"$AILSA" skill install ailsa --target claude --link   # ailsa skill install ailsa
 
 # ---------------------------------------------------------------------------
 say "5/6  Enable agent teams"
@@ -109,17 +105,17 @@ export CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1
 say "6/6  Verify the CASE prerequisite chain (the gates case.md checks)"
 ok=1
 [ "${CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS:-}" = "1" ] && echo "  [ok] AGENT_TEAMS=1" || { echo "  [FAIL] AGENT_TEAMS"; ok=0; }
-lucy --version >/dev/null 2>&1 && echo "  [ok] lucy CLI" || { echo "  [FAIL] lucy CLI"; ok=0; }
-lucy lsd check 2>/dev/null | grep -qi "outlsd: available" && echo "  [ok] LSD + outlsd" || { echo "  [FAIL] LSD/outlsd"; ok=0; }
-lucy predict c13 "CCO" --format json >/dev/null 2>&1 && echo "  [ok] predict c13 (DB + hosegen)" || { echo "  [FAIL] predict c13"; ok=0; }
+ailsa --version >/dev/null 2>&1 && echo "  [ok] ailsa CLI" || { echo "  [FAIL] ailsa CLI"; ok=0; }
+ailsa lsd check 2>/dev/null | grep -qi "outlsd: available" && echo "  [ok] LSD + outlsd" || { echo "  [FAIL] LSD/outlsd"; ok=0; }
+ailsa predict c13 "CCO" --format json >/dev/null 2>&1 && echo "  [ok] predict c13 (DB + hosegen)" || { echo "  [FAIL] predict c13"; ok=0; }
 # Discoverability from a data dir (CASE runs start outside this repo):
-[ -e "$HOME/.local/bin/lucy" ] && echo "  [ok] lucy on ~/.local/bin" || { echo "  [FAIL] ~/.local/bin/lucy missing"; ok=0; }
+[ -e "$HOME/.local/bin/ailsa" ] && echo "  [ok] ailsa on ~/.local/bin" || { echo "  [FAIL] ~/.local/bin/ailsa missing"; ok=0; }
 [ -e "$HOME/.local/bin/outlsd" ] && echo "  [ok] outlsd on ~/.local/bin" || { echo "  [FAIL] ~/.local/bin/outlsd missing"; ok=0; }
-( cd /tmp && lucy predict c13 "CCO" --format json >/dev/null 2>&1 ) && echo "  [ok] DB found from any dir (~/.lucy)" || { echo "  [FAIL] DB not found outside repo (~/.lucy/lucy-ng-derep.db)"; ok=0; }
+( cd /tmp && ailsa predict c13 "CCO" --format json >/dev/null 2>&1 ) && echo "  [ok] DB found from any dir (~/.lucy)" || { echo "  [FAIL] DB not found outside repo (~/.lucy/ailsa-derep.db)"; ok=0; }
 
 if [ "$ok" = "1" ]; then
   say "DONE — host is CASE-capable. Next: a smoke CASE in a fresh Claude Code session:"
-  echo "  cd data/Ibuprofen && claude   # then type:  /lucy-ng:case . C13H18O2"
+  echo "  cd data/Ibuprofen && claude   # then type:  /ailsa:case . C13H18O2"
 else
   die "One or more prerequisites failed (see [FAIL] above). Fix and re-run — this script is idempotent."
 fi

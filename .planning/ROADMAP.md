@@ -344,7 +344,7 @@ heteroatom-hybridisation and multiplicity variants, carbons seen only in 2D spec
   3. The agents are named `ailsa-nmr-chemist`, `ailsa-lsd-engineer`, `ailsa-solution-analyst`, `ailsa-devils-advocate` and `ailsa-diagnostic`; the unused supervisor agent is gone; the SHA-256 guard references the new files; the `~/.claude/agents` symlinks are updated.
   4. Every skill file body is under 500 lines with details in one-level reference files (one shared LSD reference instead of two copies), files over 100 lines have a table of contents, and the skill contains no dead references, no project history or defect numbers, no dataset numbers, no fixed model IDs, and one term per role.
   5. An automated skill-lint check enforces criterion 4 on every commit; a local check (answer key never in the repository) finds no benchmark compound by name or structure in any skill file.
-  6. One blind CASE run on the compute host through the renamed command completes and grades, and the blind runner, watchdog scripts and LaunchAgent use the new command and paths.
+  6. One blind CASE run on the compute host through the renamed command completes and grades, and the blind runner and watchdog scripts use the new command and paths; the watchdog runs on vitus in a herdr pane instead of a LaunchAgent.
 
 **Plans**: 15 plans in 15 waves (planned 2026-11-27; strictly sequential on one checkout)
 
