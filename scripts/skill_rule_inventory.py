@@ -62,9 +62,21 @@ STOPWORDS = set(EMPHASIS_WORDS) | {
     "is", "it", "of", "to", "in", "on", "at", "as", "by", "be", "or", "an", "if",
 }
 
+# Polarity. STOPWORDS drops the emphasis words from the token sets, so "always X" and
+# "never X" have identical tokens and would match as "same". What a rule forbids, restricts or
+# permits is therefore compared separately (polarity()), in both directions: a unit whose
+# polarity differs from its match, or from any other near-identical candidate, is never "same".
+NEGATION_WORDS = (
+    "never", "not", "no", "none", "nothing", "nor", "neither", "without", "cannot",
+    "avoid", "forbidden", "prohibited",
+)
+PERMISSION_WORDS = ("may", "optional", "optionally", "allowed", "permitted")
+
 EMPH_RE = re.compile(r"\b(" + "|".join(EMPHASIS_WORDS) + r")\b", re.I)
 NORM_RE = re.compile(r"\b(" + "|".join(NORMATIVE_WORDS) + r")\b", re.I)
-NEG_RE = re.compile(r"\b(never|not|no|without)\b|n't\b")
+NEG_RE = re.compile(r"\b(?:" + "|".join(NEGATION_WORDS) + r")\b|n't\b")
+ONLY_RE = re.compile(r"\bonly\b")
+PERM_RE = re.compile(r"\b(?:" + "|".join(PERMISSION_WORDS) + r")\b")
 LIST_RE = re.compile(r"^(\s*)([-*]|\d+[.)])\s+")
 FENCE_RE = re.compile(r"^\s*(```|~~~)")
 HEAD_RE = re.compile(r"^\s{0,3}#{1,6}\s")
@@ -110,6 +122,12 @@ def normalise(text: str) -> str:
     for pat, rep in RENAMES:
         t = re.sub(pat, rep, t)
     return re.sub(r"\s+", " ", t).strip()
+
+
+def polarity(norm: str) -> tuple[int, int, bool]:
+    """(negations, "only" restrictions, permission wording) of a normalised unit."""
+    t = norm.replace("\u2019", "'")
+    return len(NEG_RE.findall(t)), len(ONLY_RE.findall(t)), bool(PERM_RE.search(t))
 
 
 def tokenize(norm: str) -> frozenset:
@@ -206,7 +224,12 @@ def hints(u: Unit) -> list[str]:
 
 
 def match_all(old: list[Unit], new: list[Unit]):
-    """Return {old uid: (score, new unit or None)}."""
+    """Return {old uid: (score, new unit or None, polarity conflict)}.
+
+    The conflict flag is set when any candidate at or above SAME_AT (not only the best one)
+    has a different polarity from the old unit: an inverted copy of a rule must not hide
+    behind an unchanged copy elsewhere.
+    """
     post: dict[str, list[int]] = {}
     by_file: dict[str, list[int]] = {}
     for idx, u in enumerate(new):
@@ -223,14 +246,17 @@ def match_all(old: list[Unit], new: list[Unit]):
             window[idx] = frozenset(w)
     result = {}
     exact = {}
+    new_pol = [polarity(u.norm) for u in new]
     for idx, u in enumerate(new):
         exact.setdefault((u.kind == "code", u.norm), idx)
     for o in old:
         best, best_idx = 0.0, None
         if not o.tokens:
             hit = exact.get((o.kind == "code", o.norm))
-            result[o.uid] = (1.0, new[hit]) if hit is not None else (0.0, None)
+            result[o.uid] = (1.0, new[hit], False) if hit is not None else (0.0, None, False)
             continue
+        o_pol = polarity(o.norm)
+        conflict = False
         cands: set[int] = set()
         for t in o.tokens:
             for j in post.get(t, ()):
@@ -245,17 +271,23 @@ def match_all(old: list[Unit], new: list[Unit]):
             jac = inter / len(o.tokens | n.tokens) if n.tokens else 0.0
             cont = min(CONTAIN_CAP, CONTAIN_FACTOR * len(o.tokens & window[i]) / len(o.tokens))
             s = max(jac, cont)
+            if s >= SAME_AT and new_pol[i] != o_pol:
+                conflict = True
             if s > best:
                 best, best_idx = s, i
-        result[o.uid] = (best, new[best_idx] if best_idx is not None else None)
+        result[o.uid] = (best, new[best_idx] if best_idx is not None else None, conflict)
     return result
 
 
-def status_of(score: float, o: Unit, n: Unit | None) -> tuple[str, list[str]]:
+def status_of(
+    score: float, o: Unit, n: Unit | None, conflict: bool = False
+) -> tuple[str, list[str]]:
     st = "same" if score >= SAME_AT else "reworded" if score >= REWORDED_AT else "LOST"
     extra: list[str] = []
-    if st != "LOST" and n is not None and NEG_RE.search(o.norm) and not NEG_RE.search(n.norm):
-        extra.append("negation?")
+    if st == "LOST" or n is None:
+        return st, extra
+    if conflict or polarity(o.norm) != polarity(n.norm):
+        extra.append("polarity?")
         st = "reworded"
     return st, extra
 
@@ -370,8 +402,8 @@ def cmd_build(args) -> int:
     out.mkdir(parents=True, exist_ok=True)
     inv, pairs = [], []
     for o in old:
-        score, n = res[o.uid]
-        st, extra = status_of(score, o, n)
+        score, n, conflict = res[o.uid]
+        st, extra = status_of(score, o, n, conflict)
         hs = ",".join(hints(o) + extra)
         emph = "yes" if o.kind != "code" and EMPH_RE.search(o.text) else "no"
         inv.append([

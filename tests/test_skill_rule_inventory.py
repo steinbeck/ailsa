@@ -94,16 +94,59 @@ def test_moved_unit_same_in_other_file(trees):
     assert all(r["new_file"] == "b.md" and r["status"] == "same" for r in rows(out))
 
 
-def test_negation_dropped_needs_review(tmp_path):
+def _one(tmp_path, old_text, new_text):
     old, new, out = tmp_path / "o", tmp_path / "n", tmp_path / "out"
     old.mkdir()
     new.mkdir()
-    (old / "a.md").write_text("- NEVER poll the list.\n")
-    (new / "a.md").write_text("- Poll the list.\n")
+    (old / "a.md").write_text(old_text)
+    (new / "a.md").write_text(new_text)
     build(old, new, out)
-    r = rows(out)[0]
-    assert r["status"] != "same"
-    assert "negation?" in r["hint"]
+    return rows(out), out
+
+
+@pytest.mark.parametrize(
+    ("old_text", "new_text"),
+    [
+        ("- NEVER poll the list.\n", "- Poll the list.\n"),  # negation dropped
+        ("- Poll the list.\n", "- Never poll the list.\n"),  # negation added
+        ("- Run the filter.\n", "- Do not run the filter.\n"),  # negation added
+        ("- Always run the duplicate filter before ranking.\n",
+         "- Never run the duplicate filter before ranking.\n"),  # always -> never
+        ("- Never run the duplicate filter before ranking.\n",
+         "- Always run the duplicate filter before ranking.\n"),  # never -> always
+        ("- Run the solver only after validation.\n",
+         "- Run the solver after validation.\n"),  # restriction dropped
+        ("- You must keep the input spectrum.\n",
+         "- You may keep the input spectrum.\n"),  # obligation -> permission
+        ("- You don\u2019t rerun the solver.\n", "- You rerun the solver.\n"),  # typographic n't
+    ],
+    ids=["neg-dropped", "neg-added", "do-not-added", "always-never", "never-always",
+         "only-dropped", "must-may", "curly-apostrophe"],
+)
+def test_polarity_change_never_same(tmp_path, old_text, new_text):
+    (r,), out = _one(tmp_path, old_text, new_text)
+    assert r["status"] == "reworded"
+    assert "polarity?" in r["hint"]
+    # The meaning check must not pass until someone has looked at it.
+    run("check", "--lost-only", "--meaning", "--out", str(out), expect=1)
+
+
+def test_emphasis_removed_without_inversion_stays_same(tmp_path):
+    # D-02: capital-letter emphasis becomes a plain imperative; that is not an inversion.
+    (r,), _ = _one(tmp_path, "- You MUST run the filter first.\n", "- You run the filter first.\n")
+    assert r["status"] == "same"
+    assert "polarity?" not in r["hint"]
+
+
+def test_inverted_copy_flagged_even_next_to_unchanged_copy(tmp_path):
+    rs, _ = _one(
+        tmp_path,
+        "- Never run the duplicate filter before ranking.\n",
+        "- Never run the duplicate filter before ranking.\n\n"
+        "# Other\n\n- Always run the duplicate filter before ranking.\n",
+    )
+    assert rs[0]["status"] == "reworded"
+    assert "polarity?" in rs[0]["hint"]
 
 
 def test_todo_idempotent_and_check_reasons(trees):
