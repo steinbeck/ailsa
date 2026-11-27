@@ -475,3 +475,84 @@ def test_extra_args_go_to_the_harness(claude: Path, dataset: Path, tmp_path: Pat
     res = _start(dataset, "--model", "haiku", "--", "--max-turns", "7")
     _result(res)
     assert _shim(tmp_path)["argv"][-2:] == ["--max-turns", "7"]
+
+
+# ------------------------------------------------------------------ frontier skill
+
+
+@pytest.fixture
+def frontier_home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    from .test_env import install_command_skill
+
+    home = tmp_path / "home"
+    install_command_skill(home / ".claude", link=True)
+    monkeypatch.setenv("HOME", str(home))
+    return home
+
+
+def _run_folders(tmp_path: Path) -> list[Path]:
+    ws = tmp_path / "ws"
+    return [p for p in ws.iterdir() if p.is_dir()] if ws.is_dir() else []
+
+
+def test_default_prompt_frontier() -> None:
+    assert default_prompt("/d", skill="ailsa", formula="C6H6") == "/ailsa:case /d C6H6"
+    assert default_prompt("/d", skill="ailsa") == "/ailsa:case /d"
+    assert default_prompt("/d") == "/ailsa-lite /d"
+
+
+def test_frontier_start(
+    claude: Path, frontier_home: Path, dataset: Path, tmp_path: Path
+) -> None:
+    res = _result(
+        _start(
+            dataset, "--model", "m", "--skill", "ailsa", "--formula", "C6H6", "--time-limit", "30"
+        )
+    )
+    run_dir = Path(res["run_dir"])
+    info = _shim(tmp_path)
+    argv = info["argv"]
+    assert argv[0] == "-p" and argv[1] == f"/ailsa:case {dataset.resolve()} C6H6"
+    assert info["env"]["CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS"] == "1"
+    assert not (run_dir / "agent" / ".claude" / "skills").exists()
+    ev = _events(run_dir)
+    env = _of(ev, "env.captured")[0]["payload"]
+    assert env["skill"]["name"] == "ailsa"
+    assert env["skill_location"] == "global-claude-commands"
+    assert env["skill_matches_packaged"] is True
+    assert _of(ev, "run.created")[0]["payload"]["request"]["mode"] == "headless"
+
+
+def test_lean_start_sets_no_teams_flag(
+    claude: Path, dataset: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.delenv("CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS", raising=False)
+    res = _result(_start(dataset, "--model", "m"))
+    assert "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS" not in _shim(tmp_path)["env"]
+    assert (Path(res["run_dir"]) / "agent" / ".claude" / "skills" / "ailsa-lite").is_dir()
+
+
+def test_frontier_prompt_override(
+    claude: Path, frontier_home: Path, dataset: Path, tmp_path: Path
+) -> None:
+    _result(_start(dataset, "--model", "m", "--skill", "ailsa", "--prompt", "custom"))
+    assert _shim(tmp_path)["argv"][1] == "custom"
+
+
+def test_frontier_missing_install_refused(
+    claude: Path, dataset: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("HOME", str(tmp_path / "emptyhome"))
+    res = _start(dataset, "--model", "m", "--skill", "ailsa")
+    assert res.exit_code == 2
+    assert "ailsa skill install ailsa --target claude" in res.output
+    assert _run_folders(tmp_path) == []
+
+
+def test_frontier_opencode_refused(
+    shim_path: Path, frontier_home: Path, dataset: Path, tmp_path: Path
+) -> None:
+    make_shim(shim_path, "opencode", SHIM)
+    res = _start(dataset, "--harness", "opencode", "--model", "m", "--skill", "ailsa")
+    assert res.exit_code == 2
+    assert _run_folders(tmp_path) == []

@@ -25,6 +25,8 @@ from ailsa.record.fsutil import atomic_write_json, scrub_home
 from ailsa.record.log import append_event
 
 SKILL_NAME = "ailsa-lite"
+FRONTIER_SKILL = "ailsa"
+SKILLS = (SKILL_NAME, FRONTIER_SKILL)
 # Plan 02 spike answer A8: a slash prompt invokes a project skill in `claude -p`.
 SLASH_PROMPT_WORKS = True
 KILL_GRACE_S = 10
@@ -41,7 +43,17 @@ class LauncherError(Exception):
     """The run cannot be prepared or started."""
 
 
-def default_prompt(dataset: str | os.PathLike[str], slash_ok: bool = SLASH_PROMPT_WORKS) -> str:
+def default_prompt(
+    dataset: str | os.PathLike[str],
+    slash_ok: bool = SLASH_PROMPT_WORKS,
+    *,
+    skill: str = SKILL_NAME,
+    formula: str | None = None,
+) -> str:
+    if skill == FRONTIER_SKILL:
+        if slash_ok:
+            return f"/ailsa:case {dataset}" + (f" {formula}" if formula else "")
+        return f"Run the AILSA CASE workflow (/ailsa:case) on the compound in {dataset}."
     if slash_ok:
         return f"/{SKILL_NAME} {dataset}"
     return f"Use the {SKILL_NAME} skill to determine the structure of the compound in {dataset}."
@@ -93,7 +105,12 @@ def _context_entries(files: Sequence[str | os.PathLike[str]]) -> list[dict[str, 
 
 
 def child_environment(
-    run_dir: Path, *, harness: str, transcript: bool, base: Mapping[str, str] | None = None
+    run_dir: Path,
+    *,
+    harness: str,
+    transcript: bool,
+    base: Mapping[str, str] | None = None,
+    teams: bool = False,
 ) -> dict[str, str]:
     env = {k: v for k, v in (os.environ if base is None else base).items() if k not in _DROPPED_ENV}
     exe_dir = str(Path(sys.executable).parent)
@@ -103,6 +120,8 @@ def child_environment(
     env["AILSA_HOOKS_VIA_SETTINGS"] = "1"
     env["AILSA_HARNESS"] = _HARNESS_NAME[harness]
     env["CLAUDE_CODE_SESSIONEND_HOOKS_TIMEOUT_MS"] = "15000"
+    if teams:
+        env["CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS"] = "1"
     if not transcript:
         env["AILSA_NO_TRANSCRIPT"] = "1"
     return env
@@ -127,6 +146,7 @@ def prepare_run(
     views: bool = True,
     transcript: bool = True,
     extra_args: Sequence[str] = (),
+    skill: str = SKILL_NAME,
 ) -> dict[str, Any]:
     from ailsa.record.hooksettings import build_settings
     from ailsa.record.resolve import REQUIRE_ENV, RUN_DIR_ENV, SESSION_ENV
@@ -134,12 +154,24 @@ def prepare_run(
 
     if harness not in HARNESSES:
         raise LauncherError(f"unknown harness {harness!r}; choose claude or opencode")
-    skill_src = _packaged_skill(SKILL_NAME)
+    if skill not in SKILLS:
+        raise LauncherError(f"unknown skill {skill!r}; choose one of {', '.join(SKILLS)}")
+    frontier = skill == FRONTIER_SKILL
+    if frontier:
+        # Checked before init_run so a refusal leaves no run folder behind.
+        if harness != "claude":
+            raise LauncherError("the frontier skill runs only in Claude Code (--harness claude)")
+        if not (Path.home() / ".claude" / "commands" / "ailsa" / "case.md").is_file():
+            raise LauncherError(
+                "the frontier skill is not installed; "
+                "run: ailsa skill install ailsa --target claude"
+            )
+    skill_src = _packaged_skill(skill)
     if skill_src is None:
-        raise LauncherError(f"the packaged skill {SKILL_NAME} was not found")
+        raise LauncherError(f"the packaged skill {skill} was not found")
     ds = Path(dataset).expanduser()
     shown = str(ds.resolve()) if ds.is_dir() else str(ds)
-    request_prompt = prompt if prompt else default_prompt(shown)
+    request_prompt = prompt if prompt else default_prompt(shown, skill=skill, formula=formula)
     contexts = _context_entries(context_files)
     harness_name = _HARNESS_NAME[harness]
     confidential = run_class == "confidential"
@@ -166,7 +198,7 @@ def prepare_run(
             formula=formula,
             source=source,
             licence=licence,
-            skill=SKILL_NAME,
+            skill=skill,
             mode="headless" if headless else "interactive",
             harness=harness_name,
             prompt=request_prompt,
@@ -189,8 +221,11 @@ def prepare_run(
             session_id = str(uuid.uuid4())
             settings = build_settings(sys.executable, auto_memory=False)
             atomic_write_json(run_dir / HOOKS_SETTINGS, settings)
-        parts = _SKILL_DIRS[harness]
-        shutil.copytree(skill_src, agent_dir.joinpath(*parts, SKILL_NAME), symlinks=False)
+        if not frontier:
+            # The frontier command skill must be the global install: its commands read
+            # ~/.claude/ailsa/references.
+            parts = _SKILL_DIRS[harness]
+            shutil.copytree(skill_src, agent_dir.joinpath(*parts, skill), symlinks=False)
         if context_files:
             target = agent_dir / "context"
             target.mkdir(mode=0o700, exist_ok=True)
@@ -218,8 +253,9 @@ def prepare_run(
         "run_dir": str(run_dir),
         "agent_dir": str(agent_dir),
         "argv": argv,
-        "env": child_environment(run_dir, harness=harness, transcript=transcript),
+        "env": child_environment(run_dir, harness=harness, transcript=transcript, teams=frontier),
         "harness": harness_name,
+        "skill": skill,
         "model": model,
         "headless": headless,
         "time_limit_s": time_limit_s,

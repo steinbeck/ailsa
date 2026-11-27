@@ -523,6 +523,14 @@ def finalize_cmd(
 )
 @click.option("--no-transcript", is_flag=True, help="Do not copy the harness transcripts.")
 @click.option("--no-views", is_flag=True, help="Do not export the spectra view products.")
+@click.option(
+    "--skill",
+    type=click.Choice(["ailsa-lite", "ailsa"]),
+    default="ailsa-lite",
+    show_default=True,
+    help="Skill to run: the lean skill or the frontier skill (/ailsa:case; needs the global "
+    "install).",
+)
 @_format_option
 @click.argument("extra", nargs=-1, type=click.UNPROCESSED)
 def start_cmd(
@@ -542,6 +550,7 @@ def start_cmd(
     context_files: tuple[Path, ...],
     no_transcript: bool,
     no_views: bool,
+    skill: str,
     fmt: str,
     extra: tuple[str, ...],
 ) -> None:
@@ -572,6 +581,7 @@ def start_cmd(
             views=not no_views,
             transcript=not no_transcript,
             extra_args=list(extra),
+            skill=skill,
         )
     except LauncherError as exc:
         click.echo(f"ailsa: {exc}", err=True)
