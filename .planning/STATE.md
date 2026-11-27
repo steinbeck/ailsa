@@ -55,7 +55,13 @@ Last activity: 2026-11-24 -- Phase 106.1 complete and verified
        after the restructuring; acceptance run on Opus 5.5). **Planned 2026-11-27:** 15 plans in 15
        waves (strict chain), research + pattern map + validation strategy, checker passed on iteration 2.
        User away, asked for the whole phase without questions: executed 2026-11-27.
-       **EXECUTED + VERIFIED (human_needed), awaiting the user's acceptance verdict:** all 15 plans,
+       **PHASE 106 COMPLETE 2026-11-27** (user accepted all 8 items, following every recommendation;
+       commits pushed `52e5ab3..1ea7253`, tag `frontier-skill-pre-106` local only; skill-check
+       pre-commit hook `scripts/git-hooks/pre-commit` linked in `.git/hooks`; global CLAUDE.md
+       examples now `/ailsa:*` on template, vitus, caffeine). Laptop still to do there:
+       `~/Dropbox/develop/lucy-ng/.venv/bin/ailsa skill install ailsa --target claude --link` and
+       `./claude-md-verteilen.sh`. **Next: `/gsd-discuss-phase 106.2`** (frontier skill writes the
+       run record, team + headless proof, old web view removed). History of the run: all 15 plans,
        verification 6/6 criteria and 7/7 requirements (`106-VERIFICATION.md`). Blind acceptance run:
        CASE146 via `/ailsa:case`, Opus 5.5, Claude Code 2.1.332, schema-3 DB, rank 1 in 1418 s.
        Code review found 3 blockers + 12 warnings, all fixed (`106-REVIEW-FIX.md`, 447 quick tests);

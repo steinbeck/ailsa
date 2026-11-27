@@ -222,7 +222,7 @@ prose: `docs/SKILLS.md`. Inserted as Phase 105.1. Background research:
 - [x] **Phase 104: Package and CLI** — PyPI package `ailsa`, module `ailsa` replacing `lucy_ng`, CLI `ailsa` with `lucy` kept as a deprecated alias for one release; full suite/mypy/ruff green on the renamed tree (completed 2026-10-03; PyPI upload of 0.1.0 deferred by user until after Phase 105 — see 104-HUMAN-UAT.md)
 - [x] **Phase 105: Documentation and outside face** — README, `docs/`, CLAUDE.md, the figshare record and the infographic deck under the new name; LSD and Nuzillard credited up front (completed 2026-10-14)
 - [ ] **Phase 105.1: Lean skill for small open-weight models (INSERTED 2026-10-31)** — `ailsa-lite`, an Agent Skill of about 1 000 tokens on top of new `ailsa case` commands (scan, setup, check/edit, solve, rank, report) that do all bookkeeping; shipped as package data and installed with `ailsa skill install`; partner guide `docs/AILSA-LITE.md` (in progress: v0.1 built)
-- [ ] **Phase 106: Freeze, rename and restructure the skill** — the two measured skill states tagged; `/ailsa:*` commands and `ailsa-*` agents; every skill file restructured to Anthropic's best practices (core under 500 lines, references, TOCs, no dead references, no history, no benchmark compounds, no model IDs, one term per role); an automated skill-lint check
+- [x] **Phase 106: Freeze, rename and restructure the skill** — (completed 2026-11-27) the two measured skill states tagged; `/ailsa:*` commands and `ailsa-*` agents; every skill file restructured to Anthropic's best practices (core under 500 lines, references, TOCs, no dead references, no history, no benchmark compounds, no model IDs, one term per role); an automated skill-lint check
 - [x] **Phase 106.1: Run record core (INSERTED 2026-11-24)** — every run writes a structured record (manifest, event log, typed results, declared result) in a workspace folder outside the data; release R0a of the web-interface specification; package, hooks and the lean skill (split 2026-11-24, see 106.2) (completed 2026-11-24)
 - [ ] **Phase 106.2: Frontier skill writes the run record (INSERTED 2026-11-24)** — the renamed frontier skill writes the 106.1 record; team and headless runs proven; old web view removed; before Phases 109 and 110
 - [ ] **Phase 107: Evaluation bench and team-mode spike** — fixed ~25-dataset evaluation sample, per-run mechanics report, Mac/compute-host parity check, and a decided route for running the agent team unattended
@@ -508,7 +508,7 @@ decisions in `106.1-CONTEXT.md`.
 |-------|-----------------|--------|-----------|
 | 104. Package and CLI | 6/6 | Complete    | 2026-10-03 |
 | 105. Documentation and outside face | 10/10 | Complete   | 2026-10-14 |
-| 106. Freeze, rename and restructure the skill | 15/15 | Executed, verified (human_needed): awaiting the user's acceptance verdict | - |
+| 106. Freeze, rename and restructure the skill | 15/15 | Complete | 2026-11-27 |
 | 107. Evaluation bench and team-mode spike | 0/? | Not started | - |
 | 108. Foundation | 0/? | Not started | - |
 | 109. Rework the CASE workflow | 0/? | Not started | - |

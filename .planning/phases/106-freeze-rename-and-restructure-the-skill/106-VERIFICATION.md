@@ -1,7 +1,8 @@
 ---
 phase: 106-freeze-rename-and-restructure-the-skill
 verified: 2026-11-27T16:00:00Z
-status: human_needed
+status: passed
+human_verification_accepted: 2026-11-27 (all 8 items in 106-HUMAN-UAT.md accepted by the user)
 score: 6/6 roadmap criteria verified automatically; 8 user verdicts open
 overrides_applied: 0
 human_verification:

@@ -1,9 +1,9 @@
 ---
-status: partial
+status: complete
 phase: 106-freeze-rename-and-restructure-the-skill
 source: [106-15-SUMMARY.md]
 started: 2026-11-27T11:08:21Z
-updated: 2026-11-27T11:36:09Z
+updated: 2026-11-27T20:15:00Z
 ---
 
 ## Current Test
@@ -18,7 +18,7 @@ expected: A blind structure-elucidation run, started through the renamed command
 the renamed agents, runs to its end on Sheldon and can be graded against the private answer key.
 The rank of the true structure is reported; the phase does not fail on the rank alone, as agreed
 beforehand.
-result: [pending — awaiting the user's verdict]
+result: accepted 2026-11-27 by the user (followed all recommendations)
 
 **What was done.** On 2026-11-27 at 11:09 UTC, the normal benchmark runner started one blind run on
 Sheldon on benchmark dataset CASE146. The runner opens a fresh headless Claude Code session that
@@ -82,7 +82,7 @@ rank 1, and every link of the renamed chain shows up in its records.
 expected: Every rule of the old skill files is found again in the new files, either word for word,
 reworded with the same meaning, or removed for one of the reasons this phase allowed (an example
 that named a compound or dataset, project history, a fixed model name, a dead reference).
-result: [pending — awaiting the user's verdict]
+result: accepted 2026-11-27 by the user (followed all recommendations): comparison base = phase-start tag `frontier-skill-pre-106`, option (a)
 
 **What was done.** The skill text was split into smaller files and rewritten in plainer language.
 To show that no rule was lost on the way, a script cut the old files into single rules and looked
@@ -134,7 +134,7 @@ text at the start of this work is the text that was restructured.
 
 expected: The automatic checks that enforce the new writing rules run on every skill file, none is
 skipped, and the scan for benchmark answers finds nothing.
-result: [pending — awaiting the user's verdict; all evidence green]
+result: accepted 2026-11-27 by the user (followed all recommendations)
 
 **What it is.** A test file checks every skill file for the agreed form: under 500 lines, a
 contents list in files over 100 lines, no dead references, no dataset numbers or compound names,
@@ -157,7 +157,7 @@ now run on every change, so a later regression shows up at once.
 
 expected: The whole test suite, the type checker and the linter are no worse at the end of this
 phase than at the end of the previous one.
-result: [pending — awaiting the user's verdict; evidence green]
+result: accepted 2026-11-27 by the user (followed all recommendations); the five web-view failures go with the old web view in Phase 106.2
 
 **What it is.** The full suite takes too long for the work laptops, so it ran on Sheldon against
 the recorded result of the previous phase (the run-record phase).
@@ -181,7 +181,7 @@ accept; the old web view is removed in the next phase anyway, and with it those 
 
 expected: On every machine where CASE runs happen, `/ailsa:*` commands work and no `/lucy-ng:*`
 leftovers remain.
-result: [pending — awaiting the user's verdict; one manual step on the laptop]
+result: accepted 2026-11-27 by the user (followed all recommendations); vitus and Sheldon linked; laptop command still to run on the laptop (not reachable from vitus); caffeine not installed (no CASE sessions there)
 
 **Done.**
 - **vitus**: linked into the checkout. `~/.claude/commands/ailsa` points to
@@ -234,7 +234,7 @@ sessions there, which it has never had.
 
 expected: In a new Claude Code session the `/ailsa:` menu shows six commands (case, dereplicate,
 help, predict, sanitise, status) and no entries for the reference files.
-result: [pending — needs one look from you in a new session]
+result: accepted 2026-11-27 by the user (followed all recommendations); the vitus session listed exactly the six /ailsa:* commands after the link install (no reference entries); the status-path observation is option (a), todo `2026-11-27-ailsa-status-db-relative-path.md` for Phase 108
 
 **Why manual.** Slash commands are registered when a session starts, and only a person sees the
 menu. Headless on Sheldon, `/ailsa:status` was recognised and reported the `ailsa` command, LSD and
@@ -285,7 +285,7 @@ bookmark internal.
 ### 8. Not done here on purpose: the global CLAUDE.md example
 
 expected: Your global `~/.claude/CLAUDE.md` names commands that exist.
-result: [pending — a change outside this repository]
+result: accepted 2026-11-27 by the user (followed all recommendations): template changed to `/ailsa:case`, `/ailsa:dereplicate` and copied to vitus and caffeine (backups `CLAUDE.md.bak-2026-11-27`); laptop copy follows with `./claude-md-verteilen.sh` on the laptop
 
 **What it is about.** The global instructions on all three herdr machines cite `/lucy-ng:case` and
 `/lucy-ng:dereplicate` as examples of plugin commands that keep the colon form. Those commands no
@@ -301,14 +301,14 @@ illustrates still reads correctly, but a session may try to run the old command 
 ## Summary
 
 total: 8
-passed: 0
+passed: 8
 issues: 0
-pending: 8
+pending: 0
 skipped: 0
 blocked: 0
 
-All eight wait for your verdict. Items 3 and 4 are automated checks whose evidence is green; item
-5 needs one command on the laptop; item 7 needs your push decision.
+All eight accepted on 2026-11-27. Remaining manual steps on the laptop only: the skill install
+command (item 5) and `./claude-md-verteilen.sh` (item 8).
 
 ## Gaps
 
