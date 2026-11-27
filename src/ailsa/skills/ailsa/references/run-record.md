@@ -190,7 +190,7 @@ Rules:
   questions and next steps come from the analyst's declaration draft; repeat an option for each
   item.
 - A devil's advocate flag from the identity gate becomes a `--caveat`, for example
-  `--caveat "reported name tentative: <rationale>"`. It never blocks the declaration.
+  `--caveat "name not confirmed: <rationale>"`. It never blocks the declaration.
 - If `finalize` refuses because a solver ran after the ranking (the ranking is stale), ask the
   solution analyst to rank again and declare against the new id. The same holds after the coverage
   gate reopened the run.

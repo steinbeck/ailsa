@@ -10,7 +10,7 @@ ff4508f4b51be739165456a515d1031c371afcdfca88baa142c97746f3d99099  ./commands/der
 f4842c8132e5daa678c031e40787acf5597b35cee86c12d41f9bfb5c4d1f9e98  ./commands/predict.md
 28f953ba0bf487229aba6370fe4d47dba75e1a3b2ef3db64186b366d5295141d  ./commands/sanitise.md
 61ae22a902fa83ee6614429acbb8a76035d265035e383f4d4e9c09561cbf0705  ./commands/status.md
-085948fc285085c1b3cfb0e39555404dc10517d045ef31a62bda57149217ba76  ./references/advisory-templates.md
+262cc0d497b002ac4f7cf44556eaaa1a45df2fe9ef8b58e9188f00ac30e21e17  ./references/advisory-templates.md
 c4466aafbbd584364b7261093f6cf475034841c52a63e643261099bd211e3189  ./references/constraint-inventory.md
 2a783c4c7d7e7365cc7a84d74edf9d1a5e276f13fd477a4b061e7be88dce4127  ./references/coordinator-gates.md
 1736f63dc6a2e04bb2ecd8f50d0dda364bee76ce3a5abf37f22926afcfbd5d61  ./references/diagnose-solution-explosion.md
@@ -24,6 +24,6 @@ fd738b294220da46e1995557008532784d81a86f38e3fd0be95b567b94be6fc0  ./references/l
 728ce3d8847a8148d5781d9180377acf3fd10488c4740287334f4096433e3529  ./references/monitoring.md
 2a23118a8e2af19014e78c0b252f94f5889df89661f0a855d45fb8f3782101e0  ./references/multiplicity-ambiguity.md
 432f482fbfc1340ef066d9d5981ae14896abf4b437000362271f5675a6883472  ./references/nmr-basics.md
-d9fb704304e75ec2aef01d657abe61c76847658a356736e4d985f34158258767  ./references/run-record.md
+af7052506adc4b3e92eade9339f1f02a5dd104d40766a0a007e9d0644d935d1b  ./references/run-record.md
 fb731b8e4263a43a4c6388a279f1e720cf828a2b4f7fad92d194498b93542feb  ./references/smoke-test.md
 d579c7ac773e553d80ac3ddd8859fa2d7448b14e109c3ad10ad6ded96e71f93f  ./references/validation-checks.md

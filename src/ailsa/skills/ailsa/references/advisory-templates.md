@@ -16,7 +16,7 @@
 Deliver advisory constraints to the running team via SendMessage. Do not kill and re-spawn the agent to deliver an advisory.
 
 Before sending, record the intervention note:
-`ailsa run note "Intervention: Pattern: <pattern_name>; Counter: <n>/10; Advisory sent: <one line>" --sender coordinator`.
+`ailsa run note "Intervention: Pattern: <pattern_name>; Counter: <n>/10; Advisory sent: <one line>; Diagnosis: <none, or root cause, primary fix and confidence from DIAGNOSTIC-REPORT.md>" --sender coordinator`.
 
 **Why SendMessage instead of re-spawn:**
 - Team retains all context and state (no restart overhead)
