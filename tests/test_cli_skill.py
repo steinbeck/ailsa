@@ -110,35 +110,61 @@ def test_copy_refuses_existing_without_force(fake_pkg: Path, root: Path) -> None
     assert "--force" in out
 
 
-def test_force_over_symlink_never_touches_package(fake_pkg: Path, root: Path) -> None:
+def test_copy_over_own_links_never_touches_package(fake_pkg: Path, root: Path) -> None:
+    before = _state(fake_pkg)
     assert _run("install", "ailsa", "--link", "--root", str(root))[0] == 0
+    # Links into the package are this skill's own: copy mode replaces them without --force.
+    code, out = _run("install", "ailsa", "--root", str(root))
+    assert code == 0, out
+    assert _state(fake_pkg) == before
+    for p in _paths(root):
+        assert p.exists() and not p.is_symlink(), p
+
+
+def test_foreign_link_needs_force(fake_pkg: Path, root: Path, tmp_path: Path) -> None:
+    (root / "agents").mkdir(parents=True)
+    mine = tmp_path / "mine.md"
+    mine.write_text("custom\n")
+    agent = root / "agents" / "ailsa-nmr-chemist.md"
+    agent.symlink_to(mine)
+    for mode in (["--link"], []):
+        code, out = _run("install", "ailsa", *mode, "--root", str(root))
+        assert code == 1, out
+        assert "--force" in out
+        assert agent.is_symlink() and agent.resolve() == mine.resolve()
     code, out = _run("install", "ailsa", "--force", "--root", str(root))
     assert code == 0, out
-    assert (fake_pkg / "ailsa" / "commands" / "case.md").read_text() == "case\n"
-    assert (fake_pkg / "ailsa" / "references" / "lsd-reference.md").read_text() == "lsd\n"
-    assert (fake_pkg / "ailsa" / "agents" / "ailsa-nmr-chemist.md").read_text() == "chemist\n"
-    assert (root / "commands" / "ailsa").is_dir()
-    assert not (root / "commands" / "ailsa").is_symlink()
+    assert agent.is_file() and not agent.is_symlink()
+    assert agent.read_text() == "chemist\n"
+    assert mine.read_text() == "custom\n"
 
 
-def test_legacy_cleanup_only_symlinks(fake_pkg: Path, root: Path, tmp_path: Path) -> None:
+def test_legacy_cleanup_only_lucy_links(fake_pkg: Path, root: Path, tmp_path: Path) -> None:
     (root / "commands").mkdir(parents=True)
     (root / "agents").mkdir()
-    target = tmp_path / "somewhere"
-    target.mkdir()
-    (target / "f.md").write_text("x\n")
-    (root / "commands" / "lucy-ng").symlink_to(target)
-    (root / "agents" / "lucy-nmr-chemist.md").symlink_to(target / "f.md")
-    (root / "agents" / "supervisor.md").symlink_to(target / "f.md")
+    old = tmp_path / "lucy-ng" / ".claude"
+    (old / "commands" / "lucy-ng").mkdir(parents=True)
+    (old / "agents").mkdir()
+    (old / "agents" / "lucy-nmr-chemist.md").write_text("x\n")
+    (old / "agents" / "supervisor.md").write_text("x\n")
+    other = tmp_path / "other-project"
+    other.mkdir()
+    (other / "supervisor.md").write_text("theirs\n")
+    (root / "commands" / "lucy-ng").symlink_to(old / "commands" / "lucy-ng")
+    (root / "agents" / "lucy-nmr-chemist.md").symlink_to(old / "agents" / "lucy-nmr-chemist.md")
+    (root / "agents" / "supervisor.md").symlink_to(other / "supervisor.md")
     (root / "agents" / "lucy-diagnostic.md").write_text("regular\n")
     code, out = _run("install", "ailsa", "--root", str(root))
     assert code == 0, out
     assert not (root / "commands" / "lucy-ng").is_symlink()
     assert not (root / "agents" / "lucy-nmr-chemist.md").is_symlink()
-    assert not (root / "agents" / "supervisor.md").is_symlink()
+    # A generic name linked into another project is not ours: reported and kept.
+    assert (root / "agents" / "supervisor.md").is_symlink()
+    assert "left alone (link not into lucy-ng)" in out
     assert (root / "agents" / "lucy-diagnostic.md").read_text() == "regular\n"
     assert "left alone (not a link)" in out
-    assert (target / "f.md").read_text() == "x\n"
+    assert (old / "agents" / "lucy-nmr-chemist.md").read_text() == "x\n"
+    assert (other / "supervisor.md").read_text() == "theirs\n"
 
 
 def test_link_refused_from_site_packages(

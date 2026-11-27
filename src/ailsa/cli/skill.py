@@ -10,6 +10,7 @@ folder of a harness) and the command skill (a folder with ``INDEX.md``, ``comman
 
 from __future__ import annotations
 
+import os
 import re
 import shutil
 from importlib.resources import as_file, files
@@ -24,7 +25,14 @@ TARGETS: dict[str, tuple[Path, Path]] = {
     "agents": (Path.home() / ".agents" / "skills", Path(".agents") / "skills"),
 }
 
-# Old links from before the rename, relative to the install root. Only symlinks are removed.
+# Link targets that belong to this skill: an ailsa package skill tree (this install, another
+# checkout or a wheel) or the skill folders of an ailsa/lucy-ng checkout before the move.
+_OWNED_LINK = re.compile(
+    r"/skills/ailsa(?:/|$)|/(?:lucy-ng|ailsa)/\.claude/(?:commands|agents)(?:/|$)"
+)
+
+# Old links from before the rename, relative to the install root. Only symlinks whose target
+# lies in a lucy-ng tree are removed; anything else of that name is reported and left alone.
 LEGACY_LINKS: tuple[str, ...] = (
     "commands/lucy-ng",
     "agents/lucy-nmr-chemist.md",
@@ -120,14 +128,41 @@ def _place(src: Path, dst: Path, link: bool) -> str:
     return f"copied {src} -> {dst}"
 
 
+def _link_target(path: Path) -> str:
+    """Absolute, normalised target of a symlink (it may dangle)."""
+    return os.path.normpath(os.path.join(path.parent, os.readlink(path)))
+
+
+def _owned_link(path: Path, package: Path) -> bool:
+    """True when the link at path points into an ailsa skill tree or the old lucy-ng folders.
+
+    Only such links are replaced without --force; a user's own link (an agent variant, say)
+    needs --force, and even then only the link is removed, never its target.
+    """
+    target = _link_target(path)
+    if _inside(Path(target).resolve(), package.resolve()):
+        return True
+    return bool(_OWNED_LINK.search(target))
+
+
+def _legacy_link(path: Path) -> bool:
+    target = _link_target(path)
+    return "lucy-ng" in target or "/.claude/agents/lucy-" in target
+
+
 def _drop_legacy(root: Path) -> list[str]:
     """Remove old lucy-ng symlinks; report anything else of that name and leave it."""
     lines: list[str] = []
     for rel in LEGACY_LINKS:
         path = root / rel
         if path.is_symlink():
-            path.unlink()
-            lines.append(f"removed legacy link {path}")
+            if _legacy_link(path):
+                path.unlink()
+                lines.append(f"removed legacy link {path}")
+            else:
+                lines.append(
+                    f"left alone (link not into lucy-ng): {path} -> {_link_target(path)}"
+                )
         elif path.exists():
             lines.append(f"left alone (not a link): {path}")
     return lines
@@ -153,7 +188,14 @@ def _preflight(
         why = _destination_problem(dst, root, package)
         if why:
             problems.append(why)
-        elif dst not in legacy and not dst.is_symlink() and dst.exists() and not force:
+        elif dst in legacy or force:
+            continue
+        elif dst.is_symlink() and not _owned_link(dst, package):
+            problems.append(
+                f"{dst} is a link to {_link_target(dst)}, not into an ailsa skill tree. "
+                "Use --force to replace the link (its target is left alone)."
+            )
+        elif not dst.is_symlink() and dst.exists():
             problems.append(f"{dst} exists. Use --force to replace it.")
     return problems
 
