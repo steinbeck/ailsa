@@ -67,11 +67,14 @@ def test_agent_roster() -> None:
     found = sorted(p.name for p in (SKILL_DIR / "agents").glob("*.md"))
     assert found == list(EXPECTED_AGENT_FILES)
     assert not list(SKILL_DIR.rglob("supervisor.md"))
-    tracked = subprocess.run(
+    listing = subprocess.run(
         ["git", "ls-files", ".claude/agents", ".claude/commands"],
         cwd=REPO_ROOT, capture_output=True, text=True, check=False,
-    ).stdout.split()
-    assert tracked == []
+    )
+    if listing.returncode != 0:
+        # Outside a git checkout the empty output would pass for "nothing tracked".
+        pytest.skip("not a git checkout: cannot list tracked files")
+    assert listing.stdout.split() == []
 
 
 def test_case_md_is_a_regular_readable_file() -> None:

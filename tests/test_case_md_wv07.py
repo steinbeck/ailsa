@@ -1,14 +1,8 @@
-"""Wave 0 grep-contract tests for the WV-07 case.md edit (Phase 92-01).
+"""Grep-contract tests for the web-view launch in case.md and progress-format.md.
 
-These tests assert the BEHAVIORAL CONTRACT that Plan 92-02 must satisfy by
-editing case.md and progress-format.md.  Before Plan 92-02 lands:
-
-  - test_webview_launch_present  RED  (ailsa webview serve not yet in case.md)
-  - test_stop_hint_present       RED  (ailsa webview stop not yet in pre-terminate region)
-  - test_terminate_team_no_stop  GREEN  (regression guard — server must outlive run)
-  - test_progress_format_dashboard_field  RED  (**Dashboard:** not yet in progress-format.md)
-
-After Plan 92-02 lands all four tests are GREEN.
+They check that case.md launches `ailsa webview serve`, mentions `ailsa webview stop` before
+terminate_team, never stops the server in terminate_team and creates the CASE-PROGRESS.md header
+at run start, and that progress-format.md has the **Dashboard:** field.
 
 All file reads use repo-relative paths (src/ailsa/skills/ailsa/...) so tests
 work from any checkout without touching ~/.claude.
@@ -22,7 +16,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-# Repo-relative paths — pytest must be invoked from the repo root (pyproject.toml).
+# Resolved from this file, so pytest can run from any folder.
 SKILL_DIR = Path(__file__).resolve().parents[1] / "src/ailsa/skills/ailsa"
 CASE_MD = SKILL_DIR / "commands/case.md"
 PROGRESS_FORMAT_MD = SKILL_DIR / "references/progress-format.md"
