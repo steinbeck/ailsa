@@ -347,8 +347,11 @@ def test_real_copy_install(root: Path) -> None:
 
     code, out = _run("install", "ailsa")
     assert code == 0, out
-    package = Path(available_skills()["ailsa"]["path"]).parent
+    package = Path(available_skills()["ailsa"]["path"])
     assert len(list((root / "commands" / "ailsa").glob("*.md"))) == 6
     assert len(list((root / "agents").glob("ailsa-*.md"))) == 5
-    for ref in (package / "references").glob("*.md"):
+    refs = sorted((package / "references").glob("*.md"))
+    assert refs, f"no reference files found under {package / 'references'}"
+    for ref in refs:
         assert (root / "ailsa" / "references" / ref.name).is_file()
+    assert (root / "ailsa" / "INDEX.md").is_file()
