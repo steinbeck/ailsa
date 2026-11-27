@@ -29,8 +29,19 @@ set it before the first series. Without it the watchdog halts after the snapshot
 A new series uses a new results folder on Sheldon; the historical `case-uat-results*` folders stay
 untouched. The watchdog refuses the paper benchmark's folders, and any folder that already holds a
 run whose `meta.json` names another model or none; `blind_case_batch.py` refuses the same on
-Sheldon. Every `meta.json` records `model`, `claude_bin` and `claude_version`. The watchdog pins Claude Code 2.1.332 and the model `claude-opus-5-5` on Sheldon. The
-answer-file lockout it carries is a no-op today because the key is no longer on Sheldon.
+Sheldon. Every `meta.json` records `model`, `claude_bin` and `claude_version`.
+
+The watchdog pins the model `claude-opus-5-5` and Claude Code 2.1.332 at
+`~/opt/claude-2.1.332/claude` on Sheldon, outside `~/.local/share/claude/versions/`, which the
+auto-updater prunes. Copy the binary there once before the first series (the watchdog halts with
+the exact command if it is missing):
+
+```bash
+mkdir -p ~/opt/claude-2.1.332 && cp ~/.local/share/claude/versions/2.1.332 ~/opt/claude-2.1.332/claude
+```
+
+The answer-file lockout the watchdog carries is a no-op today because the key is no longer on
+Sheldon.
 
 ## One blind run without the watchdog
 

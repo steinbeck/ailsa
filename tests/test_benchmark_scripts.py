@@ -60,9 +60,22 @@ def _load_watchdog():
 
 def test_watchdog_pins():
     env = _load_watchdog().REMOTE_ENV
-    version = tuple(int(x) for x in env["CLAUDE_BIN"].rsplit("/", 1)[1].split("."))
+    binary = env["CLAUDE_BIN"]
+    # Outside the auto-updater's folder, which prunes old versions.
+    assert "/.local/share/claude/versions/" not in binary
+    folder, name = binary.rsplit("/", 2)[-2:]
+    assert name == "claude"
+    version = tuple(int(x) for x in folder.removeprefix("claude-").split("."))
     assert version >= (2, 1, 280)
     assert env["CLAUDE_MODEL"] == "claude-opus-5-5"
+
+
+def test_preflight_halts_with_copy_command_when_pin_missing(monkeypatch):
+    mod = _load_watchdog()
+    monkeypatch.setattr(mod, "ssh_run", lambda *a, **k: "NO_BINARY\n")
+    with pytest.raises(mod.Halt) as exc:
+        mod.preflight()
+    assert f"cp {mod.PINNED_CLI_SOURCE} {mod.PINNED_CLI}" in str(exc.value)
 
 
 def test_watchdog_abort_pattern():

@@ -75,6 +75,14 @@ REMOTE_TRUTH_PATHS = [
     f"{_ASSEMBLY}/STATUS.md",
 ]
 REMOTE_TRUTH = REMOTE_TRUTH_PATHS[0]  # ordering source; see heavy() in the launcher
+
+# The pinned Claude Code lives outside ~/.local/share/claude/versions/: the auto-updater prunes
+# that folder (the earlier pin 2.1.205 is already gone from it), and a pruned pin would stop a
+# series halfway. The copy is made once by hand; preflight() halts with the command if it is
+# missing. Naming the copy `claude` also keeps the process listing readable.
+PINNED_CLI_VERSION = "2.1.332"
+PINNED_CLI_SOURCE = f"/home/chris/.local/share/claude/versions/{PINNED_CLI_VERSION}"
+PINNED_CLI = f"/home/chris/opt/claude-{PINNED_CLI_VERSION}/claude"
 REMOTE_ENV = {
     "CASE_DATA_DIR": REMOTE_DATA,
     # CASE_RESULTS_DIR is set per launch from the required --results-dir.
@@ -85,7 +93,7 @@ REMOTE_ENV = {
     # on Claude Code 2.1.205 (recorded in docs/BENCHMARK.md); Opus 5.5 needs
     # 2.1.280 or later. ("Execution error" in a run log is `claude -p` being
     # killed by the 3600 s call timeout, not a fault -- see blind_case_run.sh.)
-    "CLAUDE_BIN": "/home/chris/.local/share/claude/versions/2.1.332",
+    "CLAUDE_BIN": PINNED_CLI,
     # Lockout (a no-op today, the key is no longer on Sheldon): the harness
     # would physically move these files to
     # CASE_STASH_DIR for the batch and restore them in a finally. That is why
@@ -599,14 +607,18 @@ def preflight() -> None:
     remaining cases in minutes and retire every one of them.
     """
     binary = REMOTE_ENV["CLAUDE_BIN"]
-    out = ssh_run(
-        f"bash -lc 'command -v {shlex.quote(binary)} >/dev/null "
-        f"|| echo NO_BINARY; "
-        f"timeout 25 {shlex.quote(binary)} -p hi </dev/null 2>&1 | head -3'",
-        timeout=60,
-    )
+    q = shlex.quote(binary)
+    inner = (f"test -x {q} || echo NO_BINARY; "
+             f"timeout 25 {q} -p hi </dev/null 2>&1 | head -3")
+    out = ssh_run(f"bash -lc {shlex.quote(inner)}", timeout=60)
     if "NO_BINARY" in out:
-        raise Halt(f"{REMOTE_ENV['CLAUDE_BIN']} is not executable on Sheldon")
+        raise Halt(
+            f"the pinned Claude Code {binary} is not executable on Sheldon.\n"
+            "  It lives outside the auto-updater's folder; copy it there once:\n"
+            f"    mkdir -p {posixpath.dirname(binary)} && cp {PINNED_CLI_SOURCE} {binary}\n"
+            f"  If {PINNED_CLI_SOURCE} is gone as well, pin a version that exists and "
+            "record it in docs/BENCHMARK.md."
+        )
     if "Not logged in" in out or "/login" in out:
         raise Halt(
             "Claude Code on Sheldon is not authenticated "
