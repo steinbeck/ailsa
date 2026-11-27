@@ -40,6 +40,14 @@ Applies to: ailsa (frontier skill) only; the lean skill writes the record since 
 - The devil's advocate's name gate runs after `[RANKING-COMPLETE]` and before the result is
   declared, on the reported name and top SMILES in the coordinator's `[BEGIN] G-IDENT` message;
   a flag becomes a caveat of the declaration. Its file paths are under the work folder.
+- The LSD engineer, the NMR chemist and the diagnostic specialist work in the absolute work
+  folder: the engineer's file layout is `{work_dir}/iteration_NN/` (per-family runs in
+  `iteration_NN_<family>/`, run with `ailsa lsd run compound.lsd --purpose family`, so the record
+  tells main and family searches apart), and a ring-BOND escalation is stated in the
+  `[ITERATION-COMPLETE]` message instead of a progress-log entry. The diagnostic specialist reads
+  the generated progress log and writes `DIAGNOSTIC-REPORT.md` into the work folder. "Contribution
+  Protocol" sections became "Message protocol to the coordinator": the coordinator records the
+  agents' messages as notes, and no agent writes a progress log.
 
 ## 0.1.0
 

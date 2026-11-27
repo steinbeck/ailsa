@@ -29,6 +29,15 @@ INDEX_MD = SKILL_DIR / "INDEX.md"
 AGENTS_DIR = SKILL_DIR / "agents"
 ANALYST_MD = AGENTS_DIR / "ailsa-solution-analyst.md"
 DEVILS_ADVOCATE_MD = AGENTS_DIR / "ailsa-devils-advocate.md"
+ENGINEER_MD = AGENTS_DIR / "ailsa-lsd-engineer.md"
+DIAGNOSTIC_MD = AGENTS_DIR / "ailsa-diagnostic.md"
+AGENT_FILES = (
+    AGENTS_DIR / "ailsa-nmr-chemist.md",
+    ENGINEER_MD,
+    ANALYST_MD,
+    DEVILS_ADVOCATE_MD,
+    DIAGNOSTIC_MD,
+)
 
 # The heading of the devil's advocate's name-gate section.
 G_IDENT_HEADING = "## G-IDENT: name and structure cross-check"
@@ -203,7 +212,7 @@ def test_analyst_reports_ranking_id() -> None:
     text = ANALYST_MD.read_text()
     for field in ("Ranking id:", "Declaration draft:"):
         assert field in text, f"the solution analyst's file lacks {field!r}"
-    assert "ranking_results.json" not in text, "the solution analyst still saves ranking_results.json"
+    assert "ranking_results.json" not in text, "the analyst still saves ranking_results.json"
     writes = [
         line.strip()
         for line in text.splitlines()
@@ -213,9 +222,40 @@ def test_analyst_reports_ranking_id() -> None:
 
 
 def test_devils_advocate_gate_reads_message() -> None:
-    """The name gate reads the coordinator's G-IDENT message after the ranking, not a report file."""
+    """The name gate reads the coordinator's G-IDENT message after the ranking, not a report."""
     text = DEVILS_ADVOCATE_MD.read_text()
     assert "analysis/" not in text, "the devil's advocate's file still names analysis/"
     assert "[BEGIN] G-IDENT" in text, "the devil's advocate's file names no [BEGIN] G-IDENT message"
     gate = _section(text, G_IDENT_HEADING)
     assert "[RANKING-COMPLETE]" in gate, "the G-IDENT section does not name [RANKING-COMPLETE]"
+
+
+def test_agents_use_work_dir() -> None:
+    """No agent writes or reads the dataset's analysis folder, a manifest or a timing file.
+
+    Every agent path lies under the absolute work folder, so the dataset stays read-only; the
+    progress log is generated from the record, so no agent contributes to it by hand.
+    """
+    assert len(AGENT_FILES) == 5, f"expected five agent files, found {len(AGENT_FILES)}"
+    for path in AGENT_FILES:
+        assert path.exists(), f"{path.name} is missing"
+        text = path.read_text()
+        for legacy in ("analysis/", ".run_manifest", "timing.json", "Contribution Protocol"):
+            assert legacy not in text, f"{path.name} still contains {legacy!r}"
+
+
+def test_engineer_marks_family_runs() -> None:
+    """The engineer runs the solver in the work folder and marks per-family runs as such.
+
+    The record then tells the main search apart from the family searches.
+    """
+    text = ENGINEER_MD.read_text()
+    assert "{work_dir}/iteration_" in text, "the engineer's file has no {work_dir}/iteration_ path"
+    assert "--purpose family" in text, "the engineer's file does not mark family runs"
+
+
+def test_diagnostic_writes_report_to_work_dir() -> None:
+    """The diagnostic specialist writes its report into the work folder, not the dataset."""
+    text = DIAGNOSTIC_MD.read_text()
+    assert "{work_dir}" in text, "the diagnostic specialist's file names no {work_dir}"
+    assert "DIAGNOSTIC-REPORT.md" in text, "the diagnostic specialist's file names no report"

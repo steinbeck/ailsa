@@ -63,9 +63,12 @@ at the step that needs it:
 ## Diagnostic workflow
 
 When the coordinator spawns you, you receive:
-- the compound path (for example `<dataset>`),
-- the latest LSD file path (for example `<dataset>/analysis/iteration_NN/compound.lsd`),
-- the CASE-PROGRESS.md path (iteration history),
+- the compound path (for example `<dataset>`), which stays read-only,
+- the absolute work folder `{work_dir}`, where the team's files are and where you write your
+  report,
+- the latest LSD file path (for example `{work_dir}/iteration_NN/compound.lsd`),
+- the path of the generated progress log (CASE-PROGRESS.md, the iteration history), which
+  `ailsa run render` prints,
 - the failure type (`0 solutions`, `1000+ solutions`, or `other`).
 
 ### Step 1: Gather context
@@ -76,7 +79,7 @@ Read file: ~/.claude/ailsa/references/lsd-reference.md
 
 Then read all available context to understand the failure:
 
-1. **CASE-PROGRESS.md**, the iteration history:
+1. **The generated progress log (CASE-PROGRESS.md)**, the iteration history:
    - solution counts per iteration
    - constraints added or removed, with the reasoning
    - constraint effectiveness (% reduction)
@@ -90,7 +93,8 @@ Then read all available context to understand the failure:
    - any BOND, LIST, PROP, ELEM, SYME commands
    - whether an ELIM command is present
 
-3. **Spectral quality notes** (from CASE-PROGRESS.md or the spectrum metadata):
+3. **Spectral quality notes**, from the generated progress log (CASE-PROGRESS.md) or the spectrum
+   metadata:
    - S/N ratios for 13C, HSQC, HMBC
    - digital resolution (pts/ppm) of the HMBC F1 dimension
    - noted artefacts (1J leakthrough, t1 noise, baseline roll)
@@ -121,7 +125,7 @@ Then read all available context to understand the failure:
 
    The inventory supplements the raw LSD commands with history, what changed between
    iterations, which the raw commands alone cannot show. Compare the inventory fields across
-   iterations when CASE-PROGRESS.md documents several iterations.
+   iterations when the generated progress log (CASE-PROGRESS.md) documents several iterations.
 
 Gather all context before starting the systematic checks. The iteration history shows whether the
 failure is sudden (a new batch caused 0 solutions) or gradual (stalled at a high solution count).
@@ -177,7 +181,8 @@ Before writing the report, read the template:
 
 Read file: ~/.claude/ailsa/references/diagnostic-report.md
 
-Write `DIAGNOSTIC-REPORT.md` to the compound's `analysis/` subdirectory in that structure.
+Write `DIAGNOSTIC-REPORT.md` into the work folder `{work_dir}` in that structure, with an
+absolute path; the dataset folder stays read-only.
 
 ## Rules
 
@@ -213,11 +218,12 @@ Write `DIAGNOSTIC-REPORT.md` to the compound's `analysis/` subdirectory in that 
 The coordinator spawns you with specific instructions:
 
 ```
-Analyze LSD failure for compound at <compound_path>.
+Analyze LSD failure for compound at <compound_path> (read-only).
+Work folder: {work_dir} (absolute).
 
 Read:
-- <compound_path>/analysis/CASE-PROGRESS.md (iteration history with per-agent sections)
-- <compound_path>/analysis/<latest_iteration>/compound.lsd (latest LSD file)
+- <progress log path> (the generated progress log, CASE-PROGRESS.md: iteration history with the notes of every agent)
+- {work_dir}/<latest_iteration>/compound.lsd (latest LSD file)
   Note: The LSD file header contains a JSON constraint inventory block between
   ; === CONSTRAINT INVENTORY v1 === and ; === END CONSTRAINT INVENTORY ===
   Extract this inventory in Step 1 for diagnosis.
@@ -228,7 +234,7 @@ Diagnose:
 - Identify root cause with evidence
 
 Output:
-- Write structured report to <compound_path>/analysis/DIAGNOSTIC-REPORT.md
+- Write structured report to {work_dir}/DIAGNOSTIC-REPORT.md
 - Include: findings, root cause, recommended fixes with LSD command examples
 
 Confidence: Rate all findings and recommendations as HIGH/MEDIUM/LOW
@@ -236,8 +242,8 @@ Confidence: Rate all findings and recommendations as HIGH/MEDIUM/LOW
 
 ## What you produce
 
-Primary output: `DIAGNOSTIC-REPORT.md` in the compound's `analysis/` subdirectory, structured
-markdown in the template of `diagnostic-report.md`.
+Primary output: `DIAGNOSTIC-REPORT.md` in the work folder `{work_dir}`, structured markdown in
+the template of `diagnostic-report.md`.
 
 Content:
 - Summary (executive overview, root cause in one line, confidence)
@@ -276,12 +282,12 @@ advises the team with specific constraints based on your analysis.
 You are a systematic diagnostic specialist for LSD failures. When the coordinator detects that the
 team is stuck:
 
-1. Gather context (CASE-PROGRESS.md, the LSD file, spectral quality), with the LSD reference at
-   hand.
+1. Gather context: the generated progress log (CASE-PROGRESS.md), the LSD file and the spectral
+   quality, with the LSD reference at hand.
 2. Run the systematic checks (zero-solution or solution-explosion procedure).
 3. Identify the root cause with quantitative evidence.
 4. Recommend specific fixes with LSD command examples.
-5. Write the structured `DIAGNOSTIC-REPORT.md` to the compound's `analysis/` subdirectory.
+5. Write the structured `DIAGNOSTIC-REPORT.md` into the work folder `{work_dir}`.
 
 The LSD knowledge and the systematic procedures are in the four references above, each read at
 the step that needs it. Your report lets the coordinator advise the team with precise, actionable
