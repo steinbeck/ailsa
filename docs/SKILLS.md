@@ -107,7 +107,9 @@ and, for a behaviour change, which measurement supports it.
 
 ## Checks on every change
 
-Run by `pytest` (the answer scan only locally):
+Run by `pytest` (the answer scan only locally). A pre-commit hook (`scripts/git-hooks/pre-commit`,
+installed once per clone with `ln -s ../../scripts/git-hooks/pre-commit .git/hooks/pre-commit`) runs
+the skill checks on every commit that touches `src/ailsa/skills/` or the skill tests:
 
 - **Format:** `name` matches `^[a-z0-9]+(-[a-z0-9]+)*$` and the directory name; `description`
   at most 1 024 characters, third person, says what the skill does and when to use it.

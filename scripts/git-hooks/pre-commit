@@ -1,0 +1,22 @@
+#!/bin/sh
+# Skill lint on every commit that touches the packaged skills or their checks (SKILL-06).
+# It runs the form checks, the hash guard and the local answer scan (about ten seconds).
+# Install once per clone:  ln -s ../../scripts/git-hooks/pre-commit .git/hooks/pre-commit
+# Skip in an emergency with:  git commit --no-verify
+staged=$(git diff --cached --name-only --diff-filter=ACMR)
+echo "$staged" | grep -q -E '^(src/ailsa/skills/|tests/test_skill_|tests/skill_files\.sha256)' || exit 0
+
+root=$(git rev-parse --show-toplevel)
+PY=""
+for candidate in "$HOME/.venvs/ailsa/bin/python" "$root/.venv/bin/python"; do
+  if [ -x "$candidate" ]; then PY="$candidate"; break; fi
+done
+if [ -z "$PY" ]; then
+  echo "pre-commit: no ailsa virtualenv found; skill checks skipped" >&2
+  exit 0
+fi
+
+cd "$root" || exit 1
+exec "$PY" -m pytest -q --no-header \
+  tests/test_skill_frontier.py tests/test_skill_lite.py \
+  tests/test_skill_files_unchanged.py tests/test_skill_answer_scan.py
