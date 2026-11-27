@@ -66,6 +66,12 @@ Applies to: ailsa (frontier skill) only; the lean skill writes the record since 
   diagnostic report in `{work_dir}/DIAGNOSTIC-REPORT.md`. History, symmetry notes and the PROP and
   aromatic-cosy documentation are read from the notes of the generated progress log; the setup
   note now carries the `Aromatic expectation:` field the aromatic ring check reads.
+- Both maintained skills name the same record commands (`ailsa run init`, `ailsa run note`,
+  `ailsa run finalize`, `ailsa run close`, `ailsa run render`); the lean skill's contract test no
+  longer needs an exception for them, and a whole-skill test keeps the dataset's analysis folder,
+  the dataset manifest, the timing log and the web view out of every frontier file.
+- Measurement: recording only; validated by one headless and one team run on the public example
+  dataset (see the phase's acceptance file).
 
 ## 0.1.0
 

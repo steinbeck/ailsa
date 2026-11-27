@@ -9,6 +9,8 @@ ranking id and a declaration draft instead of writing a report, and the devil's 
 gate reads the coordinator's message before the result is declared. Finally they pin the
 references (src/ailsa/skills/ailsa/references/): the procedures read history from the generated
 progress log, open every phase with a note and point into the run's work folder, never the dataset.
+Two whole-skill tests cover every skill file at once: none brings back a legacy write, and the
+frontier skill names the same record commands as the lean skill.
 
 All file reads use repo-relative paths (src/ailsa/skills/ailsa/...), so the tests work from any
 checkout without touching ~/.claude.
@@ -318,3 +320,66 @@ def test_references_use_work_dir() -> None:
     assert "{work_dir}/DIAGNOSTIC-REPORT.md" in report, (
         "diagnostic-report.md does not place the report in the work folder"
     )
+
+
+def _skill_files() -> list[Path]:
+    """Every frontier skill text except the changelog, which describes old behaviour on purpose."""
+    return sorted(p for p in SKILL_DIR.rglob("*.md") if p.name != "CHANGELOG.md")
+
+
+# Substrings no skill file may contain: the dataset's analysis folder, the dataset manifest, the
+# timing file, the explicit "newest ranking" shortcut and the old dashboard header line.
+LEGACY_SUBSTRINGS = (
+    "analysis/",
+    ".run_manifest",
+    "timing.json",
+    "--ranking latest",
+    "**Dashboard:**",
+)
+
+# A hand-written progress log; allowed only on a line that says it must not happen.
+PROGRESS_WRITE = re.compile(r"(?i)\bwrite[^\n]{0,40}CASE-PROGRESS\.md")
+NEGATION = re.compile(r"(?i)\b(?:never|not)\b|\bno ")
+
+# Every record command the lean skill uses; the frontier skill names the same set.
+RECORD_COMMANDS = (
+    "ailsa run init",
+    "ailsa run note",
+    "ailsa run finalize",
+    "ailsa run close",
+    "ailsa run render",
+)
+
+
+def test_whole_skill_has_no_legacy_writes() -> None:
+    """No frontier file writes into the dataset, a manifest, a timing log or the old web view.
+
+    The per-file tests above pin the coordinator, the agents and the references one by one; this
+    test covers every skill file at once, so a new or overlooked file cannot bring the old flow
+    back. The progress log and the results are renderings of the record, never written by hand.
+    """
+    files = _skill_files()
+    assert files, "the frontier skill has no markdown files"
+    hits: list[str] = []
+    for path in files:
+        rel = path.relative_to(SKILL_DIR)
+        for number, line in enumerate(path.read_text().splitlines(), start=1):
+            for legacy in LEGACY_SUBSTRINGS:
+                if legacy in line:
+                    hits.append(f"{rel}:{number}: {legacy!r}")
+            if "webview" in line.lower():
+                hits.append(f"{rel}:{number}: 'webview'")
+            if PROGRESS_WRITE.search(line) and not NEGATION.search(line):
+                hits.append(f"{rel}:{number}: writes CASE-PROGRESS.md")
+    assert not hits, "legacy writes in the frontier skill:\n" + "\n".join(hits)
+
+
+def test_both_skills_name_record_commands() -> None:
+    """The frontier skill names every record command, so both skills share one command set.
+
+    A new recording command changes both skills in the same commit (docs/SKILLS.md); the lean
+    skill's contract test then needs no exception for commands only it would name.
+    """
+    text = "\n".join(path.read_text() for path in _skill_files())
+    missing = [command for command in RECORD_COMMANDS if command not in text]
+    assert not missing, f"the frontier skill does not name: {missing}"

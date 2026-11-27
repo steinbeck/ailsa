@@ -85,11 +85,6 @@ def _commands() -> list[list[str]]:
 FRONTIER = sorted(p for p in (SKILL_DIR.parent / "ailsa").rglob("*.md") if p.name != "CHANGELOG.md")
 
 
-# Run-record commands only the lean skill names for now. The frontier skill adopts them when it
-# is wired to the run record; this allow-list is removed then.
-RECORD_COMMANDS = {"run init", "run note", "run finalize"}
-
-
 def _command_names(paths: list[Path], prefixes: str) -> set[str]:
     """First two words of every command a skill names, e.g. "lsd run" or "identify"."""
     names = set()
@@ -112,7 +107,6 @@ def test_same_tools_as_frontier_skill() -> None:
     assert lean, "the lean skill names no ailsa command"
     # a bare group name ("the `ailsa analyze ...` tools") counts if the frontier uses the group
     missing = {n for n in lean - frontier if not any(f.startswith(n + " ") for f in frontier)}
-    missing -= RECORD_COMMANDS
     assert not missing, f"not used by the frontier skill: {sorted(missing)}"
 
 
