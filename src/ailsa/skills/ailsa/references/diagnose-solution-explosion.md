@@ -221,13 +221,13 @@ Document in the report:
 ## Check 5: symmetry encoding
 
 Procedure:
-1. Check CASE-PROGRESS.md for symmetry detection notes.
+1. Check the generated progress log (CASE-PROGRESS.md) for symmetry detection notes.
 2. Compare the expected carbons (from the formula) with the observed carbons (from 13C/DEPT).
 3. If symmetry was detected, check the LSD file for native symmetry encoding: BOND/COSY
    equivalence constraints (SYME is not native in LSD 3.4.9).
 
 ```
-From CASE-PROGRESS.md iteration 1 notes:
+From the iteration 1 notes in the generated progress log (CASE-PROGRESS.md):
 "Symmetry detected: 13 carbons expected (formula), 11 observed (13C spectrum).
 Difference = 2 carbons → likely one pair of equivalent carbons."
 

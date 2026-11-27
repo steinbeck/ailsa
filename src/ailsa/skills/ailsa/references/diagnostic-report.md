@@ -11,8 +11,8 @@ and advises the team with specific constraints.
 
 ## File name and location
 
-Write the report to the compound's `analysis/` subdirectory:
-`<compound_directory>/analysis/DIAGNOSTIC-REPORT.md`.
+Write the report to the run's work folder, never into the dataset:
+`{work_dir}/DIAGNOSTIC-REPORT.md`.
 
 If several diagnostics are needed for the same compound, use timestamped file names, for example
 `DIAGNOSTIC-REPORT-<timestamp>.md`, so that an earlier report is not overwritten.
@@ -79,7 +79,7 @@ The report has this structure.
 - Path, MULT count, HSQC count, HMBC count, other commands
 
 ### Iteration History Context
-- Brief summary from CASE-PROGRESS.md
+- Brief summary from the generated progress log (CASE-PROGRESS.md)
 
 ### Spectral Quality
 - S/N, resolution notes

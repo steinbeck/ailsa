@@ -299,3 +299,22 @@ def test_coordinator_references_use_record() -> None:
     ]
     assert not writes, f"monitoring.md still asks for final_results.md: {writes}"
     assert "--caveat" in GATES_MD.read_text(), "coordinator-gates.md turns no flag into a caveat"
+
+
+def test_references_use_work_dir() -> None:
+    """Every reference names work-folder paths, so no snippet writes or reads in the dataset.
+
+    Per-family solver runs are marked as such, so the record tells them from the main search, and
+    the diagnostic report lands in the work folder, where the coordinator looks for it.
+    """
+    references = sorted(REFERENCES_DIR.glob("*.md"))
+    assert references, "references/ is empty"
+    legacy = [path.name for path in references if "analysis/" in path.read_text()]
+    assert not legacy, f"references still naming analysis/: {legacy}"
+    search = (REFERENCES_DIR / "lsd-search.md").read_text()
+    for token in ("--purpose family", "{work_dir}/union_solutions.smi"):
+        assert token in search, f"lsd-search.md does not name {token!r}"
+    report = (REFERENCES_DIR / "diagnostic-report.md").read_text()
+    assert "{work_dir}/DIAGNOSTIC-REPORT.md" in report, (
+        "diagnostic-report.md does not place the report in the work folder"
+    )

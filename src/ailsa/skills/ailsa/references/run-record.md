@@ -79,7 +79,7 @@ the values from the message.
 **Setup summary**, from `[SETUP-COMPLETE]`:
 
 ```bash
-ailsa run note "Setup: DBE: <n>; Spectra found: <list>; Peak counts: <13C, HSQC, HMBC counts>; Multiplicities: <CH3/CH2/CH/C counts>; Symmetry: <verdict>; Quality assessment: <verdict>; 13C shifts: <comma-separated ppm list>" --sender ailsa-nmr-chemist
+ailsa run note "Setup: DBE: <n>; Spectra found: <list>; Peak counts: <13C, HSQC, HMBC counts>; Multiplicities: <CH3/CH2/CH/C counts>; Symmetry: <verdict>; Quality assessment: <verdict>; Aromatic expectation: <verdict>; 13C shifts: <comma-separated ppm list>" --sender ailsa-nmr-chemist
 ```
 
 **Iteration**, from `[ITERATION-COMPLETE]`:

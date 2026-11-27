@@ -91,8 +91,9 @@ ailsa detect aromatic-cosy "<shifts>" --multiplicities "<mults>"
 ```
 
 `ailsa detect aromatic-cosy` is the authoritative source of aromatic equivalence pairs. If the file
-has `; equiv-pair` COSY lines and no call to `ailsa detect aromatic-cosy` is documented in
-CASE-PROGRESS.md or in the LSD engineer's `[ITERATION-COMPLETE]` message, flag `CRITICAL`: "COSY
+has `; equiv-pair` COSY lines and no call to `ailsa detect aromatic-cosy` is documented in the
+notes in the generated progress log or in the LSD engineer's `[ITERATION-COMPLETE]` message, flag
+`CRITICAL`: "COSY
 equivalence pairs must be derived with ailsa detect aromatic-cosy (not hand-assigned). Within-group
 pairs (both atoms at same chemical shift) cause LSD error 283 when ring BONDs are present."
 
@@ -112,8 +113,8 @@ N-1: `CRITICAL`.
 Why: the progress log can announce a PROP constraint (for example "PROP constraint for O
 neighbor") while the LSD file uses BOND instead.
 
-If CASE-PROGRESS.md mentions PROP, check that the LSD file contains PROP, or that the reason for
-BOND is documented. BOND instead of PROP is valid if justified.
+If the notes in the generated progress log mention PROP, check that the LSD file contains PROP, or
+that the reason for BOND is documented. BOND instead of PROP is valid if justified.
 
 ### Detection constraints present (`WARNING`)
 
@@ -250,10 +251,9 @@ This applies when the NMR chemist's `[SETUP-COMPLETE]` message reports "aromatic
 (at least 4 carbons in 110-160 ppm) and ranking results are available for this compound, from the
 current or a previous iteration.
 
-Data source: to see whether the NMR chemist flagged an aromatic expectation, read
-`<compound_path>/analysis/CASE-PROGRESS.md` and look for the `Aromatic expectation:` field in the
-NMR chemist's subsection of `## Setup`. The coordinator writes it there from the
-`[SETUP-COMPLETE]` message.
+Data source: to see whether the NMR chemist flagged an aromatic expectation, read the generated
+progress log (run `ailsa run render`; it prints the path) and look for the `Aromatic expectation:`
+field in the setup note. The coordinator records it there from the `[SETUP-COMPLETE]` message.
 
 Check whether the `ailsa lsd rank --format json` output has any solution with
 `has_aromatic_ring: true`, or whether its `warnings` array contains an aromatic mismatch message.

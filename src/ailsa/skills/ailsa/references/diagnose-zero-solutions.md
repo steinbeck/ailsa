@@ -202,8 +202,8 @@ Document in the report:
 
 Procedure:
 1. Extract all carbon shifts from the MULT commands (from their comments or supplementary data).
-2. Calculate the digital resolution of the HMBC F1 dimension (from CASE-PROGRESS.md or the
-   spectrum metadata).
+2. Calculate the digital resolution of the HMBC F1 dimension (from the notes in the generated
+   progress log, CASE-PROGRESS.md, or the spectrum metadata).
 3. Identify carbon pairs closer than the minimum distinguishable spacing.
 
 Digital resolution:

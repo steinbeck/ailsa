@@ -113,7 +113,7 @@ the file:
 5. Classify each detection result as `applied_from_detection` or `pending_from_detection`.
    - 5a. Run the fragment search: `ailsa fragment search --shifts "<13c_shifts>" --format json --top 1`
      - If result_count > 0: run
-       `ailsa fragment to-lsd "<smiles>" --output-dir analysis/iteration_01/ --format json` and
+       `ailsa fragment to-lsd "<smiles>" --output-dir {work_dir}/iteration_01/ --format json` and
        populate deff_fexp with status "applied" and all fields.
      - If result_count == 0: set deff_fexp to
        ```

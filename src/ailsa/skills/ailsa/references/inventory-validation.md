@@ -31,7 +31,7 @@ block apart, as the branches below show.
 
 ```bash
 # Validate and extract inventory from current LSD file
-RESULT=$(ailsa lsd validate-inventory --format json analysis/iteration_NN/compound.lsd)
+RESULT=$(ailsa lsd validate-inventory --format json {work_dir}/iteration_NN/compound.lsd)
 VALID=$(echo "$RESULT" | python3 -c "import sys,json; print(json.load(sys.stdin)['valid'])")
 
 if [ "$VALID" = "True" ]; then
@@ -57,7 +57,7 @@ else
 fi
 
 # Extract inventory from previous iteration (for the no-regression check)
-PREV_RESULT=$(ailsa lsd validate-inventory --format json analysis/iteration_MM/compound.lsd)
+PREV_RESULT=$(ailsa lsd validate-inventory --format json {work_dir}/iteration_MM/compound.lsd)
 PREV_INVENTORY=$(echo "$PREV_RESULT" | python3 -c "import sys,json; d=json.load(sys.stdin); print(json.dumps(d))")
 ```
 
@@ -118,7 +118,8 @@ DEFF F1/F2/FEXP lines are present verbatim.
 Extract `elim_budget` from the constraint inventory (0 if absent).
 
 **G-ELIM-1: excessive ELIM N without documented escalation history.** Take the iteration count
-from the inventory and check the `[ITERATION-COMPLETE]` history in CASE-PROGRESS.md. If
+from the inventory and check the `[ITERATION-COMPLETE]` history in the notes of the generated
+progress log (run `ailsa run render`; it prints the path). If
 `elim_budget > 3` and no earlier `[ITERATION-COMPLETE]` documents the N=1, 2 and 3 attempts:
 `WARNING` — "Excessive ELIM N without documented escalation history. Confirm N=1, N=2, N=3 were
 tried first per the ELIM Escalation procedure."
@@ -126,7 +127,7 @@ tried first per the ELIM Escalation procedure."
 **G-ELIM-2: HMBC with an explicit bond range is immune to ELIM.**
 
 ```bash
-grep -cE "^HMBC [0-9]+ [0-9]+ [0-9]+ [0-9]+" analysis/iteration_NN/compound.lsd
+grep -cE "^HMBC [0-9]+ [0-9]+ [0-9]+ [0-9]+" {work_dir}/iteration_NN/compound.lsd
 ```
 
 If any HMBC line contains an explicit bond range (4 numeric arguments) and `ELIM` is present:
@@ -141,7 +142,7 @@ Escalation procedure."
 **G-ELIM-4: plain COSY equivalence pairs can be dropped by ELIM.**
 
 ```bash
-grep -E "^COSY [0-9]+ [0-9]+[[:space:]]*(;|$)" analysis/iteration_NN/compound.lsd | grep -c "equiv-pair"
+grep -E "^COSY [0-9]+ [0-9]+[[:space:]]*(;|$)" {work_dir}/iteration_NN/compound.lsd | grep -c "equiv-pair"
 ```
 
 If any aromatic COSY equivalence pair (tagged `; equiv-pair`) is written as plain `COSY X Y` (no
@@ -165,8 +166,8 @@ invokes the solver.
 The DA's part: with `[VALIDATION-PASSED]`, compute the file hash and include it.
 
 ```bash
-FILE_HASH=$(md5sum analysis/iteration_NN/compound.lsd 2>/dev/null \
-  || md5 -q analysis/iteration_NN/compound.lsd 2>/dev/null)
+FILE_HASH=$(md5sum {work_dir}/iteration_NN/compound.lsd 2>/dev/null \
+  || md5 -q {work_dir}/iteration_NN/compound.lsd 2>/dev/null)
 ```
 
 Add to the `[VALIDATION-PASSED]` message:
@@ -197,8 +198,8 @@ shift + C=O context + O in the formula).
 Step 1: detect the hard heteroatom constraints.
 
 ```bash
-grep -E "^PROP [0-9]+ (O|N)" analysis/iteration_NN/compound.lsd
-grep -E "^BOND [0-9]+ [0-9]+" analysis/iteration_NN/compound.lsd
+grep -E "^PROP [0-9]+ (O|N)" {work_dir}/iteration_NN/compound.lsd
+grep -E "^BOND [0-9]+ [0-9]+" {work_dir}/iteration_NN/compound.lsd
 ```
 
 For BOND lines, cross-reference the MULT definitions to see whether a BOND atom is a heteroatom.
@@ -229,8 +230,9 @@ Step 3: sub-checks, each of which triggers `CRITICAL` on its own:
   detect-neighbours probability detected. Only raw tool output values are permitted. Recalculating
   by excluding elements is fabrication."
 
-Step 4: without an inventory (legacy fallback), check CASE-PROGRESS.md for a documented
-direct-evidence or convergent-evidence citation. If there is none: flag `CRITICAL`.
+Step 4: without an inventory (legacy fallback), check the notes of the generated progress log (run
+`ailsa run render`) for a documented direct-evidence or convergent-evidence citation. If there is
+none: flag `CRITICAL`.
 
 Message template for the `CRITICAL` finding:
 

@@ -15,8 +15,8 @@ Applies to: ailsa (frontier skill) only; the lean skill writes the record since 
   (`ailsa run init <compound_path> --formula <formula> --skill ailsa --mode team`), before any
   team, task or spawn; after a context compaction the same command reads the run back.
 - Every spawn prompt and the first push carry the absolute work folder `{work_dir}`; agents write
-  there, and the dataset folder stays read-only. The coordinator no longer creates `analysis/` in
-  the dataset.
+  there, and the dataset folder stays read-only. The coordinator no longer creates an analysis
+  folder in the dataset.
 - The coordinator records one `ailsa run note` per validated structured message and a `--phase`
   note before every `[BEGIN]` push; it reads the progress log that `ailsa run render` generates
   instead of writing `CASE-PROGRESS.md` itself. The multiplicity coverage ledger is kept as
@@ -58,6 +58,14 @@ Applies to: ailsa (frontier skill) only; the lean skill writes the record since 
   the `Run created` row of the generated log; the diagnostic specialist gets the work folder and
   the log path and writes its report to `{work_dir}/DIAGNOSTIC-REPORT.md`; an escalation is
   declared `handed_to_human` and a smoke test closes the record.
+- The specialists' procedures (inventory validation, validation checks, LSD search and command
+  reference, constraint inventory, both diagnosis references, the diagnostic report) name paths
+  under the work folder only: `{work_dir}/iteration_NN/compound.lsd` in every shell snippet,
+  per-family runs in `{work_dir}/iteration_NN_<family>/` with
+  `ailsa lsd run compound.lsd --purpose family`, `{work_dir}/union_solutions.smi`, and the
+  diagnostic report in `{work_dir}/DIAGNOSTIC-REPORT.md`. History, symmetry notes and the PROP and
+  aromatic-cosy documentation are read from the notes of the generated progress log; the setup
+  note now carries the `Aromatic expectation:` field the aromatic ring check reads.
 
 ## 0.1.0
 

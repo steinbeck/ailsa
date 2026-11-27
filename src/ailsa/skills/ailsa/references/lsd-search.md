@@ -34,7 +34,7 @@ structures containing that fragment.
 ailsa fragment search --shifts "<comma_separated_shifts>" --format json --top 1
 
 # Generate the fragment .lsd file for DEFF/FEXP injection
-ailsa fragment to-lsd "<smiles>" --output-dir analysis/iteration_NN/ --filter-index 3 --format json
+ailsa fragment to-lsd "<smiles>" --output-dir {work_dir}/iteration_NN/ --filter-index 3 --format json
 ```
 
 JSON fields of `fragment search`: `result_count` (number of matching fragments),
@@ -77,7 +77,9 @@ single leading multiplicity model: with one hard-coded model, a correct structur
 family is never handed to LSD and cannot be found.
 
 Run each viable family as a separate LSD run, each in its own iteration directory named
-`iteration_NN_<family>` (for example `analysis/iteration_03_A/` and `analysis/iteration_03_B/`).
+`iteration_NN_<family>` (for example `{work_dir}/iteration_03_A/` and `{work_dir}/iteration_03_B/`).
+In each directory run `ailsa lsd run compound.lsd --purpose family`, so that the run record tells
+the family searches apart from the main iterations.
 
 - Not a single relaxed-MULT run: LSD may not enumerate the intended families cleanly, and the
   solution count may explode.
@@ -119,18 +121,18 @@ deferred". The coordinator's coverage gate checks that every viable family was s
 
 Once each family with a tractable solution set has a `solutions.smi`:
 
-1. Build `analysis/union_solutions.smi` by concatenating the per-family `solutions.smi` files.
+1. Build `{work_dir}/union_solutions.smi` by concatenating the per-family `solutions.smi` files.
 2. Deduplicate by canonical SMILES. The `ailsa lsd rank` parser does not deduplicate, and
    duplicate SMILES across families would distort counts and ranks. Canonicalise each SMILES and
    keep one copy per canonical form before ranking.
 3. Run one ranking across the union. The atom-by-atom ranking decides; it reads each family's
    `.sol` and deduplicates structures itself:
    ```bash
-   ailsa lsd rank --assigned analysis/iteration_NN_<family1>/compound.lsd --assigned analysis/iteration_NN_<family2>/compound.lsd --format json
+   ailsa lsd rank --assigned {work_dir}/iteration_NN_<family1>/compound.lsd --assigned {work_dir}/iteration_NN_<family2>/compound.lsd --format json
    ```
    The nearest-line cross-check runs on the deduplicated union file:
    ```bash
-   ailsa lsd rank analysis/union_solutions.smi --shifts "<13C list>" --format json
+   ailsa lsd rank {work_dir}/union_solutions.smi --shifts "<13C list>" --format json
    ```
    Ranking runs across the union, never per family followed by picking the best-looking family.
 4. Report which family the top-ranked solution came from, so that coverage and the winning model

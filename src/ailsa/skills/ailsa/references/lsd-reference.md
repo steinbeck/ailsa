@@ -25,7 +25,7 @@ Syntax examples use atom numbers and shifts only. Everything after `;` on a line
 
 ## File layout
 
-One LSD file per run, `analysis/iteration_NN/compound.lsd`, in this order:
+One LSD file per run, `{work_dir}/iteration_NN/compound.lsd`, in this order:
 
 ```
 ; === CONSTRAINT INVENTORY v2 === ... ; === END CONSTRAINT INVENTORY ===
@@ -259,8 +259,8 @@ are also present; the tool prevents that error class.
 
 When this fails. Symmetry was detected but the file has no `COSY ... ; equiv-pair` or
 `BOND ... gem-dimethyl` lines: the encoding is missing and the solutions multiply. To find it:
-check CASE-PROGRESS.md for symmetry or grouping notes and check that the paired atoms have the
-same multiplicity (both CH, both CH3).
+check the notes in the generated progress log for symmetry or grouping and check that the paired
+atoms have the same multiplicity (both CH, both CH3).
 
 ## Hybridisation: an even number of sp2 atoms
 
@@ -349,10 +349,10 @@ FEXP "F3 AND NOT F1 AND NOT F2"
 
 ## Running LSD
 
-Run LSD through `ailsa lsd run` from the iteration directory. It produces `solutions.smi`
-automatically; no manual `outlsd 5 < compound.sol > solutions.smi` call is needed on the primary
-path. `outlsd` is still used internally by the runner; `ailsa lsd check` verifies that it is
-available.
+Run LSD through `ailsa lsd run` from the iteration directory, `{work_dir}/iteration_NN/`. It
+produces `solutions.smi` automatically; no manual `outlsd 5 < compound.sol > solutions.smi` call
+is needed on the primary path. `outlsd` is still used internally by the runner; `ailsa lsd check`
+verifies that it is available.
 
 ## Solution count
 
