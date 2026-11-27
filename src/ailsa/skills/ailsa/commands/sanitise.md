@@ -11,8 +11,25 @@ allowed-tools:
 <objective>
 AI-driven sanitisation of Bruker NMR datasets for blind CASE evaluation. Removes all compound identifiers (names, database IDs, structure files, audit logs) from metadata and text files while preserving spectroscopic data integrity.
 
-**CRITICAL:** There is NO CLI command for sanitisation. This is a pure AI task requiring semantic reasoning to identify compound identifiers that reveal chemical identity. Unlike other ailsa commands that call thin CLI wrappers, sanitisation depends entirely on Claude's ability to distinguish revealing information (compound names, CAS numbers, InChI strings) from generic metadata (experiment types, solvents, instrument parameters).
+There is no CLI command for sanitisation. This is a pure AI task requiring semantic reasoning to identify compound identifiers that reveal chemical identity. Unlike other ailsa commands that call thin CLI wrappers, sanitisation depends entirely on Claude's ability to distinguish revealing information (compound names, CAS numbers, InChI strings) from generic metadata (experiment types, solvents, instrument parameters).
 </objective>
+
+## Contents
+
+The steps in run order, then the background notes.
+
+- validate_input: parse the argument, confirm a Bruker dataset
+- discover_text_files: classify every file (skip, delete, read)
+- dry_run_scan: find the identifiers without changing anything
+- present_dry_run_report: show the findings, wait for "proceed"
+- delete_structure_and_audit_files: remove structure files and audit logs
+- scan_and_redact: redact identifiers in place (with the identifier categories and the false positives)
+- present_report: the sanitisation report
+- verify_completeness: full re-scan plus the mechanical grep backstop
+- handoff_instructions: blind CASE in a fresh session
+- Implementation Notes
+
+## Process
 
 <process>
 
@@ -29,8 +46,8 @@ User provides dataset path:
 Usage: /ailsa:sanitise <dataset_path>
 
 Example:
-  /ailsa:sanitise data/compound/Ibuprofen
-  /ailsa:sanitise data/nmrXiv/Classics_Caffeine
+  /ailsa:sanitise data/compound/<compound name>
+  /ailsa:sanitise data/nmrXiv/Classics_<compound name>
 ```
 
 **Verify path exists:**
@@ -60,16 +77,16 @@ Glob:
 
 **Classify each file into categories:**
 
-**SKIP (binary NMR data) — NEVER read or modify:**
+**SKIP (binary NMR data). Do not read or modify these:**
 - fid, ser (raw FID data)
 - 1r, 1i (processed 1D real/imaginary)
 - 2rr, 2ri, 2ir, 2ii (processed 2D data)
 - 3rrr, 3rri, 3rir, 3rii, 3irr, 3iri, 3iir, 3iii (3D data - 8 variants)
 
-**SKIP (binary extensions) — NEVER read or modify:**
+**SKIP (binary extensions). Do not read or modify these:**
 - .pdf, .png, .jpg, .jpeg, .gif, .tiff, .bmp
 
-**DELETE (structure files) — contain compound structure, must be removed entirely:**
+**DELETE (structure files). They contain the compound structure; delete them entirely:**
 - *.mol, *.sdf, *.cdx, *.cml
 
 **DELETE (audit logs) — contain user activity and possibly compound names:**
@@ -79,16 +96,16 @@ Glob:
 - title (experiment titles, often contains compound names!)
 - acqus, acqu, acqu2s, acqu2 (acquisition parameters; `$$` path comments embed the original dataset directory which is often the compound name)
 - procs, proc, proc2s, proc2 (processing parameters; `$$` path comments embed names)
-- **curdat, curdat2, orig (HIGH RISK — these carry the explicit `##$NAME=`/`##$NAME2=` dataset-name field, e.g. `##$NAME2= <Ibuprofen>`. The original CASE1 sanitisation MISSED these. ALWAYS scan them.)**
+- **curdat, curdat2, orig (high risk: these carry the explicit `##$NAME=`/`##$NAME2=` dataset-name field, whose angle-bracket value is usually the compound name). Scan them in every dataset: a sanitisation that skipped them left the name in place.**
 - scon, meta, parm.txt, clevels, dsp.hdr, eretic, cag_par (Bruker auxiliary text files — may embed path comments with names)
 - *.xml (peak lists, metadata, may contain annotations)
 - *.txt (except audita.txt, auditp.txt which are deleted)
 - pulseprogram (pulse sequence code, typically safe)
-- **Any other non-binary file — DO NOT skip a file just because it is not in the list above. The list is illustrative, not exhaustive. Every non-binary file in the dataset MUST be scanned.**
+- **Any other non-binary file. Do not skip a file just because it is not in the list above: the list is illustrative, not exhaustive. Scan every non-binary file in the dataset.**
 
-**Bruker-specific MUST-scan patterns (the most common real-world leaks):**
+**Bruker patterns to scan in every dataset (the most common real-world leaks):**
 - `##$NAME= <...>` and `##$NAME2= <...>` — the dataset-name field; the angle-bracket value is almost always the compound name. Redact the value, keep the field key: `##$NAME2= <[REDACTED]>`.
-- `$$ <path>` comment lines — Bruker writes the original acquisition/processing path here (e.g. `$$ /disk2/data/schaller/nmr/ibuprof/7/acqus`, `$$ Z:/.../nmr/Ibuprofen/...`). The directory component is frequently the compound name. Redact only the name component, preserve the rest of the path.
+- `$$ <path>` comment lines — Bruker writes the original acquisition/processing path here (e.g. `$$ /disk2/data/<user>/nmr/<truncated name>/7/acqus`, `$$ Z:/.../nmr/<compound name>/...`). The directory component is frequently the compound name. Redact only the name component, preserve the rest of the path.
 
 **Store lists for next steps:**
 - files_to_delete: structure files + audit logs
@@ -96,20 +113,20 @@ Glob:
 </step>
 
 <step name="dry_run_scan">
-**Scan all text files and report findings WITHOUT modifying anything.**
+**Scan all text files and report findings without modifying anything.**
 
 For each file in the files_to_read list:
 
 1. **Read file content** using Read tool
 2. **Apply semantic reasoning to identify compound identifiers** (same categories as scan_and_redact)
-3. **Record each finding** — do NOT write any files
+3. **Record each finding**; do not write any files
 
 Build a findings manifest:
 - Files that would be deleted (structure files, audit logs) — list with reasons
 - Identifiers that would be redacted — list with file path, identifier text, and type
 - Total counts: files to delete, identifiers to redact, files to modify
 
-**CRITICAL:** This step is READ-ONLY. Do NOT use Write tool or rm commands. Do NOT modify any files.
+This step only reads. Do not use the Write tool or rm commands, and do not modify any files: nothing changes before the user has confirmed the dry-run report.
 </step>
 
 <step name="present_dry_run_report">
@@ -138,7 +155,7 @@ Present the dry-run report:
 Type "proceed" to apply these changes, or "cancel" to abort.
 ```
 
-**STOP and wait for user response.** Do NOT continue to delete/redact steps until user explicitly types "proceed".
+**Stop and wait for the user's response.** Do not continue to the delete and redact steps until the user explicitly types "proceed".
 
 If user types "cancel" (or any response other than "proceed"), acknowledge and stop: "Sanitisation cancelled. No files were modified."
 </step>
@@ -157,7 +174,7 @@ rm -f <filepath>
 **Track deletions for the report.** Include relative paths from dataset root.
 
 Example deletions:
-- 1/Ibuprofen.mol
+- 1/<name>.mol
 - audita.txt
 - auditp.txt
 - 3/compound.sdf
@@ -188,44 +205,21 @@ For each file in files_to_read list:
 
 **Category A: Chemical Names** (requires semantic understanding)
 
-IUPAC systematic names:
-- "2-(4-isobutylphenyl)propionic acid"
-- "1,3,7-trimethylxanthine"
-- "6,6'-dibromoindigotin"
-
-Trivial/common names:
-- "Ibuprofen", "Caffeine", "Indigo", "Aspirin", "Vanillin"
-
-Trade names:
-- "Advil", "Brufen", "Tylenol", "Motrin"
-
-**Include all case variants:**
-- "Ibuprofen", "ibuprofen", "IBUPROFEN"
+- IUPAC systematic names: locants, brackets and substituent prefixes around a parent name, such as `<n>-(<substituent>)<parent> acid` or `<n>,<n'>-di<substituent><parent>`
+- Trivial/common names: `<compound name>`
+- Trade names: `<trade name>`
+- All case variants: `<Name>`, `<name>`, `<NAME>`
 
 **Category B: Database Identifiers** (structured patterns)
 
-CAS numbers (format: xxxxxx-xx-x):
-- "482-89-3"
-- "CAS 58-08-2"
-- "58-08-2"
+- CAS numbers (format: xxxxxx-xx-x): "`<CAS number>`", "CAS `<CAS number>`"
+- InChI strings (starts with "InChI=1S/"): "InChI=1S/`<formula>`/c..." (the connection, hydrogen and charge layers follow the formula)
+- InChIKey (exactly 27 characters, format XXXXXXXXXXXXXX-YYYYYYYYYY-Z): "`<InChIKey>`"
+- PubChem/ChEBI IDs: "CID 12345", "CHEBI:12345", "PubChem CID `<number>`"
 
-InChI strings (starts with "InChI=1S/"):
-- "InChI=1S/C14H16/c1-9(10-7-4-3-5-8-10)11-12-6-13(2)14(11)13/h3-9H,12H2,1-2H3"
+**Category C: SMILES Strings** (best-effort, low priority)
 
-InChIKey (exactly 27 characters, format XXXXXXXXXXXXXX-YYYYYYYYYYY-Z):
-- "HEFNNWSXXWATRW-UHFFFAOYSA-N"
-
-PubChem/ChEBI IDs:
-- "CID 12345"
-- "CHEBI:12345"
-- "PubChem CID 3672"
-
-**Category C: SMILES Strings** (best-effort, LOW priority)
-
-SMILES notation patterns:
-- "C1=CC=CC=C1" (benzene, aromatic)
-- "CC(=O)OC1=CC=CC=C1C(=O)O" (aspirin)
-- "CN1C=NC2=C1C(=O)N(C(=O)N2C)C" (caffeine)
+SMILES notation patterns: element symbols with ring-closure digits, `=` and `#` for multiple bonds, parentheses for branches, lowercase letters for aromatic atoms, for example "`<smiles>`".
 
 **Note:** SMILES detection is low priority. If some SMILES strings are missed, this is acceptable — exploiting SMILES for CASE cheating requires significant effort.
 
@@ -236,32 +230,34 @@ File content often contains full file paths with compound names embedded:
 Example:
 ```
 ##TITLE= Parameter file, TopSpin 4.1.0
-$$  Z:/Torsten/NMR/data/spek-vl_premium/nmr/Ibuprofen/1/pdata/1/procs
+$$  Z:/<user>/NMR/data/<project>/nmr/<compound name>/1/pdata/1/procs
 ```
 
 **Redact only the compound name portion:**
 ```
 ##TITLE= Parameter file, TopSpin 4.1.0
-$$  Z:/Torsten/NMR/data/spek-vl_premium/nmr/[REDACTED]/1/pdata/1/procs
+$$  Z:/<user>/NMR/data/<project>/nmr/[REDACTED]/1/pdata/1/procs
 ```
+
+A title line works the same way: `TITLE= <compound name> in CDCl3` becomes `TITLE= [REDACTED] in CDCl3`.
 
 **Category E: Dataset Naming Patterns**
 
 nmrXiv patterns:
-- "Classics_Indigo" → contains "Indigo"
-- "nmrXiv_Caffeine_01" → contains "Caffeine"
+- "Classics_`<compound name>`" → contains the compound name
+- "nmrXiv_`<compound name>`_01" → contains the compound name
 
 Lab naming patterns:
-- "JD_caffeine_01" → contains "caffeine"
-- "Sample_Ibuprofen_20240301" → contains "Ibuprofen"
+- "`<initials>`_`<compound name>`_01" → contains the compound name
+- "`<prefix>`_`<compound name>`_`<date>`" → contains the compound name
 
 Coded patterns (typically safe unless pattern is obvious):
-- "MC047_9" → likely a sample code, not revealing
+- "AB012_3" → likely a lab code, not revealing
 - "Compound_42" → generic
 
 ---
 
-## DO NOT Redact (False Positive Avoidance)
+## Do Not Redact (False Positive Avoidance)
 
 **Experiment types:**
 - 1H, 13C, HSQC, HMBC, COSY, DEPT, NOESY, ROESY, TOCSY, etc.
@@ -279,11 +275,11 @@ Coded patterns (typically safe unless pattern is obvious):
 - Dates, timestamps
 
 **Generic placeholders:**
-- "Unknown", "Sample", "Test", "Compound"
+- "Unknown", "Test", "Compound", and other generic labels for samples
 - "Standard", "Reference"
 
 **Chemical formulas:**
-- "C14H16", "C8H10N4O2" (molecular formulas are data, not identifiers)
+- "`<formula>`" (molecular formulas are data, not identifiers)
 
 ---
 
@@ -318,10 +314,10 @@ None (no structure files or audit logs found)
 [If identifiers were redacted:]
 | File | Original Identifier | Type |
 |------|-------------------|------|
-| 1/pdata/1/title | Ibuprofen | Chemical name (trivial) |
-| 1/acqus | Ibuprofen | File path component |
-| 2/pdata/1/procs | 482-89-3 | CAS number |
-| peaklist.xml | Classics_Indigo | Dataset naming pattern |
+| 1/pdata/1/title | <compound name> | Chemical name (trivial) |
+| 1/acqus | <compound name> | File path component |
+| 2/pdata/1/procs | <CAS number> | CAS number |
+| peaklist.xml | Classics_<compound name> | Dataset naming pattern |
 ...
 
 Total: <N> identifiers redacted across <M> files
@@ -345,7 +341,7 @@ Directory name appears generic (no manual renaming needed)
 <step name="verify_completeness">
 **Full re-scan verification — confirm no identifiers remain.**
 
-Re-read ALL text files from the files_to_read list (same files scanned in scan_and_redact step).
+Re-read all text files from the files_to_read list (same files scanned in scan_and_redact step).
 
 For each file:
 1. Read current content (after redaction)
@@ -382,15 +378,15 @@ Redacting missed identifiers and re-verifying...
 - Re-run verification (third pass)
 - Continue until verification passes (0 identifiers found)
 
-**Note:** Verification must be a FULL re-scan, not just checking that specific strings from the manifest were replaced. This catches identifiers missed in the first pass due to variants, context changes, or oversight.
+**Note:** Verification is a full re-scan, not just a check that specific strings from the manifest were replaced. This catches identifiers missed in the first pass due to variants, context changes, or oversight.
 
-### Mechanical grep backstop (REQUIRED — catches what the AI re-scan misses)
+### Mechanical grep backstop (required; catches what the AI re-scan misses)
 
-The AI re-scan above shares the first pass's blind spots: a name overlooked semantically once tends to be overlooked again. Add a deterministic safety net that does NOT rely on AI re-reading. The original CASE1 sanitisation passed its AI verification but left 24× `Ibuprofen` + 54× `ibuprof` in `curdat2`/`acqus` `$$` comments — this backstop is the defense against exactly that.
+The AI re-scan above shares the first pass's blind spots: a name overlooked semantically once tends to be overlooked again. Add a deterministic safety net that does not rely on AI re-reading. A sanitisation once passed its AI verification but left dozens of copies of the compound name and of a truncated form of it in `curdat2`/`acqus` `$$` comments; this backstop is the defence against exactly that.
 
 1. **Derive candidate leak tokens** from two sources:
    - The original dataset directory name (the path argument's basename) and any obvious chemical substring of it.
-   - Every value seen inside `##$NAME=`/`##$NAME2=` fields and `$$` path comments during discovery — including substrings (e.g. `Ibuprofen` → also `ibuprof`).
+   - Every value seen inside `##$NAME=`/`##$NAME2=` fields and `$$` path comments during discovery — including substrings (e.g. `<compound name>` → also its truncated form, as directory names often shorten it).
 
 2. **Grep the entire tree (text files only) for each token, case-insensitively:**
    ```bash
@@ -399,9 +395,9 @@ The AI re-scan above shares the first pass's blind spots: a name overlooked sema
    ```
    Use a python3 walk if shell quoting/word-splitting is unreliable (BSD `xargs -0`/zsh `read -d ''` are error-prone here — a python `pathlib.rglob` + `.read_text()` loop is the robust path; skip the binary file set fid/ser/1r/1i/2rr/... and image extensions).
 
-3. **If the grep finds ANY residual token:** redact it (preserving Bruker field keys and path structure), then re-run BOTH the AI re-scan and this grep backstop. Loop until the grep returns zero hits across all text files.
+3. **If the grep finds any residual token:** redact it (preserving Bruker field keys and path structure), then re-run both the AI re-scan and this grep backstop. Loop until the grep returns zero hits across all text files.
 
-4. **Final gate:** verification only PASSES when the mechanical grep returns zero residual-token hits. Report the exact grep command used and its empty result as evidence.
+4. **Final gate:** verification passes only when the mechanical grep returns zero residual-token hits. Report the exact grep command used and its empty result as evidence.
 </step>
 
 <step name="handoff_instructions">
@@ -410,20 +406,20 @@ The AI re-scan above shares the first pass's blind spots: a name overlooked sema
 ```markdown
 ## Next Steps for Blind CASE Evaluation
 
-### CRITICAL: Fresh AI Session Required
+### A Fresh AI Session Is Required
 
 This AI session has seen the compound identity during sanitisation. To perform valid blind CASE evaluation:
 
-1. **Start a NEW AI session** (do not continue in this session)
+1. **Start a new AI session** (do not continue in this session)
 
 2. **In the new session**, run:
    ```
    /ailsa:case <sanitised_dataset_path> <molecular_formula>
    ```
 
-3. **Provide the molecular formula** (simulating HRMS data) — but do NOT mention the compound name or identity
+3. **Provide the molecular formula** (simulating HRMS data), but do not mention the compound name or identity
 
-4. **Do NOT reference this sanitisation session** or share this report with the CASE AI
+4. **Do not reference this sanitisation session** and do not share this report with the CASE AI
 
 ### Why This Matters
 
@@ -448,7 +444,7 @@ The sanitised dataset at `<dataset_path>` is now ready for blind CASE evaluation
 
 This cannot be solved with regex patterns. Chemical names vary enormously:
 - IUPAC systematic vs. trivial vs. trade names
-- Case variants (Caffeine, caffeine, CAFFEINE)
+- Case variants (`<Name>`, `<name>`, `<NAME>`)
 - Embedded in paths, dataset names, descriptors
 - Context-dependent (is "Unknown" generic or specific?)
 
@@ -458,9 +454,9 @@ AI semantic understanding is the only reliable approach.
 
 The Read tool automatically detects and handles UTF-8, Latin-1, and CP1252 encodings. Bruker parameter files often use legacy encodings (Latin-1, Windows CP1252) for special characters (degree symbol °, mu μ). Trust the tool — no manual encoding logic needed.
 
-**3. Binary files must never be read**
+**3. Do not read binary files**
 
-Classification BEFORE reading is critical. Attempting to Read binary NMR data (fid, ser, 1r, 2rr, etc.) will fail or return garbage. Use filename patterns to filter before attempting Read.
+Classify each file before reading it. Attempting to Read binary NMR data (fid, ser, 1r, 2rr, etc.) will fail or return garbage. Use filename patterns to filter before attempting Read.
 
 **4. Redaction is in-place**
 
@@ -468,14 +464,14 @@ The Write tool overwrites files with redacted content. The tool architecture enf
 
 **5. Verification is a full second pass**
 
-Do not just check that specific manifest strings were replaced. Re-scan ALL files with the same semantic identifier detection. This catches:
+Do not just check that specific manifest strings were replaced. Re-scan all files with the same semantic identifier detection. This catches:
 - Variants missed in first pass (different case, partial matches)
 - Identifiers in files not initially scanned
 - New identifiers exposed by path changes after redaction
 
 **6. Directory renaming is manual**
 
-Claude cannot safely rename a directory while working inside it. If the dataset directory itself is named after the compound (e.g., "Ibuprofen/"), detect this and warn the user to rename manually after sanitisation.
+Claude cannot safely rename a directory while working inside it. If the dataset directory itself is named after the compound (e.g., "`<compound name>`/"), detect this and warn the user to rename manually after sanitisation.
 
 **7. Structure files are deleted, not redacted**
 
