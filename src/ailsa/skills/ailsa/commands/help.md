@@ -1,5 +1,5 @@
 ---
-description: Overview of the AILSA commands and when to use each. Use when: which AILSA command fits, what AILSA can do, list the commands
+description: "Overview of the AILSA commands and when to use each. Use when: which AILSA command fits, what AILSA can do, list the commands"
 ---
 
 # AILSA: AI-Powered NMR Structure Elucidation
@@ -30,13 +30,20 @@ description: Overview of the AILSA commands and when to use each. Use when: whic
 | `/ailsa:predict` | Predict 13C chemical shifts for a SMILES structure |
 | `/ailsa:sanitise` | Remove compound identifiers for blind CASE evaluation |
 | `/ailsa:case` | Full CASE workflow - autonomous structure elucidation from NMR |
+| `/ailsa:help` | This overview of the commands |
+
+## Reference Database
+
+Dereplication and prediction use one reference database of 928K compounds: COCONUT natural
+products with predicted 13C shifts and NMRShiftDB entries with measured 13C shifts.
+COCONUT 13C shifts: from J.-M. Nuzillard, Zenodo, doi:10.5281/zenodo.6561449, CC BY 4.0 — predicted, not measured.
 
 ## Quick Start
 
 Not sure which command? See the decision tree above.
 
 1. Check your environment: `/ailsa:status`
-2. Try dereplication: `/ailsa:dereplicate data/compound/2 C14H16`
+2. Try dereplication: `/ailsa:dereplicate <bruker_path> <formula>`
 3. Try prediction: `/ailsa:predict "CCO"`
-4. Sanitise a dataset: `/ailsa:sanitise data/compound/Ibuprofen`
-5. Run full CASE: `/ailsa:case data/compound/virgiline C16H21NO2`
+4. Sanitise a dataset: `/ailsa:sanitise <dataset_path>`
+5. Run full CASE: `/ailsa:case <compound_path> <formula>`

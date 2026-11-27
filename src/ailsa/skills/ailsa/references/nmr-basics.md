@@ -34,4 +34,4 @@ Shared reference for all CASE team agents. Read by agents that need NMR experime
 
 ## DEPT-135 Sign Convention
 
-DEPT-135: positive peaks = CH and CH3, negative peaks = CH2. Sign is critical for multiplicity assignment. Never invert or ignore negative peaks — they are CH2 carbons, not noise.
+DEPT-135: positive peaks = CH and CH3, negative peaks = CH2. Sign is critical for multiplicity assignment. Do not invert or ignore negative peaks — they are CH2 carbons, not noise.

@@ -13,7 +13,7 @@ Present a clear status summary showing what is ready and what needs action.
 
 <process>
 
-<step name="check_lucy">
+<step name="check_ailsa">
 Run `ailsa --version` via Bash.
 
 **MINIMUM_REQUIRED_VERSION = 0.1.0**

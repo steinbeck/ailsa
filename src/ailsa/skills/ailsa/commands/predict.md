@@ -6,6 +6,10 @@ allowed-tools: [Bash]
 
 <objective>
 Predict 13C NMR chemical shifts for a given SMILES string using the ailsa HOSE-code prediction engine.
+
+The HOSE statistics come from the reference database: COCONUT natural products with predicted 13C
+shifts and NMRShiftDB entries with measured 13C shifts.
+COCONUT 13C shifts: from J.-M. Nuzillard, Zenodo, doi:10.5281/zenodo.6561449, CC BY 4.0 — predicted, not measured.
 </objective>
 
 <process>
