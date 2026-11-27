@@ -272,3 +272,10 @@ def test_preflight_checks_the_skill_install(monkeypatch):
     assert "ailsa/references" in sent[-1]
     reply = "Hello! How can I help?\n"
     mod.preflight()
+
+
+def test_runner_disables_webview_with_the_cli_variable():
+    # If a later rename changes one name and not the other, benchmark runs start dashboards again.
+    from ailsa.cli.webview import WEBVIEW_OPT_OUT_ENV
+
+    assert f"export {WEBVIEW_OPT_OUT_ENV}=" in _read("tests/case-benchmark/blind_case_run.sh")
