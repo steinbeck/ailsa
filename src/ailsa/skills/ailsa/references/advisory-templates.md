@@ -168,7 +168,7 @@ Read CASE-PROGRESS.md, find most recent iteration, extract the LSD file referenc
 **Spawn diagnostic specialist via Task tool:**
 ```
 Task(
-  agent_type="lucy-diagnostic",
+  agent_type="ailsa-diagnostic",
   model="opus",
   instructions="Analyze LSD failure for compound at <compound_path>.
 
@@ -256,14 +256,14 @@ sound (solutions converged), but the 13C INTERPRETATION going into LSD may be wr
 Re-examination checklist (perform in order, stop when a concrete defect is found):
 
 1. DBE balance: count accounted DBE (rings + C=C + C=O). Is the total < formula DBE?
-   - If deficit: check the SNR annotation from your `lucy pick 1d --format json` output.
+   - If deficit: check the SNR annotation from your `ailsa pick 1d --format json` output.
      Any peaks in 160-220 ppm with SNR 3-20 that were not assigned?
    - If yes: that is a candidate missed carbonyl. Note it and proceed to step 3.
 
 2. Intensity-symmetry: were any aromatic CH peaks flagged as 2C-equivalence candidates
    (intensity ≥ 1.6× class median)?
-   - If yes AND they were NOT passed to `lucy detect aromatic-cosy`: re-run
-     `lucy detect aromatic-cosy` with the correct grouped shifts. Send updated
+   - If yes AND they were NOT passed to `ailsa detect aromatic-cosy`: re-run
+     `ailsa detect aromatic-cosy` with the correct grouped shifts. Send updated
      HMBC equivalence groups to lsd-engineer for the next iteration.
    - If yes AND they were already passed: confirm lsd-engineer used grouped notation
      `HMBC (C1 C2) H` syntax in the LSD file (carbon side grouped; a grouped proton side,
@@ -364,7 +364,7 @@ re-enter the coverage_gate. Do not proceed to identity_gate until coverage_gate 
 
 **Never attempt dereplication in this orchestrator:**
 - CASE is de novo structure elucidation (starts from scratch)
-- Dereplication is a completely separate workflow (/lucy-ng:dereplicate)
+- Dereplication is a completely separate workflow (/ailsa:dereplicate)
 - Absolute separation maintained
 
 **Never re-spawn the team to deliver an advisory:**

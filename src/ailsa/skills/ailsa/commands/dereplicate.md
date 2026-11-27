@@ -1,5 +1,4 @@
 ---
-name: lucy-ng:dereplicate
 description: "Match 13C NMR spectrum against compound database. Use when: is this compound in the database, identify known compound, dereplication, match spectrum, compare shifts to database"
 argument-hint: "<bruker_path_or_shifts> <formula> [-n N]"
 allowed-tools:
@@ -7,7 +6,7 @@ allowed-tools:
 ---
 
 <objective>
-Run 13C dereplication by calling the lucy CLI, matching an observed spectrum
+Run 13C dereplication by calling the ailsa CLI, matching an observed spectrum
 against the compound database. Accept either a Bruker experiment path or a
 comma-separated shift list, plus a molecular formula. Present ranked matches.
 </objective>
@@ -19,24 +18,24 @@ Parse user-provided arguments. Two input modes are supported:
 
 **Mode 1 -- Bruker path + formula:**
 ```
-/lucy-ng:dereplicate data/compound/2 C14H16 -n 10
+/ailsa:dereplicate data/compound/2 C14H16 -n 10
 ```
 
 **Mode 2 -- Shift list + formula:**
 ```
-/lucy-ng:dereplicate --shifts "139.94,138.51,137.16" C14H16 -n 10
+/ailsa:dereplicate --shifts "139.94,138.51,137.16" C14H16 -n 10
 ```
 
 - Default `-n` to 10 if not provided by the user
 - If no arguments given, show usage:
 
 ```
-Usage: /lucy-ng:dereplicate <bruker_path> <formula> [-n N]
-       /lucy-ng:dereplicate --shifts "<shifts>" <formula> [-n N]
+Usage: /ailsa:dereplicate <bruker_path> <formula> [-n N]
+       /ailsa:dereplicate --shifts "<shifts>" <formula> [-n N]
 
 Examples:
-  /lucy-ng:dereplicate data/compound/2 C14H16
-  /lucy-ng:dereplicate --shifts "139.94,138.51" C10H12O2 -n 5
+  /ailsa:dereplicate data/compound/2 C14H16
+  /ailsa:dereplicate --shifts "139.94,138.51" C10H12O2 -n 5
 ```
 </step>
 
@@ -44,7 +43,7 @@ Examples:
 Execute the CLI command with `--format json` for structured output:
 
 ```bash
-lucy dereplicate c13 [parsed arguments] --format json
+ailsa dereplicate c13 [parsed arguments] --format json
 ```
 
 Capture both stdout (JSON results) and stderr (any errors).
@@ -77,11 +76,11 @@ No exact match found. Top candidates:
   1. "Check formula spelling — common mistakes: lowercase letters (use C14H16 not c14h16), missing element counts (C14H16O vs C14H16O1)"
   2. "Try related formulas — if unsure about heteroatom count, try ±1 oxygen or nitrogen (e.g., C14H16O, C14H18O2)"
   3. "The compound may not be in the database — COCONUT covers ~400K natural products and NMRShiftDB ~30K experimental entries. Synthetic compounds and rare natural products may be absent."
-  4. "Consider running full CASE instead: /lucy-ng:case — this determines structure from NMR data without requiring database lookup"
+  4. "Consider running full CASE instead: /ailsa:case — this determines structure from NMR data without requiring database lookup"
 
 **If error (database not found, invalid formula, etc.):**
 Report the error and suggest corrective action:
-- Database missing: "Run: lucy database download"
+- Database missing: "Run: ailsa database download"
 - Invalid formula: show the error message from the CLI
 </step>
 

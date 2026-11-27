@@ -1,5 +1,4 @@
 ---
-name: lucy-ng:sanitise
 description: "Remove compound identifiers from NMR datasets for blind CASE evaluation. Use when: prepare blind test, remove names, anonymise dataset, sanitise for CASE, blind testing"
 argument-hint: "<dataset_path>"
 allowed-tools:
@@ -12,7 +11,7 @@ allowed-tools:
 <objective>
 AI-driven sanitisation of Bruker NMR datasets for blind CASE evaluation. Removes all compound identifiers (names, database IDs, structure files, audit logs) from metadata and text files while preserving spectroscopic data integrity.
 
-**CRITICAL:** There is NO CLI command for sanitisation. This is a pure AI task requiring semantic reasoning to identify compound identifiers that reveal chemical identity. Unlike other lucy-ng commands that call thin CLI wrappers, sanitisation depends entirely on Claude's ability to distinguish revealing information (compound names, CAS numbers, InChI strings) from generic metadata (experiment types, solvents, instrument parameters).
+**CRITICAL:** There is NO CLI command for sanitisation. This is a pure AI task requiring semantic reasoning to identify compound identifiers that reveal chemical identity. Unlike other ailsa commands that call thin CLI wrappers, sanitisation depends entirely on Claude's ability to distinguish revealing information (compound names, CAS numbers, InChI strings) from generic metadata (experiment types, solvents, instrument parameters).
 </objective>
 
 <process>
@@ -22,16 +21,16 @@ AI-driven sanitisation of Bruker NMR datasets for blind CASE evaluation. Removes
 
 User provides dataset path:
 ```
-/lucy-ng:sanitise <dataset_path>
+/ailsa:sanitise <dataset_path>
 ```
 
 **If no argument given**, show usage:
 ```
-Usage: /lucy-ng:sanitise <dataset_path>
+Usage: /ailsa:sanitise <dataset_path>
 
 Example:
-  /lucy-ng:sanitise data/compound/Ibuprofen
-  /lucy-ng:sanitise data/nmrXiv/Classics_Caffeine
+  /ailsa:sanitise data/compound/Ibuprofen
+  /ailsa:sanitise data/nmrXiv/Classics_Caffeine
 ```
 
 **Verify path exists:**
@@ -419,7 +418,7 @@ This AI session has seen the compound identity during sanitisation. To perform v
 
 2. **In the new session**, run:
    ```
-   /lucy-ng:case <sanitised_dataset_path> <molecular_formula>
+   /ailsa:case <sanitised_dataset_path> <molecular_formula>
    ```
 
 3. **Provide the molecular formula** (simulating HRMS data) — but do NOT mention the compound name or identity

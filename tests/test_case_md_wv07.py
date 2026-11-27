@@ -3,14 +3,14 @@
 These tests assert the BEHAVIORAL CONTRACT that Plan 92-02 must satisfy by
 editing case.md and progress-format.md.  Before Plan 92-02 lands:
 
-  - test_webview_launch_present  RED  (lucy webview serve not yet in case.md)
-  - test_stop_hint_present       RED  (lucy webview stop not yet in pre-terminate region)
+  - test_webview_launch_present  RED  (ailsa webview serve not yet in case.md)
+  - test_stop_hint_present       RED  (ailsa webview stop not yet in pre-terminate region)
   - test_terminate_team_no_stop  GREEN  (regression guard — server must outlive run)
   - test_progress_format_dashboard_field  RED  (**Dashboard:** not yet in progress-format.md)
 
 After Plan 92-02 lands all four tests are GREEN.
 
-All file reads use repo-relative paths (.claude/commands/lucy-ng/...) so tests
+All file reads use repo-relative paths (src/ailsa/skills/ailsa/...) so tests
 work from any checkout without touching ~/.claude.
 
 Run with::
@@ -23,8 +23,9 @@ from __future__ import annotations
 from pathlib import Path
 
 # Repo-relative paths — pytest must be invoked from the repo root (pyproject.toml).
-CASE_MD = Path(".claude/commands/lucy-ng/case.md")
-PROGRESS_FORMAT_MD = Path(".claude/commands/lucy-ng/references/progress-format.md")
+SKILL_DIR = Path(__file__).resolve().parents[1] / "src/ailsa/skills/ailsa"
+CASE_MD = SKILL_DIR / "commands/case.md"
+PROGRESS_FORMAT_MD = SKILL_DIR / "references/progress-format.md"
 
 # The marker that begins the terminate_team step in case.md.
 TERMINATE_TEAM_MARKER = '<step name="terminate_team">'
@@ -37,11 +38,11 @@ FIRST_PUSH_MARKER = 'content="[BEGIN] peak-picking'
 
 
 def test_webview_launch_present() -> None:
-    """case.md contains 'lucy webview serve' BEFORE the first '[BEGIN] peak-picking' push.
+    """case.md contains 'ailsa webview serve' BEFORE the first '[BEGIN] peak-picking' push.
 
     Asserts:
-    - 'lucy webview serve' is present in case.md.
-    - The first occurrence of 'lucy webview serve' precedes the first occurrence
+    - 'ailsa webview serve' is present in case.md.
+    - The first occurrence of 'ailsa webview serve' precedes the first occurrence
       of the SendMessage push marker ``content="[BEGIN] peak-picking`` — verifying
       that the WV-07 launch block is inserted before the team kick-off.
 
@@ -50,8 +51,8 @@ def test_webview_launch_present() -> None:
     """
     case_text = CASE_MD.read_text()
 
-    assert "lucy webview serve" in case_text, (
-        "case.md does not contain 'lucy webview serve' — "
+    assert "ailsa webview serve" in case_text, (
+        "case.md does not contain 'ailsa webview serve' — "
         "Plan 92-02 must insert the webview launch block in spawn_case_team Step 5"
     )
     assert FIRST_PUSH_MARKER in case_text, (
@@ -60,11 +61,11 @@ def test_webview_launch_present() -> None:
         "SendMessage format changed"
     )
 
-    serve_idx = case_text.index("lucy webview serve")
+    serve_idx = case_text.index("ailsa webview serve")
     push_idx = case_text.index(FIRST_PUSH_MARKER)
 
     assert serve_idx < push_idx, (
-        f"'lucy webview serve' appears at position {serve_idx}, but the first "
+        f"'ailsa webview serve' appears at position {serve_idx}, but the first "
         f"SendMessage push marker appears at position {push_idx} — "
         "the webview launch block must be inserted BEFORE the '[BEGIN] peak-picking' "
         "SendMessage in spawn_case_team Step 5"
@@ -72,7 +73,7 @@ def test_webview_launch_present() -> None:
 
 
 def test_stop_hint_present() -> None:
-    """The pre-terminate_team region of case.md contains 'lucy webview stop'.
+    """The pre-terminate_team region of case.md contains 'ailsa webview stop'.
 
     The WV-07 launch block (in spawn_case_team Step 5) must output a stop hint
     so the user knows how to shut down the dashboard after the run.
@@ -88,19 +89,19 @@ def test_stop_hint_present() -> None:
 
     pre_marker = case_text.split(TERMINATE_TEAM_MARKER, 1)[0]
 
-    assert "lucy webview stop" in pre_marker, (
+    assert "ailsa webview stop" in pre_marker, (
         "The run-start/spawn region of case.md (everything before terminate_team) "
-        "does not contain 'lucy webview stop' — "
+        "does not contain 'ailsa webview stop' — "
         "Plan 92-02 must add the stop hint to the WV-07 webview launch block in "
         "spawn_case_team Step 5"
     )
 
 
 def test_terminate_team_no_stop() -> None:
-    """The terminate_team section of case.md does NOT contain 'lucy webview stop'.
+    """The terminate_team section of case.md does NOT contain 'ailsa webview stop'.
 
     This is a regression guard: the webview server must outlive the CASE run
-    (SC #2).  The orchestrator must never call 'lucy webview stop' in the
+    (SC #2).  The orchestrator must never call 'ailsa webview stop' in the
     shutdown step — the stop hint belongs only in the run-start launch block.
 
     Status: GREEN both before and after Plan 92-02 (regression guard).
@@ -123,8 +124,8 @@ def test_terminate_team_no_stop() -> None:
 
     terminate_section = after_marker.split(closing_tag, 1)[0]
 
-    assert "lucy webview stop" not in terminate_section, (
-        "The terminate_team section of case.md contains 'lucy webview stop' — "
+    assert "ailsa webview stop" not in terminate_section, (
+        "The terminate_team section of case.md contains 'ailsa webview stop' — "
         "this violates SC #2: the server must outlive the CASE run. "
         "The stop hint belongs ONLY in the WV-07 launch block (spawn_case_team), "
         "NOT in the shutdown step."
@@ -172,7 +173,7 @@ def test_progress_format_dashboard_field() -> None:
     """progress-format.md contains a '**Dashboard:**' header field (OD-5).
 
     This field records the webview URL in the CASE-PROGRESS.md header so the
-    URL is retrievable after the run without re-running 'lucy webview status'.
+    URL is retrievable after the run without re-running 'ailsa webview status'.
 
     Status: RED until Plan 92-02 adds the Dashboard field to the CASE-PROGRESS.md
     header template in progress-format.md.

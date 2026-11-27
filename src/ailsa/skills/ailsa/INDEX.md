@@ -1,0 +1,41 @@
+---
+name: ailsa
+description: The AILSA frontier skill for Claude Code, made of the /ailsa:* commands and the ailsa-* specialist agents. It determines the structure of an unknown organic compound from NMR data, using the ailsa command line and the LSD solver. Use when asked to elucidate, solve or identify a structure from Bruker NMR data, to dereplicate a 13C peak list, to predict 13C shifts, to sanitise a dataset, or to check the setup.
+metadata:
+  version: "0.1.0"
+  requires: "ailsa CLI of the same version; LSD and outlsd on PATH; the reference database; Claude Code"
+---
+
+# AILSA frontier skill
+
+AILSA is a team of Claude Code agents that elucidates structures from NMR data with the LSD solver.
+A coordinator command runs the workflow and hands the chemistry to four specialist agents.
+
+## Commands
+
+- [case](commands/case.md): the full structure elucidation workflow, `/ailsa:case`
+- [dereplicate](commands/dereplicate.md): match a 13C peak list against the reference database
+- [predict](commands/predict.md): predict 13C shifts for a SMILES
+- [sanitise](commands/sanitise.md): remove identifying metadata from a dataset copy
+- [status](commands/status.md): check that CLI, LSD and database are ready
+- [help](commands/help.md): which command fits
+
+## Agents
+
+- [ailsa-nmr-chemist](agents/ailsa-nmr-chemist.md): reads the spectra, picks peaks, derives constraints
+- [ailsa-lsd-engineer](agents/ailsa-lsd-engineer.md): writes and runs the LSD input
+- [ailsa-solution-analyst](agents/ailsa-solution-analyst.md): ranks and reports candidate structures
+- [ailsa-devils-advocate](agents/ailsa-devils-advocate.md): challenges constraints and results
+- [ailsa-diagnostic](agents/ailsa-diagnostic.md): diagnoses LSD failures, spawned only on escalation
+
+## References
+
+- [advisory-templates](references/advisory-templates.md): message templates between agents
+- [loop-patterns](references/loop-patterns.md): iteration and stopping patterns
+- [nmr-basics](references/nmr-basics.md): NMR facts the agents rely on
+- [progress-format](references/progress-format.md): format of the progress log
+
+## Install
+
+`ailsa skill install ailsa --target claude` copies the skill into `~/.claude`.
+Maintainers add `--link` to link it to the checkout instead.

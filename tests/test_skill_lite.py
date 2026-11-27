@@ -82,10 +82,7 @@ def _commands() -> list[list[str]]:
     return found
 
 
-FRONTIER = [
-    *sorted((SKILL_DIR.parents[3] / ".claude" / "commands" / "lucy-ng").rglob("*.md")),
-    *sorted((SKILL_DIR.parents[3] / ".claude" / "agents").glob("lucy-*.md")),
-]
+FRONTIER = sorted(p for p in (SKILL_DIR.parent / "ailsa").rglob("*.md") if p.name != "CHANGELOG.md")
 
 
 # Run-record commands only the lean skill names for now. The frontier skill adopts them when it
@@ -107,11 +104,11 @@ def _command_names(paths: list[Path], prefixes: str) -> set[str]:
     return names
 
 
-@pytest.mark.skipif(not FRONTIER, reason="frontier skill not in this checkout")
 def test_same_tools_as_frontier_skill() -> None:
     """The lean skill names only commands the frontier skill uses (docs/SKILLS.md, rule 1)."""
+    assert FRONTIER, "frontier skill missing from the package"
     lean = _command_names([p for p in FILES if p.name != "CHANGELOG.md"], "ailsa")
-    frontier = _command_names(FRONTIER, "ailsa|lucy")
+    frontier = _command_names(FRONTIER, "ailsa")
     assert lean, "the lean skill names no ailsa command"
     # a bare group name ("the `ailsa analyze ...` tools") counts if the frontier uses the group
     missing = {n for n in lean - frontier if not any(f.startswith(n + " ") for f in frontier)}

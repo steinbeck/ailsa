@@ -1,12 +1,11 @@
 ---
-name: lucy-ng:predict
 description: "Predict 13C NMR chemical shifts for a SMILES structure. Use when: predict shifts, expected chemical shifts, what shifts would this have, HOSE code prediction, verify a structure"
 argument-hint: "<smiles>"
 allowed-tools: [Bash]
 ---
 
 <objective>
-Predict 13C NMR chemical shifts for a given SMILES string using the lucy-ng HOSE-code prediction engine.
+Predict 13C NMR chemical shifts for a given SMILES string using the ailsa HOSE-code prediction engine.
 </objective>
 
 <process>
@@ -17,8 +16,8 @@ Parse the user's input for a SMILES string.
 - **Required:** A SMILES string (should be quoted)
 - If no arguments provided, show usage:
   ```
-  Usage: /lucy-ng:predict "<smiles>"
-  Example: /lucy-ng:predict "CCO"
+  Usage: /ailsa:predict "<smiles>"
+  Example: /ailsa:predict "CCO"
   ```
   Then stop.
 - Validate the SMILES is a non-empty string before proceeding.
@@ -28,7 +27,7 @@ Parse the user's input for a SMILES string.
 Execute the prediction via CLI:
 
 ```bash
-lucy predict c13 "<smiles>" --format json
+ailsa predict c13 "<smiles>" --format json
 ```
 
 Capture the JSON output. If the command fails, proceed to present_results with the error.
@@ -49,7 +48,7 @@ Parse the JSON output and present results to the user.
   ```
 
 **On error:**
-- If database not found: report error and suggest `lucy database download`
+- If database not found: report error and suggest `ailsa database download`
 - If SMILES invalid: report the RDKit parse error from CLI output
 - If other error: report the error message from CLI output
 

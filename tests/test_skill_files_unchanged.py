@@ -1,220 +1,80 @@
-"""Byte-unchanged guard for `case.md` and the 5-agent CASE team (Phase 102,
-Plan 04, JCLI-02 / ROADMAP Phase-102 success criterion 4).
+"""Byte-unchanged guard for the frontier skill (the CASE coordinator, the five agents, references).
 
-WHY THIS EXISTS: Phase 102's whole design is "reuse the Phase-99 bridge and
-QC gate UNCHANGED" -- and the same invariant extends to the autonomous CASE
-orchestrator itself. `case.md` and the five `lucy-*.md` agent files are the
-highest-value tamper target in this repo: they are the instructions an
-autonomous agent team executes (see this plan's `<threat_model>`, T-102-10).
-Before this file, that guarantee was verifiable only by trust -- a full
-search of the whole `tests/` tree (grep for the alternation of "sha256",
-"hashlib" and "git diff" across every test file) found NO prior committed
-pytest test that asserts `case.md` or any
-`.claude/agents/lucy-*.md` file is byte-unchanged. `tests/test_case_md_wv07.py`
-is a different kind of test entirely -- a substring CONTENT-CONTRACT check
-(asserts specific phrases are present/absent), not a byte-equality check.
-This is the repo's FIRST committed byte-unchanged test.
+The skill text is what autonomous agents execute, so a change must be a reviewed act: update
+`tests/skill_files.sha256` in the SAME commit as the text change and never loosen this test.
+The manifest covers every `*.md` under `src/ailsa/skills/ailsa` except `CHANGELOG.md`.
+Regenerate it with:
 
-WHY A HASH TABLE, NOT `git diff --exit-code <ref>`: content hashing needs no
-git subprocess call and is immune to shallow-clone / history-rewrite
-concerns (a `git diff` against a ref that has been squashed, rebased, or is
-missing from a shallow CI checkout would fail confusingly for reasons
-unrelated to the files' actual content). A frozen SHA-256 table is simpler
-and self-contained -- exactly the same call `102-RESEARCH.md` Pitfall 5
-recommends and computed the baseline for.
-
-UPDATING THE BASELINE (deliberate, reviewed decision only): if a future
-phase LEGITIMATELY changes `case.md` or an agent file (in-scope, reviewed,
-documented in that phase's SUMMARY), recompute the new hash with
-``shasum -a 256 <path>`` for every changed file and update
-`EXPECTED_SHA256` below in the SAME commit that changes the source file.
-This is NOT a bug to silently work around by deleting or loosening this
-test -- a failure here means the file changed, and the fix is either (a)
-revert the unintended edit, or (b) update the baseline as an explicit part
-of a phase whose scope includes changing the CASE orchestrator, recorded in
-that phase's SUMMARY.
-
-WHAT IS DELIBERATELY *NOT* FROZEN HERE: `src/ailsa/nus/qc.py`,
-`nus/bridge.py`, `cli/pick.py`, and the two pickers
-(`processing/peak_picker.py`, `processing/peak_picker_2d.py`) are
-byte-unchanged for THIS PHASE ONLY, already verified by the
-`git diff --exit-code 22f2b52 -- ...` acceptance gates baked into every
-plan of Phase 102 (102-01/02/03/04) -- they are legitimately expected to
-change in some FUTURE phase (e.g. a new peak-pick algorithm), and freezing
-them by a committed hash table here would make that future, in-scope edit
-fail this test confusingly. `case.md` and the 5-agent team are different:
-they are not expected to change as a SIDE EFFECT of routine feature work at
-all, which is exactly why a hard, committed freeze is appropriate for them
-specifically.
+    (cd src/ailsa/skills/ailsa && find . -name '*.md' ! -name CHANGELOG.md | LC_ALL=C sort \
+        | xargs shasum -a 256) > tests/skill_files.sha256
 """
 
 from __future__ import annotations
 
 import hashlib
+import subprocess
 from pathlib import Path
 
 import pytest
 
-# Resolved from this test file's own location, NOT the process cwd -- unlike
-# tests/test_case_md_wv07.py's bare `Path(".claude/...")` (which silently
-# depends on pytest being launched from the repo root), this makes the test
-# pass regardless of the invoking working directory.
 REPO_ROOT = Path(__file__).resolve().parents[1]
+SKILL_DIR = REPO_ROOT / "src" / "ailsa" / "skills" / "ailsa"
+MANIFEST = REPO_ROOT / "tests" / "skill_files.sha256"
 
-CASE_MD_PATH = ".claude/commands/lucy-ng/case.md"
-
-#: Frozen baseline, verified 2026-07-25 at commit `22f2b52` (Phase-101 close,
-#: clean working tree) via `shasum -a 256 <path>` -- reproduced verbatim
-#: from 102-RESEARCH.md Pitfall 5 / this plan's `<interfaces>` block, and
-#: RE-VERIFIED live against this worktree's checkout before writing this
-#: test (identical).
-#: BASELINE UPDATED 2026-08-07: the five agent files lost their
-#: `model: claude-opus-4-8` frontmatter pin. The pin bit on any machine
-#: without `CLAUDE_CODE_SUBAGENT_MODEL=inherit` in settings.json -- Sheldon
-#: has none, so a benchmark orchestrator on Opus 5 was spawning the whole
-#: specialist team on 4.8. Omitting `model:` makes each agent inherit the
-#: parent session's model, which is the same on every host. `case.md` is
-#: unchanged; only the five agent hashes move.
-#: BASELINE UPDATED 2026-08-27 (retroactive): `d62d833` (2026-08-09,
-#: "docs(skill): heteroatom protons need their own HSQC line or LSD aborts")
-#: added the HETEROATOM-PROTON rule to `lucy-lsd-engineer.md` and
-#: `lucy-devils-advocate.md` (+28/-1 lines) but did NOT refresh this table in
-#: the same commit, as the procedure above requires. This guard therefore
-#: failed for those two files for 18 days. The edit itself was deliberate and
-#: is substantively correct -- any proton used as the H-side of an HMBC line
-#: needs its own `HSQC X X` declaration or LSD aborts, verified against the
-#: solver's own `hestvalide` check (CASE96, 2026-08-09) -- so the resolution
-#: is (b) update the baseline, not (a) revert. Approved by the user on
-#: 2026-08-27. `case.md` and the other three agent files still match the
-#: 2026-08-07 baseline exactly, so the drift is fully accounted for by
-#: `d62d833` and nothing else.
-#:
-#: NOTE FOR THE BENCHMARK: `d62d833` landed mid-campaign, so the blind CASE
-#: runs in `case-uat-results-opus5-rest/` span two skill states. That mixed
-#: provenance was accepted deliberately (see `.planning/STATE.md`
-#: "Key Decisions (2026-08)"); this red guard was its earliest machine-readable
-#: trace and went unnoticed.
-#:
-#: 2026-11-19, approved by the user: the atom-by-atom ranking (`lsd rank --assigned`,
-#: `DUPL 1` in every LSD file, measured shift first in each carbon's MULT comment)
-#: changes `case.md`, the lsd-engineer, solution-analyst and devils-advocate files.
-#: The paper skill stays available unchanged under the tags `paper-skill-v1/v2`.
-#:
-#: 2026-11-19, approved by the user: LSD facts corrected after testing each one against
-#: LSD 3.4.9 -- one FEXP line only (a second aborts, error 402; fragment and ring filters
-#: share `FEXP "F3 AND NOT F1 AND NOT F2"`), one HSQC line per atom (error 234), pyrrole
-#: N-H is `N 3 1`, PROP counts are exact, `j_coupling` = `path_length` + 1, `DEFF NOT`
-#: is rejected (error 150) and not translated, list names are L1-L20 (error 114),
-#: grouped HMBC only on the carbon side, HSQC/HMBC order is a convention, not an error.
-#: Changes the lsd-engineer, devils-advocate, diagnostic and solution-analyst files.
-EXPECTED_SHA256: dict[str, str] = {
-    CASE_MD_PATH: "8c6946c0d3534c6ac18ec647f26454cb39d85751ad26762270f5fdb95c391e1f",
-    ".claude/agents/lucy-nmr-chemist.md": (
-        "c643b44d3e49bcd7eb0de0125fca051f9c59cf9b1ceff1906143d39d9bdca19e"
-    ),
-    ".claude/agents/lucy-lsd-engineer.md": (
-        "d4fb5127dcdf6adc609192571e10a9db35601f821f09a57fc3084e3e1907b602"
-    ),
-    ".claude/agents/lucy-solution-analyst.md": (
-        "30007673ad565fdd60b2d206f1d2b0ecc6da5fd5187cabb5a56173af69a9ada4"
-    ),
-    ".claude/agents/lucy-devils-advocate.md": (
-        "c8e01e362eed870b7f21862ff9d657c2a775b79a26bdf8398e0c757c1d385b98"
-    ),
-    ".claude/agents/lucy-diagnostic.md": (
-        "5d22e2a09cbc49efde841cbc652b1d24369d64c666242a8735e56f4ef7acd423"
-    ),
-}
-
-#: Exactly the five `lucy-*.md` agent files that make up "the 5-agent CASE
-#: team" per CLAUDE.md's own "CASE skill location" section
-#: (`lucy-nmr-chemist`, `lucy-lsd-engineer`, `lucy-solution-analyst`,
-#: `lucy-devils-advocate` spawned by `case.md`, plus `lucy-diagnostic` on
-#: escalation only). `.claude/agents/supervisor.md` ALSO exists in this
-#: repo but is DELIBERATELY EXCLUDED here: it is not named as part of "the
-#: 5-agent team" by CLAUDE.md's roster or by 102-CONTEXT.md's own list
-#: (102-RESEARCH.md Assumption A2) -- the `lucy-*.md` glob pattern below is
-#: what makes that exclusion explicit and structural rather than an
-#: accidental omission from a hand-maintained list.
-EXPECTED_AGENT_FILES: tuple[str, ...] = (
-    "lucy-devils-advocate.md",
-    "lucy-diagnostic.md",
-    "lucy-lsd-engineer.md",
-    "lucy-nmr-chemist.md",
-    "lucy-solution-analyst.md",
+EXPECTED_AGENT_FILES = (
+    "ailsa-devils-advocate.md",
+    "ailsa-diagnostic.md",
+    "ailsa-lsd-engineer.md",
+    "ailsa-nmr-chemist.md",
+    "ailsa-solution-analyst.md",
 )
 
 
-def _sha256(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()
+def _manifest() -> dict[str, str]:
+    entries: dict[str, str] = {}
+    for line in MANIFEST.read_text().splitlines():
+        if not line.strip():
+            continue
+        digest, name = line.split(maxsplit=1)
+        name = name.strip()
+        if name.startswith("./"):
+            name = name[2:]
+        entries[name] = digest
+    return entries
 
 
-@pytest.mark.parametrize("relative_path,expected_hash", sorted(EXPECTED_SHA256.items()))
-def test_skill_files_are_byte_unchanged(relative_path: str, expected_hash: str) -> None:
-    """`case.md` and the five agent files must be byte-identical to the
-    frozen Phase-101-close baseline.
-
-    A failure here means one of these files changed. This is NOT
-    automatically a bug: either (a) the edit was unintended -- revert it,
-    or (b) a later phase DELIBERATELY changed the CASE orchestrator as part
-    of its own reviewed scope -- in which case recompute the new hash with
-    `shasum -a 256 <path>` and update `EXPECTED_SHA256` above in the SAME
-    commit, and record the deliberate change in that phase's SUMMARY.md.
-    Never "fix" this test by deleting the assertion or loosening the hash
-    comparison.
-    """
-    path = REPO_ROOT / relative_path
-    assert path.exists(), f"missing skill file: {relative_path}"
-    actual_hash = _sha256(path)
-    assert actual_hash == expected_hash, (
-        f"{relative_path} has changed since the Phase-101-close baseline "
-        f"(expected sha256={expected_hash}, got {actual_hash}). "
-        "If this edit was unintended, revert it. If a later phase "
-        "deliberately changed the CASE orchestrator/agent files as part of "
-        "its own reviewed scope, update EXPECTED_SHA256 in this test file "
-        "(shasum -a 256 <path>) in the same commit and record the decision "
-        "in that phase's SUMMARY.md -- do not silently loosen this check."
+@pytest.mark.parametrize("relative_path,expected", sorted(_manifest().items()))
+def test_skill_files_match_manifest(relative_path: str, expected: str) -> None:
+    path = SKILL_DIR / relative_path
+    assert path.is_file(), f"missing skill file: {relative_path}"
+    actual = hashlib.sha256(path.read_bytes()).hexdigest()
+    assert actual == expected, (
+        f"{relative_path} changed (expected {expected}, got {actual}). Revert the edit, or "
+        "update tests/skill_files.sha256 in the same commit as a reviewed change."
     )
 
 
-def test_agent_roster_is_complete() -> None:
-    """Catches a NEWLY ADDED agent file that a pure hash table over known
-    paths cannot detect on its own.
+def test_manifest_covers_tree() -> None:
+    on_disk = {
+        p.relative_to(SKILL_DIR).as_posix()
+        for p in SKILL_DIR.rglob("*.md")
+        if p.name != "CHANGELOG.md"
+    }
+    assert set(_manifest()) == on_disk
 
-    Globs `.claude/agents/lucy-*.md` and asserts the sorted result equals
-    exactly `EXPECTED_AGENT_FILES` -- five files. `.claude/agents/supervisor.md`
-    exists in this repo but is deliberately excluded from the 5-agent team
-    (it is not named by CLAUDE.md's roster or CONTEXT.md's list,
-    102-RESEARCH.md Assumption A2); the `lucy-*.md` glob pattern itself is
-    what makes that exclusion explicit and structural, not an accidental
-    gap in a hand-maintained filename list.
-    """
-    agents_dir = REPO_ROOT / ".claude" / "agents"
-    found = sorted(p.name for p in agents_dir.glob("lucy-*.md"))
-    assert found == list(EXPECTED_AGENT_FILES), (
-        f"the lucy-*.md agent roster changed: expected "
-        f"{list(EXPECTED_AGENT_FILES)}, found {found}. A new agent file was "
-        "either added or removed -- if added deliberately, decide whether "
-        "it belongs to 'the 5-agent team' (CLAUDE.md roster) and, if so, "
-        "add its frozen hash to EXPECTED_SHA256 and its name to "
-        "EXPECTED_AGENT_FILES in the same commit."
-    )
-    # supervisor.md is expected to exist but never match the lucy-*.md glob
-    # (documents the exclusion rather than leaving it silent).
-    assert (agents_dir / "supervisor.md").exists(), (
-        "supervisor.md is expected to exist in .claude/agents/ but is "
-        "deliberately excluded from the 5-agent-team byte-unchanged guard"
-    )
-    assert "supervisor.md" not in found
+
+def test_agent_roster() -> None:
+    found = sorted(p.name for p in (SKILL_DIR / "agents").glob("*.md"))
+    assert found == list(EXPECTED_AGENT_FILES)
+    assert not list(SKILL_DIR.rglob("supervisor.md"))
+    tracked = subprocess.run(
+        ["git", "ls-files", ".claude/agents", ".claude/commands"],
+        cwd=REPO_ROOT, capture_output=True, text=True, check=False,
+    ).stdout.split()
+    assert tracked == []
 
 
 def test_case_md_is_a_regular_readable_file() -> None:
-    """A broken symlink or an empty file must fail loudly and clearly here,
-    rather than surfacing as a confusing hash mismatch in the parametrized
-    test above.
-    """
-    path = REPO_ROOT / CASE_MD_PATH
-    assert path.exists(), f"missing: {CASE_MD_PATH}"
-    assert path.is_file(), f"not a regular file: {CASE_MD_PATH}"
-    content = path.read_bytes()
-    assert content, f"{CASE_MD_PATH} is empty"
+    path = SKILL_DIR / "commands" / "case.md"
+    assert path.is_file(), "missing: commands/case.md"
+    assert path.read_bytes(), "commands/case.md is empty"

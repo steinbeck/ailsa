@@ -1,13 +1,12 @@
 ---
-name: lucy-ng:status
-description: "Check lucy-ng environment readiness. Use when: is lucy-ng installed, check setup, verify environment, is LSD available, database status"
+description: "Check ailsa environment readiness. Use when: is ailsa installed, check setup, verify environment, is LSD available, database status"
 allowed-tools:
   - Bash
 ---
 
 <objective>
-Report the readiness of the lucy-ng environment by checking three components:
-lucy-ng CLI, LSD solver binaries, and the compound database.
+Report the readiness of the ailsa environment by checking three components:
+ailsa CLI, LSD solver binaries, and the compound database.
 
 Present a clear status summary showing what is ready and what needs action.
 </objective>
@@ -15,25 +14,25 @@ Present a clear status summary showing what is ready and what needs action.
 <process>
 
 <step name="check_lucy">
-Run `lucy --version` via Bash.
+Run `ailsa --version` via Bash.
 
 **MINIMUM_REQUIRED_VERSION = 0.1.0**
 
-- If command not found: record status as MISSING, action: "Run: pip install lucy-ng"
+- If command not found: record status as MISSING, action: "Run: pip install ailsa"
 - If successful: record version string, then compare against minimum required version:
-  1. Parse installed version from output format `lucy, version X.Y.Z` — extract X.Y.Z
+  1. Parse installed version from output format `ailsa, version X.Y.Z` — extract X.Y.Z
   2. Split both versions on `.` into [major, minor, patch] integers
   3. Compare major first, then minor, then patch (semver order)
   4. If installed version >= MINIMUM_REQUIRED_VERSION: record status as OK
   5. If installed version < MINIMUM_REQUIRED_VERSION: record status as INCOMPATIBLE with action:
      ```
-     Installed lucy-ng version X.Y.Z is below minimum required 0.1.0.
-     Run: pip install --upgrade lucy-ng
+     Installed ailsa version X.Y.Z is below minimum required 0.1.0.
+     Run: pip install --upgrade ailsa
      ```
 </step>
 
 <step name="check_lsd">
-Run `lucy lsd check` via Bash.
+Run `ailsa lsd check` via Bash.
 
 - Parse output for LSD and outlsd availability
 - If both found: record as OK
@@ -41,21 +40,21 @@ Run `lucy lsd check` via Bash.
 </step>
 
 <step name="check_database">
-Run `lucy database info data/reference/lucy-ng-derep.db` via Bash.
+Run `ailsa database info data/reference/ailsa-derep.db` via Bash.
 
 - If successful: record compound count and HOSE statistics from output
-- If file not found or error: record as MISSING, action: "Run: lucy database download"
+- If file not found or error: record as MISSING, action: "Run: ailsa database download"
 </step>
 
 <step name="report">
 Present a combined status summary to the user:
 
 ```
-# lucy-ng Environment Status
+# ailsa Environment Status
 
 | Component        | Status               | Details                          |
 |------------------|----------------------|----------------------------------|
-| lucy-ng CLI      | OK/MISSING/INCOMPATIBLE | version or install/upgrade cmd |
+| ailsa CLI      | OK/MISSING/INCOMPATIBLE | version or install/upgrade cmd |
 | LSD solver       | OK/MISSING           | availability or download link    |
 | outlsd           | OK/MISSING           | availability or download link    |
 | Compound database| OK/MISSING           | stats or download command        |

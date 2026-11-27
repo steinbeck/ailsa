@@ -1,5 +1,4 @@
 ---
-name: lucy-ng:case
 description: "Full CASE workflow — autonomous NMR structure elucidation. Use when: unknown compound, determine structure, identify molecule, what is this compound, structure determination from NMR"
 argument-hint: "<compound_path> <formula>"
 allowed-tools:
@@ -67,7 +66,7 @@ Extract compound path and molecular formula from user input.
 
 4. **If neither provided and cwd is not a compound directory:** Show brief usage:
    ```
-   cd into your compound directory, then: /lucy-ng:case <formula>
+   cd into your compound directory, then: /ailsa:case <formula>
    ```
 
 **Smoke test mode:** If the user's invocation includes `--smoke-test` or `smoke test`:
@@ -89,9 +88,9 @@ Extract compound path and molecular formula from user input.
 Check environment readiness. Run via Bash — STOP on any failure, do NOT spawn team:
 
 0. `echo $CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` — must be "1". Fix: `export CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`
-1. `lucy --version` — must succeed. Fix: `pip install lucy-ng`
-2. `lucy lsd check` — LSD and outlsd must be available. Fix: download from http://eos.univ-reims.fr/LSD/ and add bin/ to PATH
-3. `lucy predict c13 "CCO" --format json 2>/dev/null | head -1` — must succeed. Fix: `lucy database download`
+1. `ailsa --version` — must succeed. Fix: `pip install ailsa`
+2. `ailsa lsd check` — LSD and outlsd must be available. Fix: download from http://eos.univ-reims.fr/LSD/ and add bin/ to PATH
+3. `ailsa predict c13 "CCO" --format json 2>/dev/null | head -1` — must succeed. Fix: `ailsa database download`
 4. `ls <compound_path>` — directory must exist.
 </step>
 
@@ -147,7 +146,7 @@ TaskCreate(
   description="Build initial LSD file from peak assignments. Use HSQC for MULT definitions,
                add first HMBC batch (3-5 high-confidence correlations). Run LSD from
                analysis/iteration_01/ directory. Send [ITERATION-COMPLETE] message to coordinator after LSD run.
-               solutions.smi is produced automatically by lucy lsd run (no manual outlsd step).",
+               solutions.smi is produced automatically by ailsa lsd run (no manual outlsd step).",
   activeForm="Running LSD iteration 1"
 )
 ```
@@ -158,11 +157,11 @@ TaskCreate(
 Task(
   name="nmr-chemist",
   team_name="case-{compound_name}",
-  subagent_type="lucy-nmr-chemist",
+  subagent_type="ailsa-nmr-chemist",
   model="claude-opus-4-8",
   prompt="You are the NMR chemist for CASE of {formula} at {compound_path}.
           Begin ONLY when the coordinator sends you a [BEGIN] peak-picking directive — do NOT poll or wait on the TaskList (idle agents are not woken by tasks, only by messages).
-          Execute peak picking and statistical detection using lucy CLI.
+          Execute peak picking and statistical detection using the ailsa CLI.
           Send [SETUP-COMPLETE] message to coordinator via SendMessage with all peak assignments, detection results, and quality assessment.
           Mark the task completed (TaskUpdate, for the status ledger) and then wait for the coordinator's next [BEGIN] directive — never poll the TaskList for more work."
 )
@@ -170,7 +169,7 @@ Task(
 Task(
   name="lsd-engineer",
   team_name="case-{compound_name}",
-  subagent_type="lucy-lsd-engineer",
+  subagent_type="ailsa-lsd-engineer",
   model="claude-opus-4-8",
   prompt="You are the LSD engineer for CASE of {formula} at {compound_path}.
           Act ONLY on the coordinator's [BEGIN] lsd-iteration directives sent to you via SendMessage — do NOT poll or wait on the TaskList (idle agents are woken by messages, not by tasks).
@@ -184,7 +183,7 @@ Task(
 Task(
   name="solution-analyst",
   team_name="case-{compound_name}",
-  subagent_type="lucy-solution-analyst",
+  subagent_type="ailsa-solution-analyst",
   model="claude-opus-4-8",
   prompt="You are the solution analyst for CASE of {formula} at {compound_path}.
           Act ONLY when the coordinator sends you a [BEGIN] ranking directive via SendMessage — do NOT poll or monitor the TaskList (idle agents are woken by messages, not by tasks).
@@ -197,7 +196,7 @@ Task(
 Task(
   name="devils-advocate",
   team_name="case-{compound_name}",
-  subagent_type="lucy-devils-advocate",
+  subagent_type="ailsa-devils-advocate",
   model="claude-opus-4-8",
   prompt="You are the devils advocate for CASE of {formula} at {compound_path}.
           Act ONLY on requests received via SendMessage (from lsd-engineer or the coordinator) — do NOT poll the TaskList.
@@ -206,7 +205,7 @@ Task(
           2. Check for dropped constraints (ring exclusion DEFF F/FEXP, COSY equivalence pairs, grouped notation)
           3. Verify sp2 count is even, H budget matches formula
           4. Send [VALIDATION-PASSED] or [VALIDATION-BLOCKED] to coordinator via SendMessage.
-          On a POST-SOLUTION [BEGIN] G-IDENT request (after analysis/final_results.md exists): run ONLY the G-IDENT gate — read the reported trivial name + top SMILES, reason INDEPENDENTLY about whether the name matches the structure (do NOT call lucy identify), apply the CASE4/CASE5 triggers, and reply [G-IDENT-PASSED] or [G-IDENT-FLAGGED] with a one-line rationale.
+          On a POST-SOLUTION [BEGIN] G-IDENT request (after analysis/final_results.md exists): run ONLY the G-IDENT gate — read the reported trivial name + top SMILES, reason INDEPENDENTLY about whether the name matches the structure (do NOT call ailsa identify), apply the CASE4/CASE5 triggers, and reply [G-IDENT-PASSED] or [G-IDENT-FLAGGED] with a one-line rationale.
           Report constraint persistence status after every validation."
 )
 ```
@@ -251,7 +250,7 @@ JSON
 
 <!-- WV-07: Launch webview dashboard before the first [BEGIN] push.
      analysis/ was just created by the run_start timing stamp above.
-     lucy webview serve is non-blocking (~0.5 s startup probe) — it does NOT
+     ailsa webview serve is non-blocking (~0.5 s startup probe) — it does NOT
      violate the headless/non-interactive rule. The spawned uvicorn process
      uses start_new_session=True and outlives this orchestrator session.
      Do NOT use & (background operator), --port, or --open. -->
@@ -259,21 +258,21 @@ JSON
 **Launch the webview dashboard (non-blocking — exits in ~0.5 s):**
 
 ```bash
-WEBVIEW_OUTPUT=$(lucy webview serve "<compound_path>/analysis" 2>&1)
+WEBVIEW_OUTPUT=$(ailsa webview serve "<compound_path>/analysis" 2>&1)
 WEBVIEW_EXIT=$?
 if [ $WEBVIEW_EXIT -eq 0 ]; then
   echo "$WEBVIEW_OUTPUT"
 else
   echo "Note: Webview dashboard unavailable — $WEBVIEW_OUTPUT"
-  echo "Install lucy-ng[webview] to enable the live dashboard."
+  echo "Install ailsa[webview] to enable the live dashboard."
 fi
 ```
 
-This call is foreground and non-blocking: `lucy webview serve` launches a detached uvicorn subprocess via `start_new_session=True`, waits ~0.5 s for a startup probe, then returns. Do NOT append `&`, do NOT background-and-wait, do NOT pass `--port` or `--open`, and do NOT abort the CASE run if the call fails — the dashboard is observability only.
+This call is foreground and non-blocking: `ailsa webview serve` launches a detached uvicorn subprocess via `start_new_session=True`, waits ~0.5 s for a startup probe, then returns. Do NOT append `&`, do NOT background-and-wait, do NOT pass `--port` or `--open`, and do NOT abort the CASE run if the call fails — the dashboard is observability only.
 
 When the server starts successfully the output already contains:
 - `Webview server running at http://127.0.0.1:NNNNN`
-- `Stop with: lucy webview stop <compound_path>/analysis`
+- `Stop with: ailsa webview stop <compound_path>/analysis`
 
 Store the URL from the output in a variable (e.g. `WEBVIEW_URL`) so it can be recorded in the CASE-PROGRESS.md header `**Dashboard:**` field (see write_progress). The `analysis/` directory exists because the `run_start` stamp above created it — this is why the launch block sits after that stamp.
 
@@ -296,9 +295,9 @@ Do NOT proceed to a passive wait. After this push, enter monitor_progress: each 
 <step name="write_progress">
 Read the full CASE-PROGRESS.md format template before writing any progress entries:
 
-Read file: ~/.claude/commands/lucy-ng/references/progress-format.md
+Read file: ~/.claude/ailsa/references/progress-format.md
 
-The orchestrator is the SOLE AUTHOR of CASE-PROGRESS.md. Create the file with its **header at run-start** — in spawn_case_team Step 5, right after the webview launch, using the File-header trigger (trigger 1 below). Do NOT wait for [SETUP-COMPLETE]: the header must exist from t=0 so the dashboard **Run Log** panel shows the run context (compound path, formula, dashboard URL) immediately rather than "Waiting for log data…". Then **append** the `## Setup` section after receiving [SETUP-COMPLETE] from nmr-chemist, and update after every [ITERATION-COMPLETE], [VALIDATION-PASSED/BLOCKED], and [RANKING-COMPLETE] message. When writing the file header, record the dashboard URL captured from the `lucy webview serve` output (stored in `WEBVIEW_URL` from spawn_case_team Step 5) into the `**Dashboard:**` field — or write "unavailable — [webview] extra not installed" if the launch warned.
+The orchestrator is the SOLE AUTHOR of CASE-PROGRESS.md. Create the file with its **header at run-start** — in spawn_case_team Step 5, right after the webview launch, using the File-header trigger (trigger 1 below). Do NOT wait for [SETUP-COMPLETE]: the header must exist from t=0 so the dashboard **Run Log** panel shows the run context (compound path, formula, dashboard URL) immediately rather than "Waiting for log data…". Then **append** the `## Setup` section after receiving [SETUP-COMPLETE] from nmr-chemist, and update after every [ITERATION-COMPLETE], [VALIDATION-PASSED/BLOCKED], and [RANKING-COMPLETE] message. When writing the file header, record the dashboard URL captured from the `ailsa webview serve` output (stored in `WEBVIEW_URL` from spawn_case_team Step 5) into the `**Dashboard:**` field — or write "unavailable — [webview] extra not installed" if the launch warned.
 
 <!--
 RELOAD NOTE: case.md is a repo `.claude/` skill prompt symlinked into `~/.claude`. Behavior
@@ -308,7 +307,7 @@ CASE4 re-run (UAT-01 / Phase 89).
 -->
 
 **`## Multiplicity Coverage` ledger (only when a `[MULTIPLICITY-AMBIGUOUS]` record exists).**
-When the nmr-chemist has emitted a `[MULTIPLICITY-AMBIGUOUS]` signal (see lucy-nmr-chemist.md
+When the nmr-chemist has emitted a `[MULTIPLICITY-AMBIGUOUS]` signal (see ailsa-nmr-chemist.md
 Section 5b), maintain a `## Multiplicity Coverage` section in CASE-PROGRESS.md as the single
 source of truth the pre-accept coverage gate reads. Record four things:
 
@@ -602,8 +601,8 @@ SendMessage(
                   LSD input: analysis/iteration_{current_iter:02d}/compound.lsd
                   solutions.smi path: analysis/iteration_{current_iter:02d}/solutions.smi
                   Experimental 13C shifts: {shift_list}
-                  Run (decides): lucy lsd rank --assigned analysis/iteration_{current_iter:02d}/compound.lsd
-                  Cross-check: lucy lsd rank analysis/iteration_{current_iter:02d}/solutions.smi --shifts '{shift_list}'
+                  Run (decides): ailsa lsd rank --assigned analysis/iteration_{current_iter:02d}/compound.lsd
+                  Cross-check: ailsa lsd rank analysis/iteration_{current_iter:02d}/solutions.smi --shifts '{shift_list}'
                   Assess chemical plausibility of top candidates.
                   Write analysis/final_results.md with full report.
                   Send [RANKING-COMPLETE] to coordinator.",
@@ -631,7 +630,7 @@ After creating a task you MUST have pushed its `[BEGIN]` directive — then retu
 <step name="detect_loops">
 Read the full loop pattern definitions before analyzing iteration patterns:
 
-Read file: ~/.claude/commands/lucy-ng/references/loop-patterns.md
+Read file: ~/.claude/ailsa/references/loop-patterns.md
 
 Five patterns to detect: ELIM Thrashing, Zero-Solution Loop, Solution Explosion, Constraint Churning, Quality Convergence Failure.
 
@@ -882,7 +881,7 @@ After the gate PASSES, proceed to identity_gate.
 <step name="identity_gate">
 **Post-solution G-IDENT review (mandatory before present_results — the D-04 independent advisory layer).**
 
-This step runs ONCE, after `[RANKING-COMPLETE]` (i.e. `analysis/final_results.md` exists) and BEFORE `deliver_advisory_and_results` / `terminate_team`. It is the genuinely independent second opinion on the reported name↔structure mapping. The solution-analyst's own run of the deterministic `lucy identify` is the BINDING check; this G-IDENT pass is the separate LLM cross-check (it must NOT re-run `lucy identify`).
+This step runs ONCE, after `[RANKING-COMPLETE]` (i.e. `analysis/final_results.md` exists) and BEFORE `deliver_advisory_and_results` / `terminate_team`. It is the genuinely independent second opinion on the reported name↔structure mapping. The solution-analyst's own run of the deterministic `ailsa identify` is the BINDING check; this G-IDENT pass is the separate LLM cross-check (it must NOT re-run `ailsa identify`).
 
 The devils-advocate is idle and will not act on its own — you MUST push the trigger:
 
@@ -890,7 +889,7 @@ The devils-advocate is idle and will not act on its own — you MUST push the tr
 SendMessage(
   type="message",
   recipient="devils-advocate",
-  content="[BEGIN] G-IDENT — post-solution name↔structure review. analysis/final_results.md is written. Run ONLY the G-IDENT gate (Section 5 / post-solution): read the reported trivial name + the top SMILES, reason INDEPENDENTLY about whether the name plausibly matches the drawn structure — do NOT call lucy identify / derive_identity (that is the analyst's binding layer). Apply the CASE4 (wrong-isomer/literature name) and CASE5 (indigo↔isoindigo↔indirubin) triggers. Reply [G-IDENT-PASSED] or [G-IDENT-FLAGGED] with a one-line rationale.",
+  content="[BEGIN] G-IDENT — post-solution name↔structure review. analysis/final_results.md is written. Run ONLY the G-IDENT gate (Section 5 / post-solution): read the reported trivial name + the top SMILES, reason INDEPENDENTLY about whether the name plausibly matches the drawn structure — do NOT call ailsa identify / derive_identity (that is the analyst's binding layer). Apply the CASE4 (wrong-isomer/literature name) and CASE5 (indigo↔isoindigo↔indirubin) triggers. Reply [G-IDENT-PASSED] or [G-IDENT-FLAGGED] with a one-line rationale.",
   summary="Post-solution G-IDENT review"
 )
 ```
@@ -908,7 +907,7 @@ After recording the G-IDENT outcome, proceed to deliver_advisory_and_results.
 <step name="deliver_advisory_and_results">
 Read advisory delivery, result presentation, diagnostic delegation, and anti-pattern templates:
 
-Read file: ~/.claude/commands/lucy-ng/references/advisory-templates.md
+Read file: ~/.claude/ailsa/references/advisory-templates.md
 
 This reference covers: advisory message formatting, result presentation (success/incomplete/failed), diagnostic specialist delegation, diagnostic findings extraction, and anti-patterns to avoid.
 </step>

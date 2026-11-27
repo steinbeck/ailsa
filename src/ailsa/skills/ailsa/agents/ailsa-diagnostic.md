@@ -1,5 +1,5 @@
 ---
-name: lucy-diagnostic
+name: ailsa-diagnostic
 description: >
   LSD failure diagnostic specialist. Systematically analyzes zero-solution and
   solution-explosion failures in LSD structure determination. Deep knowledge of
@@ -279,7 +279,7 @@ ELIM P1 P2
 
 **What this does:** Solver tries all subsets of size ≤N dropped; a solution is accepted if any such subset satisfies the remaining constraints. This is the combinatorial 4J mechanism — no pre-classification needed.
 
-**Diagnostic use:** `lucy lsd analyze compound.sol compound.lsd --format json` shows path lengths in each accepted solution; correlations with `j_coupling >= 4` are the ones ELIM dropped. Escalation ceiling: N=3 (document each escalation in `[ITERATION-COMPLETE]`).
+**Diagnostic use:** `ailsa lsd analyze compound.sol compound.lsd --format json` shows path lengths in each accepted solution; correlations with `j_coupling >= 4` are the ones ELIM dropped. Escalation ceiling: N=3 (document each escalation in `[ITERATION-COMPLETE]`).
 
 **What this constrains:** Relaxes constraints by allowing elimination — deliberately widens the solution set.
 
@@ -914,7 +914,7 @@ Write `DIAGNOSTIC-REPORT.md` to the compound's `analysis/` subdirectory using th
 **Formula:** <molecular_formula>
 **Failure Type:** <0 solutions | 1000+ solutions | other>
 **Diagnostic Date:** <YYYY-MM-DD HH:MM:SS>
-**Diagnostic Agent:** lucy-diagnostic
+**Diagnostic Agent:** ailsa-diagnostic
 
 ---
 
@@ -1000,8 +1000,8 @@ Write `DIAGNOSTIC-REPORT.md` to the compound's `analysis/` subdirectory using th
 - Root cause: [level] — [reason]
 - Fix 1: [level] — [reason]
 
-**Specialist model:** lucy-diagnostic subagent
-**Orchestrator:** /lucy-ng:case
+**Specialist model:** ailsa-diagnostic subagent
+**Orchestrator:** /ailsa:case
 **CASE agent:** <identifier>
 ```
 
