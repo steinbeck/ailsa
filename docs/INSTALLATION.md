@@ -392,22 +392,15 @@ be set, or CASE fails at its prerequisite gate.
 
 ### Install the commands and agents
 
-Symlink the repo's `.claude/` content into `~/.claude` (edits stay in sync; use `cp -r`
-for a frozen snapshot):
+The skill is package data of `ailsa`. The installer copies it:
 
 ```bash
-git clone https://github.com/steinbeck/ailsa.git
-cd ailsa
-mkdir -p ~/.claude/agents ~/.claude/commands
-
-# Commands (case, dereplicate, predict, sanitise, status + references/)
-ln -sfn "$PWD/.claude/commands/ailsa" ~/.claude/commands/ailsa
-
-# CASE team agents — REQUIRED for /ailsa:case to spawn its team
-for a in "$PWD"/.claude/agents/ailsa-*.md; do
-  ln -sfn "$a" ~/.claude/agents/"$(basename "$a")"
-done
+ailsa skill install ailsa --target claude
 ```
+
+Inside `~/.claude`, commands go to `commands/ailsa/`, the CASE team agents (required for
+`/ailsa:case` to spawn its team) to `agents/`, and the references to `ailsa/references/`.
+From a source checkout, `--link` makes symlinks instead, so edits stay in sync.
 
 ### Enable agent teams
 

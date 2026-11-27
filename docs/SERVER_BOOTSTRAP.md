@@ -11,7 +11,7 @@ A CASE run needs **five** things present together. Missing any one makes
 1. A compatible **Python** (3.11/3.12 — **not** 3.13/3.14) + the `ailsa` package
 2. The **LSD solver** (`LSD` + `outlsd`) on `PATH`
 3. The **reference DB** (`ailsa database download` → `data/reference/ailsa-derep.db`)
-4. The **CASE skill**: the `/ailsa:*` commands and the four specialist agents symlinked into `~/.claude`
+4. The **CASE skill**: the `/ailsa:*` commands and the four specialist agents, installed into `~/.claude` with `ailsa skill install ailsa --target claude --link`
 5. `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` in the environment — the agent team
    requires Claude Code's agent-team feature, which this flag enables
 
@@ -130,30 +130,21 @@ ln -sfn "$PWD/data/reference/ailsa-derep.db" ~/.local/share/ailsa/ailsa-derep.db
 
 ## 4. Install the CASE skill (commands + agents) into `~/.claude`
 
-The skill is the `/ailsa:*` **commands** PLUS the **CASE team agents**. Symlink the
-repo's `.claude/` content so edits stay in sync (mirrors the dev-machine setup). Copy
-instead of symlink only if you want a frozen snapshot.
+The skill is the `/ailsa:*` **commands** PLUS the **CASE team agents**, shipped as package
+data in `src/ailsa/skills/ailsa/`. Install it with the CLI, linked so edits stay in sync
+(mirrors the dev-machine setup); drop `--link` for a frozen copy.
 
 ```bash
-REPO="$(pwd)"                       # the cloned ailsa checkout
-mkdir -p ~/.claude/agents ~/.claude/commands
-
-# Commands (directory symlink): case.md, references/, dereplicate/predict/sanitise/status
-ln -sfn "$REPO/.claude/commands/ailsa" ~/.claude/commands/ailsa
-
-# CASE team agents (per-file symlinks) — REQUIRED for /ailsa:case to spawn its team
-for a in "$REPO"/.claude/agents/ailsa-*.md; do
-  ln -sfn "$a" ~/.claude/agents/"$(basename "$a")"
-done
+ailsa skill install ailsa --target claude --link
 ```
 
 Agents linked: `ailsa-nmr-chemist`, `ailsa-lsd-engineer`, `ailsa-solution-analyst`,
 `ailsa-devils-advocate` (the four-specialist team) + `ailsa-diagnostic` (escalation).
 
-> **Blind-UAT hygiene (read if this host runs blind benchmarks):** link ONLY the
-> decontaminated repo `.claude/` (FIX-09 removed answer keys/dev-meta from it). Keep any
-> ground-truth/answer-key manifest and compound-identity auto-memory **off the run path**
-> — never in this host's `~/.claude` or in a CASE data directory a blind instance reads.
+> **Blind-UAT hygiene (read if this host runs blind benchmarks):** install only the packaged
+> skill. Keep any ground-truth/answer-key manifest and compound-identity auto-memory **off the
+> run path** — never in this host's `~/.claude` or in a CASE data directory a blind instance
+> reads.
 
 ## 5. Enable agent teams
 
@@ -211,7 +202,7 @@ pass, the host is CASE-capable.
 - [ ] `ailsa database download` → `data/reference/ailsa-derep.db` (`ailsa database info` ok)
 - [ ] `ailsa database info` reports the current schema (needed for statistical detection)
 - [ ] **discoverability:** `ailsa` + LSD binaries symlinked into `~/.local/bin`, DB into `~/.local/share/ailsa/`
-- [ ] commands symlink + **agents symlinks** in `~/.claude`
+- [ ] skill installed (`ailsa skill install ailsa --target claude --link`) into `~/.claude`
 - [ ] `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` persisted
 - [ ] all four `case.md` prereq gates pass + a smoke CASE completes
 - [ ] (blind hosts) answer-key manifest is OFF the run path

@@ -124,8 +124,9 @@ intervention cycles fail, and is the sole writer of the progress log
 (`CASE-PROGRESS.md`). It never does dereplication and never short-cuts the elucidation —
 a CASE run always starts from the raw spectra.
 
-The agents live in [`.claude/`](https://github.com/steinbeck/ailsa/tree/master/.claude)
-(`agents/ailsa-*.md` and `commands/ailsa/`) and are loaded as Claude Code skills.
+The commands, agents and references live in
+[`src/ailsa/skills/ailsa/`](https://github.com/steinbeck/ailsa/tree/master/src/ailsa/skills/ailsa)
+as package data and are installed with `ailsa skill install ailsa --target claude`.
 
 ---
 
@@ -287,6 +288,15 @@ pip install "ailsa @ git+https://github.com/steinbeck/ailsa.git"
 
 > **macOS / zsh:** the quotes are required because zsh expands square brackets.
 
+### Claude Code skill
+
+```bash
+ailsa skill install ailsa --target claude
+```
+
+This copies the commands, agents and references that belong to the installed CLI version into
+`~/.claude`. From a source checkout, add `--link` to get symlinks instead, so edits stay in sync.
+
 ### Development
 
 ```bash
@@ -409,7 +419,7 @@ ailsa/
 │   ├── visualization/   # NMR correlation diagrams
 │   ├── identity.py      # deterministic identity derivation (ailsa identify)
 │   └── cli/             # the `ailsa` Click CLI
-├── .claude/             # CASE orchestrator command + team agents (skills)
+│   └── skills/          # CASE skills as package data (ailsa, ailsa-lite)
 ├── tests/               # pytest suite
 ├── data/                # local test NMR datasets (Bruker format)
 └── docs/                # documentation
@@ -427,7 +437,7 @@ ailsa/
 
 Developer notes (commands, invariants) are in
 [CLAUDE.md](https://github.com/steinbeck/ailsa/blob/master/CLAUDE.md); the CASE workflow
-itself is defined in `.claude/commands/ailsa/case.md` and `.claude/agents/ailsa-*.md`.
+itself is defined in `src/ailsa/skills/ailsa/` (`commands/case.md` and `agents/ailsa-*.md`).
 
 ---
 

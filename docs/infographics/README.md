@@ -81,6 +81,6 @@ Things that go stale, and where they live in the source:
 | solved / partial status | blind-UAT log + `STATE.md` | `build.py` `CASES` status field (slide 7) |
 | benchmark figures and run configuration | `docs/BENCHMARK.md` | `build.py` slide 6 |
 | headline numbers (DB, HOSE, fragments, tests, CLI groups) | `PROJECT.md` / `STATE.md` / `ailsa database info` | `build.py` slide-8 `.stats` |
-| agent roster and channels | `.claude/agents/ailsa-*.md` | `build.py` slide 4 |
+| agent roster and channels | `src/ailsa/skills/ailsa/agents/ailsa-*.md` | `build.py` slide 4 |
 
 Update the source first, then mirror into `build.py`, then rebuild (steps above).

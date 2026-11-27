@@ -182,7 +182,8 @@ building block the agent's own reasoning drives, not a `lsd generate` subcommand
 ## The CASE agent layer
 
 AILSA's CLI is a thin data-access layer; the intelligence that turns peak lists into a
-structure lives one level up, in a Claude Code skill. That skill is **a designed agent team**:
+structure lives one level up, in a Claude Code skill (package data in `src/ailsa/skills/ailsa/`,
+installed with `ailsa skill install ailsa`). That skill is **a designed agent team**:
 specialists that coordinate with each other, not a single autonomous agent working alone.
 
 - A **coordinator** (`/ailsa:case`) creates a task per elucidation stage and starts the

@@ -2,7 +2,7 @@
 
 *AI + LSD + Agents* — AI-agent computer-assisted structure elucidation (CASE) for organic natural products from NMR, built on Jean-Marc Nuzillard's LSD solver. This repository is the Python package.
 
-> **Scope of this file:** developer/maintainer context for working **inside this repo** — it is the project memory loaded when you open Claude Code in the AILSA repo. It is **not** loaded during a CASE run (those run from NMR data directories outside this repo, so only `~/.claude/CLAUDE.md` and any CLAUDE.md in the data tree apply there). The CASE workflow itself — orchestrator, team agents, references — lives under `.claude/` (see *CASE skill location* below). Do **not** put operational/skill instructions here; they belong with the skill.
+> **Scope of this file:** developer/maintainer context for working **inside this repo** — it is the project memory loaded when you open Claude Code in the AILSA repo. It is **not** loaded during a CASE run (those run from NMR data directories outside this repo, so only `~/.claude/CLAUDE.md` and any CLAUDE.md in the data tree apply there). The CASE workflow itself — coordinator, team agents, references — lives in `src/ailsa/skills/` (see *CASE skill location* below). Do **not** put operational/skill instructions here; they belong with the skill.
 
 ---
 
@@ -42,11 +42,11 @@ src/ailsa/
 ├── fragments/       # bundled LSD fragment / ring-exclusion filter files
 ├── record/          # run record: workspace, event log, manifest, hooks, launcher
 ├── spectra/         # spectra view products for display
+├── skills/          # CASE skills as package data: frontier `ailsa/`, lean `ailsa-lite/` — see below
 ├── cli/             # ailsa Click CLI (all subcommands; --format json on all but setup commands and visualize)
 └── …                # database, visualization, nmrxiv, solvers, data
 tests/               # pytest suite
 data/                # local test NMR datasets (Bruker format)
-.claude/             # CASE skill + team agents (symlinked into ~/.claude) — see below
 .planning/           # GSD planning files (PROJECT.md, ROADMAP.md, STATE.md, phases/)
 docs/                # human docs (ARCHITECTURE, USER_GUIDE, …); docs/infographics/ = editable project slide deck (regenerate via build.py — see its README)
 ```
@@ -106,10 +106,13 @@ Every text that describes this database (README, `docs/`, the deck, the figshare
 
 ## CASE skill location (maintenance pointer — not documented here)
 
-The autonomous CASE workflow lives under `.claude/` in this repo and is symlinked into `~/.claude` (so it loads as a Claude Code skill globally):
+The autonomous CASE workflow lives in `src/ailsa/skills/ailsa/` (the lean variant is `src/ailsa/skills/ailsa-lite/`):
 
-- `.claude/commands/ailsa/` — the `/ailsa:*` commands: orchestrator `case.md` + `references/`, plus `dereplicate`/`predict`/`sanitise`/`status`/routing.
-- `.claude/agents/ailsa-*.md` — the specialist team that `case.md` assembles — specialists that coordinate with each other (`ailsa-nmr-chemist`, `ailsa-lsd-engineer`, `ailsa-solution-analyst`, `ailsa-devils-advocate`) — and `ailsa-diagnostic` (escalation only).
+- `commands/` — the `/ailsa:*` commands: coordinator `case.md`, plus `dereplicate`/`predict`/`sanitise`/`status`/routing.
+- `agents/` — the five `ailsa-*` agents: the specialists that coordinate with each other (`ailsa-nmr-chemist`, `ailsa-lsd-engineer`, `ailsa-solution-analyst`, `ailsa-devils-advocate`) and `ailsa-diagnostic` (escalation only).
+- `references/` — one-level references, one shared LSD reference; plus `INDEX.md` and `CHANGELOG.md`.
+
+Install with `ailsa skill install ailsa --target claude --link` on the maintainer machines. `tests/test_skill_frontier.py` and `tests/test_skill_files_unchanged.py` guard the files (regenerate `tests/skill_files.sha256` in the same commit as a text change).
 
 Edit those files to change CASE behaviour. A **fresh Claude Code session** is required to reload edited agents/commands. All operational and domain-strategy knowledge belongs there — keep this CLAUDE.md free of it.
 
