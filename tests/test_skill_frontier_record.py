@@ -1,0 +1,177 @@
+"""Grep-contract tests for how the frontier coordinator writes the run record.
+
+They pin the coordinator text (src/ailsa/skills/ailsa/commands/case.md): the record is created
+first, before any team, task or spawn; every spawn prompt carries the absolute work folder; prose
+goes into notes; every exit declares the result or closes the run; CASE-PROGRESS.md and
+final_results.md are renderings, never hand-written. They replace the old web-view contract test.
+
+All file reads use repo-relative paths (src/ailsa/skills/ailsa/...), so the tests work from any
+checkout without touching ~/.claude.
+
+Run with::
+
+    pytest tests/test_skill_frontier_record.py -v
+"""
+
+from __future__ import annotations
+
+import re
+from pathlib import Path
+
+# Resolved from this file, so pytest can run from any folder.
+SKILL_DIR = Path(__file__).resolve().parents[1] / "src/ailsa/skills/ailsa"
+CASE_MD = SKILL_DIR / "commands/case.md"
+RUN_RECORD_MD = SKILL_DIR / "references/run-record.md"
+INDEX_MD = SKILL_DIR / "INDEX.md"
+
+# The marker that begins the terminate_team step in case.md.
+TERMINATE_TEAM_MARKER = '<step name="terminate_team">'
+
+# The first [BEGIN] peak-picking push (the SendMessage call of the kick-off), not the earlier
+# mention in the nmr-chemist spawn prompt.
+FIRST_PUSH_MARKER = 'content="[BEGIN] peak-picking'
+
+INIT = "ailsa run init"
+
+
+def _case_text() -> str:
+    return CASE_MD.read_text()
+
+
+def _step(text: str, name: str) -> str:
+    """Text of one <step name="..."> block, from its opening tag to its closing </step>."""
+    marker = f'<step name="{name}">'
+    assert marker in text, f"case.md has no {marker}"
+    after = text.split(marker, 1)[1]
+    assert "</step>" in after, f"the {name} step has no closing </step>"
+    return after.split("</step>", 1)[0]
+
+
+def _task_blocks(text: str) -> list[str]:
+    """Every Task( block: from a line starting with 'Task(' to the next line that is exactly ')'."""
+    blocks: list[str] = []
+    current: list[str] | None = None
+    for line in text.splitlines():
+        if current is None:
+            if line.startswith("Task("):
+                current = [line]
+        else:
+            current.append(line)
+            if line == ")":
+                blocks.append("\n".join(current))
+                current = None
+    return blocks
+
+
+def _first_task_line_index(text: str) -> int:
+    match = re.search(r"^Task\(", text, re.MULTILINE)
+    assert match, "case.md has no line starting with Task("
+    return match.start()
+
+
+def test_start_record_step_listed() -> None:
+    """The record step exists and is listed, so a reader sees it as its own step in run order."""
+    text = _case_text()
+    assert '<step name="start_record">' in text, "case.md has no start_record step"
+    lines = text.splitlines()
+    assert "## Contents" in lines, "case.md has no ## Contents"
+    start = lines.index("## Contents")
+    entries = []
+    for line in lines[start + 1 :]:
+        if line.startswith("## "):
+            break
+        if line.startswith("- "):
+            entries.append(line[2:])
+    assert any(e.startswith("start_record") for e in entries), (
+        f"## Contents has no entry beginning with start_record: {entries}"
+    )
+
+
+def test_init_before_first_spawn() -> None:
+    """The record exists before any team, spawn or push, so every later tool step lands in it."""
+    text = _case_text()
+    assert INIT in text, f"case.md does not name {INIT!r}"
+    init_idx = text.index(INIT)
+    assert "TeamCreate(" in text, "case.md has no TeamCreate( call"
+    assert FIRST_PUSH_MARKER in text, f"case.md has no push marker {FIRST_PUSH_MARKER!r}"
+    team_idx = text.index("TeamCreate(")
+    task_idx = _first_task_line_index(text)
+    push_idx = text.index(FIRST_PUSH_MARKER)
+    assert init_idx < team_idx, f"{INIT} at {init_idx} comes after TeamCreate( at {team_idx}"
+    assert init_idx < task_idx, f"{INIT} at {init_idx} comes after the first Task( at {task_idx}"
+    assert init_idx < push_idx, f"{INIT} at {init_idx} comes after the first push at {push_idx}"
+
+
+def test_init_names_frontier_skill() -> None:
+    """The record names the frontier skill and team mode, so the two skills' runs stay apart."""
+    text = _case_text()
+    assert INIT in text, f"case.md does not name {INIT!r}"
+    idx = text.index(INIT)
+    line_start = text.rfind("\n", 0, idx) + 1
+    line_end = text.find("\n", idx)
+    line = text[line_start : line_end if line_end != -1 else len(text)]
+    assert "--skill ailsa" in line, f"the first {INIT} line lacks --skill ailsa: {line!r}"
+    assert "--mode team" in line, f"the first {INIT} line lacks --mode team: {line!r}"
+
+
+def test_work_dir_in_every_spawn_prompt() -> None:
+    """Every specialist gets the absolute work folder, so no agent writes into the dataset."""
+    blocks = _task_blocks(_case_text())
+    assert len(blocks) == 4, f"expected four Task( blocks, found {len(blocks)}"
+    missing = [b.splitlines()[1].strip() for b in blocks if "{work_dir}" not in b]
+    assert not missing, f"Task( blocks without {{work_dir}}: {missing}"
+
+
+def test_terminate_declares_or_closes() -> None:
+    """Every exit declares the result or closes the run and renders it, so no record stays open."""
+    block = _step(_case_text(), "terminate_team")
+    for command in ("ailsa run finalize", "ailsa run close", "ailsa run render"):
+        assert command in block, f"terminate_team does not name {command!r}"
+
+
+def test_explicit_ranking_id() -> None:
+    """The declaration names its ranking, because 'latest' is the analyst's cross-check ranking."""
+    for path in (CASE_MD, RUN_RECORD_MD):
+        assert path.exists(), f"{path.name} is missing"
+        assert "--ranking latest" not in path.read_text(), f"{path.name} uses --ranking latest"
+
+
+def test_no_legacy_writes_in_case_md() -> None:
+    """The coordinator writes no dataset folder, manifest, timing file, dashboard or old log."""
+    text = _case_text()
+    legacy_tokens = (
+        "analysis/",
+        ".run_manifest",
+        "timing.json",
+        "**Dashboard:**",
+        "progress-format",
+    )
+    for legacy in legacy_tokens:
+        assert legacy not in text, f"case.md still contains {legacy!r}"
+    assert "webview" not in text.lower(), "case.md still mentions the web view"
+
+
+def test_model_self_report_recorded() -> None:
+    """Each specialist's model statement is recorded as a self-report, which stays provisional."""
+    assert "--self-reported-model" in _case_text(), "case.md records no model self-report"
+
+
+def test_ranking_complete_requires_ranking_id() -> None:
+    """[RANKING-COMPLETE] has to carry the ranking id, because the declaration names it."""
+    block = _step(_case_text(), "validate_message")
+    pattern = r"^- \[RANKING-COMPLETE\]:(.*?)(?=^- |^\s*$)"
+    match = re.search(pattern, block, re.MULTILINE | re.DOTALL)
+    assert match, "validate_message lists no [RANKING-COMPLETE] fields"
+    assert "Ranking id" in match.group(1), (
+        f"[RANKING-COMPLETE] fields lack 'Ranking id': {match.group(1).strip()!r}"
+    )
+
+
+def test_retired_references_gone() -> None:
+    """The timing and progress-format references gave way to run-record, linked from the index."""
+    assert not (SKILL_DIR / "references/timing.md").exists(), "references/timing.md still exists"
+    assert not (SKILL_DIR / "references/progress-format.md").exists(), (
+        "references/progress-format.md still exists"
+    )
+    assert RUN_RECORD_MD.exists(), "references/run-record.md is missing"
+    assert "references/run-record.md" in INDEX_MD.read_text(), "INDEX.md does not link run-record"
