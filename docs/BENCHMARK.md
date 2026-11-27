@@ -99,6 +99,8 @@ Four mechanisms, because a prompt instruction alone is not evidence of anything:
 4. **Grading is external and independent.** `tests/case-benchmark/grade_blind.py` parses
    each run's `final_results.md`, validates every candidate with RDKit, and compares
    InChIKeys against the answer key. The run's own claim about its result is never used.
+   Runs from this version on are graded from the rendered `final_results.md` copied out of
+   each run record; the frozen paper runs are unchanged.
 
 An audit of the finished campaign read all 138 protocol/report pairs against a rubric
 taken from the orchestrator's own rules, looking for short cuts to the answer. It raised

@@ -288,3 +288,57 @@ def test_preflight_checks_the_skill_install(monkeypatch):
     reply = "Hello! How can I help?\n"
     mod.preflight()
 
+
+
+# --- graders read the rendering ------------------------------------------------------------
+
+TERPINEOL = "CC1=CCC(C(C)(C)O)CC1"
+
+
+def _load(name: str, rel: str):
+    spec = importlib.util.spec_from_file_location(name, ROOT / rel)
+    mod = importlib.util.module_from_spec(spec)
+    sys.modules[name] = mod
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def _rendered(state: str) -> str:
+    from ailsa.record.render import render_final
+
+    manifest = {
+        "run_id": "run-x",
+        "dataset": {"label": "example"},
+        "status": {"state": state, "reason": "stopped"},
+        "final": {"outcome": "proposal", "candidate": 1, "confidence": "medium"},
+    }
+    ranking = {"candidates": [
+        {"rank": 1, "smiles": TERPINEOL, "mae": 0.8, "within_tolerance": 9},
+        {"rank": 2, "smiles": "OCC1CCCCC1", "mae": 2.1, "within_tolerance": 5},
+    ]}
+    declaration = {"termination_reason": "clear best candidate"}
+    return render_final(manifest, ranking, declaration)
+
+
+def test_grader_reads_rendered_final_results(tmp_path):
+    pytest.importorskip("rdkit")
+    grader = _load("grade_blind_t", "tests/case-benchmark/grade_blind.py")
+    table = _load("build_benchmark_table_t", "scripts/build_benchmark_table.py")
+    case = tmp_path / "CASE1"
+    (case / "analysis").mkdir(parents=True)
+    path = case / "analysis" / "final_results.md"
+    path.write_text(_rendered("result_declared"), encoding="utf-8")
+    top = grader.extract_top_smiles(path)
+    first = grader.inchikey_from_smiles(top[0]).split("-")[0]
+    assert first == grader.inchikey_from_smiles(TERPINEOL).split("-")[0]
+    assert table.rank_for(grader, case, first) == 1
+    second = grader.inchikey_from_smiles("OCC1CCCCC1").split("-")[0]
+    assert table.rank_for(grader, case, second) == 2
+
+
+def test_runner_copies_only_declared_results():
+    text = _read("tests/case-benchmark/blind_case_run.sh")
+    assert 'if [ "$RUN_STATE" = result_declared ]' in text
+    assert text.count("renderings/final_results.md") == 2  # the gate and the copy
+    # A stopped run renders without any SMILES, so there is nothing to grade either way.
+    assert "`" not in _rendered("stopped_before_result").split("## Result")[1]

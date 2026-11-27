@@ -82,5 +82,9 @@ python tests/case-benchmark/blind_case_batch.py --all -k 3 --mode full
 python tests/case-benchmark/grade_blind.py         # after the batch restores truth
 ```
 
-`results/` is gitignored — run outputs, `timing.json`, `CASE-PROGRESS.md`,
+Each case's run record lives in `results/<CASE>/ailsa-runs/<run>/` (manifest, event log,
+renderings, transcripts). `results/<CASE>/analysis/final_results.md` is a copy of the rendered
+result, made only when the run declared a result; a run that stopped without one leaves no copy.
+
+`results/` is gitignored — run outputs, the record folders, `CASE-PROGRESS.md`,
 `scorecard.tsv` (blind-sensitive) stay local and are never committed.

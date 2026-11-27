@@ -189,7 +189,7 @@ cd data/Ibuprofen   # or any Bruker dir with the needed experiments
 # In a fresh Claude Code session on the host:  /ailsa:case . C13H18O2
 ```
 
-If the coordinator runs to `final_results.md`, and `ailsa lsd check`/DB/prediction all
+If the coordinator declares its result (`ailsa run status` shows a valid declaration), and `ailsa lsd check`/DB/prediction all
 pass, the host is CASE-capable.
 
 ---
