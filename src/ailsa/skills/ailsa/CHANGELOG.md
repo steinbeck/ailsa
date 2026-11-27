@@ -71,6 +71,15 @@ Applies to: ailsa (frontier skill) only; the lean skill writes the record since 
   and, for its exit paths, `ailsa run close` and `ailsa run render`. The lean skill's contract
   test no longer needs an exception for them, and a whole-skill test keeps the dataset's analysis
   folder, the dataset manifest, the timing log and the web view out of every frontier file.
+- The notes carry every labelled field that the old progress log copied from each message, with
+  the same names: setup (`Statistical detection`, `Grouping`, `HHB`, `Conflicts with NMR
+  evidence`, `Key observations`), iteration (`Constraint inventory delta`, `Why`, `Constraint
+  effectiveness`), validation (the per-check results, `Concerns`, and `CRITICAL issues` and
+  `Action required` when blocked), ranking (`Solutions`, `Strained rings`, `Chemical
+  plausibility`, `Quality`) and the diagnosis in the intervention note. The devil's advocate's
+  checks (a documented aromatic-cosy call, an announced PROP constraint, evidence for a
+  heteroatom constraint, the ELIM history) and the diagnostic specialist read these fields; a
+  second reader of the skill diff found that the first note formats had dropped them.
 - Measurement: recording only; validated by one headless and one team run on the public example
   dataset (see the phase's acceptance file).
 

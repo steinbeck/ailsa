@@ -68,7 +68,8 @@ Rules:
 - A `--phase` note precedes every `[BEGIN]` push. A phase name different from the last one starts a
   new phase, so the record times each phase without separate stamps.
 - Keep notes short; the limit is 4 000 characters. Long tables stay in the agents' messages and in
-  their work files; the note carries a summary and the fields that loop detection reads.
+  their work files; the note carries every field of its format below, because loop detection, the
+  devil's advocate's checks and the diagnostic specialist read them from the notes.
 
 ## Note formats
 
@@ -79,31 +80,34 @@ the values from the message.
 **Setup summary**, from `[SETUP-COMPLETE]`:
 
 ```bash
-ailsa run note "Setup: DBE: <n>; Spectra found: <list>; Peak counts: <13C, HSQC, HMBC counts>; Multiplicities: <CH3/CH2/CH/C counts>; Symmetry: <verdict>; Quality assessment: <verdict>; Aromatic expectation: <verdict>; 13C shifts: <comma-separated ppm list>" --sender ailsa-nmr-chemist
+ailsa run note "Setup: DBE: <n>; Spectra found: <list>; Peak counts: <13C, HSQC, HMBC counts>; Multiplicities: <CH3/CH2/CH/C counts>; Symmetry: <verdict>; Quality assessment: <verdict>; Aromatic expectation: <verdict>; 13C shifts: <comma-separated ppm list>; Statistical detection: <results per shift>; Grouping: <grouped signals or none detected>; HHB: <result or N/A>; Conflicts with NMR evidence: <overrides or None>; Key observations: <text>" --sender ailsa-nmr-chemist
 ```
 
 **Iteration**, from `[ITERATION-COMPLETE]`:
 
 ```bash
-ailsa run note "Iteration <NN>: LSD file: <absolute path>; Solution count: <n>; Constraints added: <list>; Constraints removed: <list>; HMBC correlations used: <X>/<Y>; Fragment search: <none or summary>; Fragment file: <none or path>; Confidence: <level>" --sender ailsa-lsd-engineer
+ailsa run note "Iteration <NN>: LSD file: <absolute path>; Solution count: <n>; Constraints added: <list>; Constraints removed: <list>; Constraint inventory delta: <from message>; HMBC correlations used: <X>/<Y>; Fragment search: <none or summary>; Fragment file: <none or path>; Why: <reason>; Constraint effectiveness: <from message>; Confidence: <level>" --sender ailsa-lsd-engineer
 ```
 
 **Validation**, from `[VALIDATION-PASSED]` or `[VALIDATION-BLOCKED]`:
 
 ```bash
-ailsa run note "Validation: <PASSED or BLOCKED>; sp2 count: <n> (<even or odd>); H budget: <ok or mismatch>; Dropped constraints: <none or list>" --sender ailsa-devils-advocate
+ailsa run note "Validation: <PASSED or BLOCKED>; sp2 count: <n> (<even or odd>); H budget: <ok or mismatch>; Dropped constraints: <none or list>; Ring exclusion: <from message>; DEFF FEXP: <from message>; COSY-equiv: <from message>; Grouped notation: <from message>; Correlation order: <from message>; Concerns: <list or None>" --sender ailsa-devils-advocate
 ```
+
+With `[VALIDATION-BLOCKED]`, add `CRITICAL issues: <list>; Action required: <text>` to the same
+note.
 
 **Ranking**, from `[RANKING-COMPLETE]`:
 
 ```bash
-ailsa run note "Ranking: Ranking id: <rkNN>; Top candidate: rank <n>, SMILES <smiles>, MAE <ppm>; Recommendation: <text>; Declaration draft: <outcome>, candidate <n>, confidence <level>" --sender ailsa-solution-analyst
+ailsa run note "Ranking: Ranking id: <rkNN>; Solutions: <n>; Top candidate: rank <n>, SMILES <smiles>, MAE <ppm>; Strained rings: <from message>; Chemical plausibility: <from message>; Quality: <from message>; Recommendation: <text>; Declaration draft: <outcome>, candidate <n>, confidence <level>" --sender ailsa-solution-analyst
 ```
 
 **Intervention**, when the coordinator sends an advisory:
 
 ```bash
-ailsa run note "Intervention: Pattern: <loop pattern>; Counter: <n>/10; Advisory sent: <one line>" --sender coordinator
+ailsa run note "Intervention: Pattern: <loop pattern>; Counter: <n>/10; Advisory sent: <one line>; Diagnosis: <none, or root cause, primary fix and confidence from DIAGNOSTIC-REPORT.md>" --sender coordinator
 ```
 
 **Multiplicity coverage**, only with a `[MULTIPLICITY-AMBIGUOUS]` record, whenever one of its four
@@ -154,7 +158,11 @@ Loop detection reads these fields from the notes and finds them by these names:
 - `Fragment search:` in the iteration notes
 - `Fragment file:` in the iteration notes
 
-The coverage gate reads the latest note that begins with `Multiplicity coverage:`.
+The coverage gate reads the latest note that begins with `Multiplicity coverage:`. The devil's
+advocate's checks and the diagnostic specialist read the other fields: for example whether the
+setup note's `Statistical detection:` or `Key observations:` documents a call to
+`ailsa detect aromatic-cosy` or announces a PROP constraint, the `Grouping:` and `HHB:` results,
+and the `Why:` of each iteration.
 
 ## Declaring the result
 
