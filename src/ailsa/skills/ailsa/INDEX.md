@@ -2,7 +2,7 @@
 name: ailsa
 description: The AILSA frontier skill for Claude Code, made of the /ailsa:* commands and the ailsa-* specialist agents. It determines the structure of an unknown organic compound from NMR data, using the ailsa command line and the LSD solver. Use when asked to elucidate, solve or identify a structure from Bruker NMR data, to dereplicate a 13C peak list, to predict 13C shifts, to sanitise a dataset, or to check the setup.
 metadata:
-  version: "0.1.0"
+  version: "0.2.0"
   requires: "ailsa CLI of the same version; LSD and outlsd on PATH; the reference database; Claude Code"
 ---
 
@@ -45,6 +45,7 @@ A coordinator command runs the workflow and hands the chemistry to four speciali
 - [multiplicity-ambiguity](references/multiplicity-ambiguity.md): searching every aliphatic multiplicity family when the spectra leave it open
 - [nmr-basics](references/nmr-basics.md): NMR facts the agents rely on
 - [progress-format](references/progress-format.md): format of the progress log
+- [run-record](references/run-record.md): what the coordinator notes, how it reads the generated progress log, how it declares or closes the run
 - [smoke-test](references/smoke-test.md): the pass/fail report of the coordinator's smoke-test mode
 - [timing](references/timing.md): the coordinator's wall-clock timing: when to stamp, the log, the timing summary
 - [validation-checks](references/validation-checks.md): the devil's advocate's pre-solver checks on every LSD file, each with its severity

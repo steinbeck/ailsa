@@ -346,7 +346,7 @@ def test_real_package_has_command_skill() -> None:
 
     skills = available_skills()
     assert skills["ailsa"]["kind"] == "commands"
-    assert skills["ailsa"]["version"] == "0.1.0"
+    assert skills["ailsa"]["version"] == "0.2.0"
     assert "ailsa-lite" in skills
 
 

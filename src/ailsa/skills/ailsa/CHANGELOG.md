@@ -3,6 +3,15 @@
 Each entry says which skill it applies to (see docs/SKILLS.md) and, for a change of behaviour,
 which measurement supports it.
 
+## 0.2.0
+
+Applies to: ailsa (frontier skill) only; the lean skill writes the record since its 0.3.0. Recording only: no chemistry rule changed.
+
+- New reference `references/run-record.md`: what the coordinator notes and in which format (the
+  field names loop detection reads are unchanged), how it reads the progress log that
+  `ailsa run render` generates, how model self-reports are recorded, and how every exit path
+  declares the result with `ailsa run finalize` or closes the run with `ailsa run close`.
+
 ## 0.1.0
 
 Applies to: ailsa (frontier skill) only.
