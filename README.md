@@ -103,7 +103,7 @@ configuration without it — see that section for what changes and why.
                     ┌────────────────────────────────┐
                     │   Coordinator   /ailsa:case      │
                     │   tasks · advisories ·           │
-                    │   writes CASE-PROGRESS.md        │
+                    │   records notes in the run record│
                     └─────┬───────┬───────┬───────┬────┘
                           │       │       │       │
                  ┌────────▼──┐ ┌──▼──────────┐ ┌──▼───────────┐ ┌───▼─────────────┐
@@ -120,8 +120,8 @@ configuration without it — see that section for what changes and why.
 The coordinator monitors progress, detects unproductive loops, intervenes with
 **advisory** constraints (telling the team *what* is wrong, not *how* to fix it, so the
 specialists keep their autonomy), escalates to the Diagnostic specialist after repeated
-intervention cycles fail, and is the sole writer of the progress log
-(`CASE-PROGRESS.md`). It never does dereplication and never short-cuts the elucidation —
+intervention cycles fail, and records a note per specialist message in the run record; the progress log is
+generated from that record (`ailsa run render`, see [docs/RUN-RECORD.md](docs/RUN-RECORD.md)). It never does dereplication and never short-cuts the elucidation —
 a CASE run always starts from the raw spectra.
 
 The commands, agents and references live in
@@ -190,7 +190,6 @@ setup commands (`ailsa database …`, `ailsa lsd check`, `ailsa fragment build`/
 | `ailsa fetch` | Fetch datasets from external repositories |
 | `ailsa jcamp` | Read 2D spectra from JCAMP-DX files (binary-free ingestion path) |
 | `ailsa nus` | Reconstruct non-uniformly-sampled 2D spectra (NMRPipe + SMILE) |
-| `ailsa webview` | Local dashboard for watching a CASE run |
 | `ailsa database` | Download and inspect the reference database |
 
 A few representative invocations:
@@ -415,7 +414,6 @@ ailsa/
 │   ├── nmrxiv/          # nmrXiv dataset fetching
 │   ├── database/        # reference-database access
 │   ├── data/            # bundled schemas (constraint-inventory JSON, …)
-│   ├── webview/         # local run dashboard
 │   ├── visualization/   # NMR correlation diagrams
 │   ├── identity.py      # deterministic identity derivation (ailsa identify)
 │   └── cli/             # the `ailsa` Click CLI

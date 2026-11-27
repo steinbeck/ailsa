@@ -48,7 +48,6 @@ Options:
 | `ailsa fetch` | Fetch NMR data from external repositories. |
 | `ailsa database` | Database management commands. |
 | `ailsa fragment` | Fragment library management and search. |
-| `ailsa webview` | Webview dashboard server commands. |
 | `ailsa nus` | NUS (Non-Uniform Sampling) 2D reconstruction commands. |
 | `ailsa jcamp` | Ingest JCAMP-DX spectra: read -> pick -> QC -> write in one invocation. |
 | `ailsa pylsd` | PyLSD multi-run orchestration for 4J HMBC handling. |

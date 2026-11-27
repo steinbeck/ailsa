@@ -105,7 +105,6 @@ src/ailsa/
 ├── identity.py           # Structure → identity derivation (`ailsa identify`)
 ├── visualization/        # NMR correlation diagram rendering
 │   └── arrow_router.py, diagram_generator.py, layout_optimizer.py, models.py, svg_builder.py
-├── webview/              # Read-only FastAPI run dashboard (optional [webview] extra)
 │   ├── app.py, depiction.py, server.py, state.py
 │   ├── routers/
 │   └── static/
@@ -116,7 +115,7 @@ src/ailsa/
     ├── main.py, __main__.py
     ├── read.py, pick.py, analyze.py, detect.py, dereplicate.py
     ├── predict.py, lsd.py, pylsd.py, fragment.py, identify.py
-    ├── jcamp.py, nus.py, fetch.py, visualize.py, webview.py
+    ├── jcamp.py, nus.py, fetch.py, visualize.py
     └── database.py
 ```
 
@@ -188,7 +187,7 @@ specialists that coordinate with each other, not a single autonomous agent worki
 
 - A **coordinator** (`/ailsa:case`) creates a task per elucidation stage and starts the
   specialist for it, monitors progress, detects unproductive loops, and sends advisories when
-  one is found. It is the sole writer of `CASE-PROGRESS.md`, and escalates to `ailsa-diagnostic`
+  one is found. It records a note per specialist message in the run record and declares the result with `ailsa run finalize`; the progress log and the final results are renderings of that record (see [RUN-RECORD.md](RUN-RECORD.md)). It escalates to `ailsa-diagnostic`
   when a specialist cannot make progress on its own.
 - Four specialists do the elucidation work: `ailsa-nmr-chemist`, `ailsa-lsd-engineer`,
   `ailsa-solution-analyst` and `ailsa-devils-advocate`. `ailsa-diagnostic` joins only on
