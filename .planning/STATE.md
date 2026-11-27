@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-07-21)
 ## Current Position
 
 Phase: 106.2 (frontier-skill-writes-the-run-record) — PLANNED 2026-11-27, executing
-Plan: 5 of 12 (9 waves; plan 11 = team proof run with owner checkpoint)
+Plan: 6 of 12 (9 waves; plan 11 = team proof run with owner checkpoint)
 Status: planned without a discussion round (owner choice 2026-11-27); research defaults OD-1..OD-11
   are stated assumptions in the plans; plan check passed (3 warnings, no blockers)
 Last activity: 2026-11-27 -- Phase 106.2 research, pattern map, 12 plans, plan check
