@@ -191,3 +191,25 @@ def test_lite_force_over_symlink_unlinks(fake_pkg: Path, tmp_path: Path) -> None
     assert code == 0, out
     assert not (dest / "ailsa-lite").is_symlink()
     assert (old / "marker.txt").read_text() == "m\n"
+
+
+def test_real_package_has_command_skill() -> None:
+    from ailsa.cli.skill import available_skills
+
+    skills = available_skills()
+    assert skills["ailsa"]["kind"] == "commands"
+    assert skills["ailsa"]["version"] == "0.1.0"
+    assert "ailsa-lite" in skills
+
+
+def test_real_copy_install(tmp_path: Path) -> None:
+    from ailsa.cli.skill import available_skills
+
+    root = tmp_path / "root"
+    code, out = _run("install", "ailsa", "--root", str(root))
+    assert code == 0, out
+    package = Path(available_skills()["ailsa"]["path"]).parent
+    assert len(list((root / "commands" / "ailsa").glob("*.md"))) == 6
+    assert len(list((root / "agents").glob("ailsa-*.md"))) == 5
+    for ref in (package / "references").glob("*.md"):
+        assert (root / "ailsa" / "references" / ref.name).is_file()
