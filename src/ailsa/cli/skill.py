@@ -291,12 +291,6 @@ def list_cmd() -> None:
     help="Command skill only: create symlinks into a source checkout instead of copies "
     "(for maintainers; refused for an installed wheel).",
 )
-@click.option(
-    "--root",
-    type=click.Path(file_okay=False),
-    default=None,
-    help="Command skill only: install under this folder (default ~/.claude).",
-)
 def install_cmd(
     name: str,
     target: str | None,
@@ -304,9 +298,12 @@ def install_cmd(
     dest: str | None,
     force: bool,
     link: bool,
-    root: str | None,
 ) -> None:
-    """Install skill NAME: copy an Agent Skill, or copy/link the command skill."""
+    """Install skill NAME: copy an Agent Skill, or copy/link the command skill.
+
+    The command skill always goes to ~/.claude: its commands and agents read their reference
+    files from ~/.claude/ailsa/references, so an install anywhere else could not work.
+    """
     skills = available_skills()
     if name not in skills:
         click.echo(f"Error: no skill {name!r}. Available: {', '.join(skills) or 'none'}")
@@ -315,22 +312,22 @@ def install_cmd(
     if info["kind"] == "commands":
         if (target is not None and target != "claude") or project or dest:
             click.echo(
-                "Error: the command skill installs only into ~/.claude; "
-                "use --root to choose another folder."
+                "Error: the command skill installs only into ~/.claude (its files read "
+                "~/.claude/ailsa/references)."
             )
             raise SystemExit(1)
         src_dir = Path(info["path"])
         if link and _is_site_packages(src_dir):
             click.echo("Error: --link needs a source checkout; this install is a wheel.")
             raise SystemExit(1)
-        root_dir = Path(root) if root else Path.home() / ".claude"
+        root_dir = Path.home() / ".claude"
         for line in _install_command_skill(src_dir, root_dir, link, force):
             click.echo(line)
         mode = "link mode" if link else "copy mode"
         click.echo(f"Installed {name} {info['version']} into {root_dir} ({mode})")
         return
-    if link or root:
-        click.echo("Error: --link and --root apply to the command skill only.")
+    if link:
+        click.echo("Error: --link applies to the command skill only.")
         raise SystemExit(1)
     folder = Path(dest) if dest else TARGETS[target or "opencode"][1 if project else 0]
     destination = folder / name

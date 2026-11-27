@@ -47,12 +47,20 @@ def fake_pkg(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     return skills
 
 
+@pytest.fixture(autouse=True)
+def home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """Every test runs with a temporary home folder; the real ~/.claude is never touched."""
+    fake = tmp_path / "home"
+    monkeypatch.setattr(Path, "home", classmethod(lambda cls: fake))
+    return fake
+
+
 @pytest.fixture
-def root(tmp_path: Path) -> Path:
-    other = tmp_path / "home" / "other"
+def root(home: Path) -> Path:
+    other = home / "other"
     other.mkdir(parents=True)
     (other / "keep.txt").write_text("keep\n")
-    return tmp_path / "home" / ".claude"
+    return home / ".claude"
 
 
 def _run(*args: str) -> tuple[int, str]:
@@ -80,7 +88,7 @@ def test_list_shows_both_kinds(fake_pkg: Path) -> None:
 
 
 def test_copy_install_layout(fake_pkg: Path, root: Path) -> None:
-    code, out = _run("install", "ailsa", "--root", str(root))
+    code, out = _run("install", "ailsa")
     assert code == 0, out
     for p in _paths(root):
         assert p.exists() and not p.is_symlink(), p
@@ -90,7 +98,7 @@ def test_copy_install_layout(fake_pkg: Path, root: Path) -> None:
 
 
 def test_link_install_layout(fake_pkg: Path, root: Path, tmp_path: Path) -> None:
-    code, out = _run("install", "ailsa", "--link", "--root", str(root))
+    code, out = _run("install", "ailsa", "--link")
     assert code == 0, out
     for p in _paths(root):
         assert p.is_symlink(), p
@@ -99,22 +107,22 @@ def test_link_install_layout(fake_pkg: Path, root: Path, tmp_path: Path) -> None
 
 
 def test_link_install_is_idempotent(fake_pkg: Path, root: Path) -> None:
-    assert _run("install", "ailsa", "--link", "--root", str(root))[0] == 0
-    assert _run("install", "ailsa", "--link", "--root", str(root))[0] == 0
+    assert _run("install", "ailsa", "--link")[0] == 0
+    assert _run("install", "ailsa", "--link")[0] == 0
 
 
 def test_copy_refuses_existing_without_force(fake_pkg: Path, root: Path) -> None:
-    assert _run("install", "ailsa", "--root", str(root))[0] == 0
-    code, out = _run("install", "ailsa", "--root", str(root))
+    assert _run("install", "ailsa")[0] == 0
+    code, out = _run("install", "ailsa")
     assert code == 1
     assert "--force" in out
 
 
 def test_copy_over_own_links_never_touches_package(fake_pkg: Path, root: Path) -> None:
     before = _state(fake_pkg)
-    assert _run("install", "ailsa", "--link", "--root", str(root))[0] == 0
+    assert _run("install", "ailsa", "--link")[0] == 0
     # Links into the package are this skill's own: copy mode replaces them without --force.
-    code, out = _run("install", "ailsa", "--root", str(root))
+    code, out = _run("install", "ailsa")
     assert code == 0, out
     assert _state(fake_pkg) == before
     for p in _paths(root):
@@ -128,11 +136,11 @@ def test_foreign_link_needs_force(fake_pkg: Path, root: Path, tmp_path: Path) ->
     agent = root / "agents" / "ailsa-nmr-chemist.md"
     agent.symlink_to(mine)
     for mode in (["--link"], []):
-        code, out = _run("install", "ailsa", *mode, "--root", str(root))
+        code, out = _run("install", "ailsa", *mode)
         assert code == 1, out
         assert "--force" in out
         assert agent.is_symlink() and agent.resolve() == mine.resolve()
-    code, out = _run("install", "ailsa", "--force", "--root", str(root))
+    code, out = _run("install", "ailsa", "--force")
     assert code == 0, out
     assert agent.is_file() and not agent.is_symlink()
     assert agent.read_text() == "chemist\n"
@@ -140,12 +148,12 @@ def test_foreign_link_needs_force(fake_pkg: Path, root: Path, tmp_path: Path) ->
 
 
 def test_dropped_agent_link_removed(fake_pkg: Path, root: Path, tmp_path: Path) -> None:
-    assert _run("install", "ailsa", "--link", "--root", str(root))[0] == 0
+    assert _run("install", "ailsa", "--link")[0] == 0
     mine = tmp_path / "mine.md"
     mine.write_text("custom\n")
     (root / "agents" / "ailsa-my-variant.md").symlink_to(mine)
     (fake_pkg / "ailsa" / "agents" / "ailsa-diagnostic.md").unlink()
-    code, out = _run("install", "ailsa", "--link", "--root", str(root))
+    code, out = _run("install", "ailsa", "--link")
     assert code == 0, out
     stale = root / "agents" / "ailsa-diagnostic.md"
     assert not stale.is_symlink() and not stale.exists()
@@ -155,9 +163,9 @@ def test_dropped_agent_link_removed(fake_pkg: Path, root: Path, tmp_path: Path) 
 
 
 def test_dropped_agent_copy_removed_with_force(fake_pkg: Path, root: Path) -> None:
-    assert _run("install", "ailsa", "--root", str(root))[0] == 0
+    assert _run("install", "ailsa")[0] == 0
     (fake_pkg / "ailsa" / "agents" / "ailsa-diagnostic.md").unlink()
-    code, out = _run("install", "ailsa", "--force", "--root", str(root))
+    code, out = _run("install", "ailsa", "--force")
     assert code == 0, out
     assert not (root / "agents" / "ailsa-diagnostic.md").exists()
     assert "removed stale agent copy" in out
@@ -179,7 +187,7 @@ def test_legacy_cleanup_only_lucy_links(fake_pkg: Path, root: Path, tmp_path: Pa
     (root / "agents" / "lucy-nmr-chemist.md").symlink_to(old / "agents" / "lucy-nmr-chemist.md")
     (root / "agents" / "supervisor.md").symlink_to(other / "supervisor.md")
     (root / "agents" / "lucy-diagnostic.md").write_text("regular\n")
-    code, out = _run("install", "ailsa", "--root", str(root))
+    code, out = _run("install", "ailsa")
     assert code == 0, out
     assert not (root / "commands" / "lucy-ng").is_symlink()
     assert not (root / "agents" / "lucy-nmr-chemist.md").is_symlink()
@@ -198,7 +206,7 @@ def test_link_refused_from_site_packages(
     skills = tmp_path / "lib" / "python3.12" / "site-packages" / "ailsa" / "skills"
     _build_tree(skills)
     monkeypatch.setattr("ailsa.cli.skill._skills_root", lambda: skills)
-    code, _ = _run("install", "ailsa", "--link", "--root", str(root))
+    code, _ = _run("install", "ailsa", "--link")
     assert code == 1
     assert not (root / "commands").exists()
     assert not (root / "agents").exists()
@@ -212,8 +220,15 @@ def test_link_refused_from_site_packages(
 def test_command_skill_rejects_other_targets(
     fake_pkg: Path, root: Path, extra: list[str]
 ) -> None:
-    code, _ = _run("install", "ailsa", "--root", str(root), *extra)
+    code, _ = _run("install", "ailsa", *extra)
     assert code == 1
+
+
+def test_root_option_gone(fake_pkg: Path, root: Path, tmp_path: Path) -> None:
+    # The skill text reads ~/.claude/ailsa/references, so an install elsewhere cannot work.
+    code, _ = _run("install", "ailsa", "--root", str(tmp_path / "elsewhere"))
+    assert code == 2
+    assert not (tmp_path / "elsewhere").exists()
 
 
 def test_nothing_written_outside_root(fake_pkg: Path, root: Path, tmp_path: Path) -> None:
@@ -221,7 +236,7 @@ def test_nothing_written_outside_root(fake_pkg: Path, root: Path, tmp_path: Path
         return {p for p in (tmp_path / "home").rglob("*") if root not in (p, *p.parents)}
 
     before = outside()
-    assert _run("install", "ailsa", "--link", "--root", str(root))[0] == 0
+    assert _run("install", "ailsa", "--link")[0] == 0
     assert outside() == before
 
 
@@ -247,7 +262,7 @@ def test_symlinked_folder_into_package_refused(
     before = _state(fake_pkg)
     root.mkdir(parents=True)
     (root / "ailsa").symlink_to(fake_pkg / "ailsa", target_is_directory=True)
-    code, out = _run("install", "ailsa", *mode, "--force", "--root", str(root))
+    code, out = _run("install", "ailsa", *mode, "--force")
     assert code == 1, out
     assert "symlinked folder" in out
     assert _state(fake_pkg) == before
@@ -261,7 +276,7 @@ def test_root_resolving_into_package_refused(
     before = _state(fake_pkg)
     root.parent.mkdir(parents=True, exist_ok=True)
     root.symlink_to(fake_pkg / "ailsa", target_is_directory=True)
-    code, out = _run("install", "ailsa", "--link", "--force", "--root", str(root))
+    code, out = _run("install", "ailsa", "--link", "--force")
     assert code == 1, out
     assert "package's own skill files" in out
     assert _state(fake_pkg) == before
@@ -275,7 +290,7 @@ def test_refused_install_changes_nothing(fake_pkg: Path, root: Path, tmp_path: P
     (root / "commands").mkdir()
     (root / "commands" / "lucy-ng").symlink_to(old, target_is_directory=True)
     before = _state(root)
-    code, out = _run("install", "ailsa", "--root", str(root))
+    code, out = _run("install", "ailsa")
     assert code == 1
     assert "--force" in out
     assert "Nothing was changed" in out
@@ -318,11 +333,10 @@ def test_real_package_has_command_skill() -> None:
     assert "ailsa-lite" in skills
 
 
-def test_real_copy_install(tmp_path: Path) -> None:
+def test_real_copy_install(root: Path) -> None:
     from ailsa.cli.skill import available_skills
 
-    root = tmp_path / "root"
-    code, out = _run("install", "ailsa", "--root", str(root))
+    code, out = _run("install", "ailsa")
     assert code == 0, out
     package = Path(available_skills()["ailsa"]["path"]).parent
     assert len(list((root / "commands" / "ailsa").glob("*.md"))) == 6
