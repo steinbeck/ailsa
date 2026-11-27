@@ -307,8 +307,8 @@ CASE4 re-run (UAT-01 / Phase 89).
 -->
 
 **`## Multiplicity Coverage` ledger (only when a `[MULTIPLICITY-AMBIGUOUS]` record exists).**
-When the nmr-chemist has emitted a `[MULTIPLICITY-AMBIGUOUS]` signal (see ailsa-nmr-chemist.md
-Section 5b), maintain a `## Multiplicity Coverage` section in CASE-PROGRESS.md as the single
+When the nmr-chemist has emitted a `[MULTIPLICITY-AMBIGUOUS]` signal (see
+`~/.claude/ailsa/references/multiplicity-ambiguity.md`), maintain a `## Multiplicity Coverage` section in CASE-PROGRESS.md as the single
 source of truth the pre-accept coverage gate reads. Record four things:
 
 - **viable_families** — the numbered list from the nmr-chemist's `[MULTIPLICITY-AMBIGUOUS]`

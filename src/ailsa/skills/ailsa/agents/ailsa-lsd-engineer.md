@@ -219,8 +219,8 @@ to reload the edited agent. They are NOT unit-testable this session; functional 
 is the blind CASE4 re-run (UAT-01 / Phase 89), not unit tests.
 -->
 
-This section is wired to the nmr-chemist's `[MULTIPLICITY-AMBIGUOUS]` signal (Section 5b of
-ailsa-nmr-chemist.md). When aliphatic CH/CH₂/CH₃ multiplicity is NOT hard-determinable, the
+This section is wired to the nmr-chemist's `[MULTIPLICITY-AMBIGUOUS]` signal (defined in
+`~/.claude/ailsa/references/multiplicity-ambiguity.md`). When aliphatic CH/CH₂/CH₃ multiplicity is NOT hard-determinable, the
 nmr-chemist emits that signal with a numbered `viable_families:` list. **DO NOT hard-code a
 single leading multiplicity model.** Hard-coding one model is the exact CASE4 defeat: the
 isopropyl family (`3×CH₃ + CH`) was searched, scored MAE 1.75 ("PLAUSIBLE"), and the ethyl

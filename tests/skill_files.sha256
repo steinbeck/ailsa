@@ -1,10 +1,10 @@
-cd8212603de7588c01e25474c591a97e5a3179f51fc9a7b63cc035b5111a4a8e  ./INDEX.md
-3d31982b4d125486a6ccff3bb481cf34b1cab1e88485c81faf5b17349287e7c7  ./agents/ailsa-devils-advocate.md
+220f317f8698b2a342cac935c26e5a7c48df4bdad8bb5a7337add2d5ed496b75  ./INDEX.md
+932baef39336fb974f3384ee9c684852e2e702ca0e6463358ea5987fb35240d2  ./agents/ailsa-devils-advocate.md
 6b077915f231e4dbf620a04b1084d09ead5c0104126749dad718f42495572643  ./agents/ailsa-diagnostic.md
-bb82486865f9aa196a707e7d04dd44128594487f68af56bc99b04fef69698b80  ./agents/ailsa-lsd-engineer.md
-02a2364460800f0b1e34ed107fc32ae21dd2a32dd84befb4bbfac3a078f4ceb4  ./agents/ailsa-nmr-chemist.md
+1d5c8c60c414fcf83407ff48f0cc57f1b39460dfd22fc9d595906048eee788cc  ./agents/ailsa-lsd-engineer.md
+02396ce87dd7a7c47dbb7ea620b0ddffdaddb7e6f80cfb694299a597b16493ae  ./agents/ailsa-nmr-chemist.md
 b213c9f85d30e8f000cefa01f516eef138e617c78be70ae36a90e9c7b0abde25  ./agents/ailsa-solution-analyst.md
-4a06061086d1aba56f1337d84b4c4269e5bfc2aafe097fd46e4ff2b94546a6fd  ./commands/case.md
+8969ea337d170eb3b2b1e223c2b5f617716c0cbbb2916d570fba260ffd81a181  ./commands/case.md
 aedf2b98635bdf587aafb046de1f9f14b889e077d9545033eaf800be6441beb1  ./commands/dereplicate.md
 ea313dc87acdf1d3e00a5dd8bd35fc0c573bab19926ddcfeec0855163f2bb283  ./commands/help.md
 01e3f0bbd06e596cea57ee21d42a4f73bc28349a4986b9780e60026611eae8b9  ./commands/predict.md
@@ -12,5 +12,6 @@ d263715753307cce1c028990125b94283e3f088078488b64546d4e641e22d178  ./commands/san
 f03c7c7cf889a93ca0eade7adcc3e6ee3bfcbcbb999e338ba53107b948315521  ./commands/status.md
 c71226ddbb0418ced171a34141c41175f3785c6fe2a349c7fc52b16cbcdcf32b  ./references/advisory-templates.md
 f242b50bee64204fde13d4c9fd2ef96a1bbb0090582672feb182d6cabafe26bb  ./references/loop-patterns.md
+23c8a4d4bcda895f75aca2789720a3dd7db2096bacb03af0c9e4b749a0e508c7  ./references/multiplicity-ambiguity.md
 fb25f5d48082c080efda3a20235dc7d0d8374b6e881946cc216ea86b01c32e42  ./references/nmr-basics.md
 5b9691fa65492bdec5da9c32d44d2ffbd1d206073959c25a0f0e4cedd41f8930  ./references/progress-format.md

@@ -483,7 +483,7 @@ is the blind CASE4 re-run (UAT-01 / Phase 89), not unit tests.
 > G-IDENT is **POST-SOLUTION** and **advisory** (it downgrades a name, never blocks).
 > **G-MULT is PRE-ACCEPT and BINDING.** It fires while aliphatic CH/CH₂/CH₃ multiplicity is
 > ambiguous (the nmr-chemist has emitted, or should have emitted, a `[MULTIPLICITY-AMBIGUOUS]`
-> signal — see ailsa-nmr-chemist.md Section 5b). Its output is a **mandatory-search item**, not
+> signal — see `~/.claude/ailsa/references/multiplicity-ambiguity.md`). Its output is a **mandatory-search item**, not
 > a comment: a model you flag here MUST enter the LSD search space and the run CANNOT accept
 > until it has been actually searched. This is the ONE Devils-Advocate gate whose finding the
 > convergence narrative is NOT permitted to close.

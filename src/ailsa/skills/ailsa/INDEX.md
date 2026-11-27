@@ -32,6 +32,7 @@ A coordinator command runs the workflow and hands the chemistry to four speciali
 
 - [advisory-templates](references/advisory-templates.md): message templates between agents
 - [loop-patterns](references/loop-patterns.md): iteration and stopping patterns
+- [multiplicity-ambiguity](references/multiplicity-ambiguity.md): searching every aliphatic multiplicity family when the spectra leave it open
 - [nmr-basics](references/nmr-basics.md): NMR facts the agents rely on
 - [progress-format](references/progress-format.md): format of the progress log
 
