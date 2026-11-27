@@ -292,22 +292,37 @@ def status_of(
     return st, extra
 
 
+# The work tree this script belongs to, found from the script's own location so that neither
+# the guard below nor the git calls depend on the folder the script is started from.
+SCRIPT_REPO = Path(__file__).resolve().parents[1]
+
+
 def repo_root() -> Path:
-    r = subprocess.run(["git", "rev-parse", "--show-toplevel"], capture_output=True, text=True)
-    return Path(r.stdout.strip()) if r.returncode == 0 else Path.cwd()
+    return SCRIPT_REPO
+
+
+def protected_roots() -> list[Path]:
+    """The public work tree: the script's checkout and its git top level, when there is one."""
+    roots = [SCRIPT_REPO]
+    r = subprocess.run(
+        ["git", "rev-parse", "--show-toplevel"], cwd=SCRIPT_REPO, capture_output=True, text=True
+    )
+    if r.returncode == 0 and r.stdout.strip():
+        roots.append(Path(r.stdout.strip()).resolve())
+    return roots
 
 
 def resolve_out(arg: str | None) -> Path:
     out = Path(arg or os.environ.get("AILSA_RULE_INVENTORY_DIR") or DEFAULT_OUT).expanduser().resolve()
-    root = repo_root().resolve()
-    if out == root or root in out.parents:
-        print(f"refusing --out inside the work tree: {out}", file=sys.stderr)
-        sys.exit(2)
+    for root in protected_roots():
+        if out == root or root in out.parents:
+            print(f"refusing --out inside the work tree: {out}", file=sys.stderr)
+            sys.exit(2)
     return out
 
 
 def git(*args: str) -> str:
-    r = subprocess.run(["git", *args], capture_output=True, text=True)
+    r = subprocess.run(["git", *args], cwd=SCRIPT_REPO, capture_output=True, text=True)
     if r.returncode != 0:
         print(f"git {' '.join(args)} failed: {r.stderr.strip()}", file=sys.stderr)
         sys.exit(2)

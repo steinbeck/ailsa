@@ -176,6 +176,21 @@ def test_out_inside_repo_refused(trees):
     assert "work tree" in r.stderr
 
 
+def test_out_inside_repo_refused_from_any_cwd(trees, tmp_path):
+    old, new, _ = trees
+    (new / "a.md").write_text(OLD)
+    target = ROOT / "_inventory_test_out_never_created"
+    for cwd in (tmp_path, ROOT / "src"):
+        r = subprocess.run(
+            [sys.executable, str(SCRIPT), "build", "--old-dir", str(old), "--new-dir", str(new),
+             "--out", str(target)],
+            cwd=cwd, capture_output=True, text=True,
+        )
+        assert r.returncode == 2, r.stdout + r.stderr
+        assert "work tree" in r.stderr
+        assert not target.exists()
+
+
 def test_second_build_keeps_hand_files(trees):
     old, new, out = trees
     (new / "a.md").write_text(OLD)
