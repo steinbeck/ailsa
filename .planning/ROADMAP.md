@@ -349,21 +349,21 @@ heteroatom-hybridisation and multiplicity variants, carbons seen only in 2D spec
 **Plans**: 15 plans in 15 waves (planned 2026-11-27; strictly sequential on one checkout)
 
 Plans:
-- [ ] 106-01-PLAN.md — local baseline tag; `ailsa skill install` installs the command skill by copy or link, removes only old symlinks
-- [ ] 106-02-PLAN.md — rule-inventory tool (private output) with positive and negative controls
-- [ ] 106-03-PLAN.md — one mechanical commit moves the skill into `src/ailsa/skills/ailsa/` as `/ailsa:*` and `ailsa-*`, supervisor removed, tests repointed; link install on vitus
-- [ ] 106-04-PLAN.md — frontier skill lint with a PENDING set; local answer scan and teaching-set name check
-- [ ] 106-05-PLAN.md — NMR chemist and solution analyst restructured; shared multiplicity-ambiguity reference
-- [ ] 106-06-PLAN.md — shared LSD reference merged from two copies; LSD engineer restructured; constraint-inventory reference
-- [ ] 106-07-PLAN.md — diagnostic agent split into a core and three references; dead pointers removed
-- [ ] 106-08-PLAN.md — devil's advocate split and rewritten; benchmark example removed; gates kept
-- [ ] 106-09-PLAN.md — coordinator split into a core and five references; model reported, not compared; both workflows kept
-- [ ] 106-10-PLAN.md — remaining commands and references; PENDING empty; lint fully enforced; answer scan clean
-- [ ] 106-11-PLAN.md — rule-inventory meaning review by a fresh executor; D-06 counts
-- [ ] 106-12-PLAN.md — runner and watchdog call `/ailsa:case` with Claude Code 2.1.332 and Opus 5.5; LaunchAgent retired for a herdr pane; bootstrap; SKILL-04 and criterion 6 reworded
-- [ ] 106-13-PLAN.md — FREEZE-01 in BENCHMARK.md and SKILLS.md; docs point at the packaged skill; database help credit; todo closed
-- [ ] 106-14-PLAN.md — full gate and wheel check on Sheldon; main Sheldon checkout fast-forwarded and skill linked; headless `/ailsa:status`
-- [ ] 106-15-PLAN.md — blind acceptance run on Sheldon, graded on vitus; 106-HUMAN-UAT.md with the evidence and open verdicts
+- [x] 106-01-PLAN.md — local baseline tag; `ailsa skill install` installs the command skill by copy or link, removes only old symlinks
+- [x] 106-02-PLAN.md — rule-inventory tool (private output) with positive and negative controls
+- [x] 106-03-PLAN.md — one mechanical commit moves the skill into `src/ailsa/skills/ailsa/` as `/ailsa:*` and `ailsa-*`, supervisor removed, tests repointed; link install on vitus
+- [x] 106-04-PLAN.md — frontier skill lint with a PENDING set; local answer scan and teaching-set name check
+- [x] 106-05-PLAN.md — NMR chemist and solution analyst restructured; shared multiplicity-ambiguity reference
+- [x] 106-06-PLAN.md — shared LSD reference merged from two copies; LSD engineer restructured; constraint-inventory reference
+- [x] 106-07-PLAN.md — diagnostic agent split into a core and three references; dead pointers removed
+- [x] 106-08-PLAN.md — devil's advocate split and rewritten; benchmark example removed; gates kept
+- [x] 106-09-PLAN.md — coordinator split into a core and five references; model reported, not compared; both workflows kept
+- [x] 106-10-PLAN.md — remaining commands and references; PENDING empty; lint fully enforced; answer scan clean
+- [x] 106-11-PLAN.md — rule-inventory meaning review by a fresh executor; D-06 counts
+- [x] 106-12-PLAN.md — runner and watchdog call `/ailsa:case` with Claude Code 2.1.332 and Opus 5.5; LaunchAgent retired for a herdr pane; bootstrap; SKILL-04 and criterion 6 reworded
+- [x] 106-13-PLAN.md — FREEZE-01 in BENCHMARK.md and SKILLS.md; docs point at the packaged skill; database help credit; todo closed
+- [x] 106-14-PLAN.md — full gate and wheel check on Sheldon; main Sheldon checkout fast-forwarded and skill linked; headless `/ailsa:status`
+- [x] 106-15-PLAN.md — blind acceptance run on Sheldon, graded on vitus; 106-HUMAN-UAT.md with the evidence and open verdicts
 
 #### Phase 106.1: Run record core (INSERTED 2026-11-24)
 
@@ -508,7 +508,7 @@ decisions in `106.1-CONTEXT.md`.
 |-------|-----------------|--------|-----------|
 | 104. Package and CLI | 6/6 | Complete    | 2026-10-03 |
 | 105. Documentation and outside face | 10/10 | Complete   | 2026-10-14 |
-| 106. Freeze, rename and restructure the skill | 0/? | Not started | - |
+| 106. Freeze, rename and restructure the skill | 15/15 | Executed, verified (human_needed): awaiting the user's acceptance verdict | - |
 | 107. Evaluation bench and team-mode spike | 0/? | Not started | - |
 | 108. Foundation | 0/? | Not started | - |
 | 109. Rework the CASE workflow | 0/? | Not started | - |

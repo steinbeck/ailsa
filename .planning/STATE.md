@@ -54,8 +54,18 @@ Last activity: 2026-11-24 -- Phase 106.1 complete and verified
        watchdog on vitus in a herdr pane instead of the LaunchAgent; main Sheldon checkout updated
        after the restructuring; acceptance run on Opus 5.5). **Planned 2026-11-27:** 15 plans in 15
        waves (strict chain), research + pattern map + validation strategy, checker passed on iteration 2.
-       User away, asked for the whole phase without questions: executing via `/gsd-execute-phase 106`
-       (no push; no rm; acceptance verdict left to the user in `106-HUMAN-UAT.md`).
+       User away, asked for the whole phase without questions: executed 2026-11-27.
+       **EXECUTED + VERIFIED (human_needed), awaiting the user's acceptance verdict:** all 15 plans,
+       verification 6/6 criteria and 7/7 requirements (`106-VERIFICATION.md`). Blind acceptance run:
+       CASE146 via `/ailsa:case`, Opus 5.5, Claude Code 2.1.332, schema-3 DB, rank 1 in 1418 s.
+       Code review found 3 blockers + 12 warnings, all fixed (`106-REVIEW-FIX.md`, 447 quick tests);
+       full suite on Sheldon equal to the 106.1 baseline (at f56327a, before the fixes). Skill now in
+       `src/ailsa/skills/ailsa/`, installed by link on vitus and the main Sheldon checkout (fast-forwarded
+       to 9a97aa8 by bundle); pinned binary copied to `~/opt/claude-2.1.332/claude` on Sheldon.
+       **Open for the user (8 items in `106-HUMAN-UAT.md`):** acceptance verdicts; push (public repo,
+       ~60 local commits, tag `frontier-skill-pre-106` stays local); laptop install command; global
+       CLAUDE.md examples. Then `/gsd-execute-phase 106` closes it via phase.complete — but edit
+       STATE/ROADMAP by hand (GSD tools mangle them). Next phase after acceptance: 106.2.
        Original step: `/gsd-discuss-phase 106` (freeze, rename and restructure the skill), then
        `/gsd-plan-phase 106 --chain`. Prior research (local, uncommitted):
        `.planning/research/skill-rebuild/ailsa-skill-rebuild-plan.md` and

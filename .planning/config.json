@@ -7,7 +7,7 @@
   "workflow": {
     "auto_advance": false,
     "research": true,
-    "_auto_chain_active": true,
+    "_auto_chain_active": false,
     "use_worktrees": false,
     "test_command": "$HOME/.venvs/ailsa/bin/python -m pytest tests/test_skill_lite.py tests/test_skill_frontier.py tests/test_skill_files_unchanged.py tests/test_cli_skill.py tests/test_case_md_wv07.py tests/test_freeze.py tests/test_benchmark_scripts.py tests/test_cli_database_help.py -q"
   },
