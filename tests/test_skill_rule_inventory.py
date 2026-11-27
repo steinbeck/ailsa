@@ -162,3 +162,15 @@ def test_help_lists_commands():
     out = run("--help").stdout
     for c in ("build", "todo", "check"):
         assert c in out
+
+
+def test_scattered_tokens_never_same(tmp_path):
+    old, new, out = tmp_path / "o", tmp_path / "n", tmp_path / "out"
+    old.mkdir()
+    new.mkdir()
+    (old / "a.md").write_text("- Validate spectrum peaks against solver output.\n")
+    (new / "a.md").write_text(
+        "- Check the spectrum header.\n- Compare peaks with the table.\n- Read solver output.\n"
+    )
+    build(old, new, out)
+    assert rows(out)[0]["status"] != "same"

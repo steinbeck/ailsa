@@ -41,6 +41,10 @@ NEW_DEFAULT = "src/ailsa/skills/ailsa"
 SAME_AT = 0.85
 REWORDED_AT = 0.45
 CONTAIN_FACTOR = 0.95
+# Containment in a three-unit window alone never certifies "same": the skill text is
+# repetitive, so scattered tokens of a deleted rule can all be found nearby (negative
+# control, 2026-11-27). Such matches are capped below SAME_AT and go to meaning review.
+CONTAIN_CAP = 0.84
 
 EMPHASIS_WORDS = (
     "must", "never", "always", "mandatory", "binding", "important", "required",
@@ -239,7 +243,7 @@ def match_all(old: list[Unit], new: list[Unit]):
                 continue
             inter = len(o.tokens & n.tokens)
             jac = inter / len(o.tokens | n.tokens) if n.tokens else 0.0
-            cont = CONTAIN_FACTOR * len(o.tokens & window[i]) / len(o.tokens)
+            cont = min(CONTAIN_CAP, CONTAIN_FACTOR * len(o.tokens & window[i]) / len(o.tokens))
             s = max(jac, cont)
             if s > best:
                 best, best_idx = s, i
