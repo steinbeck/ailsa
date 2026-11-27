@@ -139,6 +139,31 @@ def test_foreign_link_needs_force(fake_pkg: Path, root: Path, tmp_path: Path) ->
     assert mine.read_text() == "custom\n"
 
 
+def test_dropped_agent_link_removed(fake_pkg: Path, root: Path, tmp_path: Path) -> None:
+    assert _run("install", "ailsa", "--link", "--root", str(root))[0] == 0
+    mine = tmp_path / "mine.md"
+    mine.write_text("custom\n")
+    (root / "agents" / "ailsa-my-variant.md").symlink_to(mine)
+    (fake_pkg / "ailsa" / "agents" / "ailsa-diagnostic.md").unlink()
+    code, out = _run("install", "ailsa", "--link", "--root", str(root))
+    assert code == 0, out
+    stale = root / "agents" / "ailsa-diagnostic.md"
+    assert not stale.is_symlink() and not stale.exists()
+    assert "removed stale agent link" in out
+    assert (root / "agents" / "ailsa-my-variant.md").is_symlink()
+    assert mine.read_text() == "custom\n"
+
+
+def test_dropped_agent_copy_removed_with_force(fake_pkg: Path, root: Path) -> None:
+    assert _run("install", "ailsa", "--root", str(root))[0] == 0
+    (fake_pkg / "ailsa" / "agents" / "ailsa-diagnostic.md").unlink()
+    code, out = _run("install", "ailsa", "--force", "--root", str(root))
+    assert code == 0, out
+    assert not (root / "agents" / "ailsa-diagnostic.md").exists()
+    assert "removed stale agent copy" in out
+    assert (root / "agents" / "ailsa-nmr-chemist.md").read_text() == "chemist\n"
+
+
 def test_legacy_cleanup_only_lucy_links(fake_pkg: Path, root: Path, tmp_path: Path) -> None:
     (root / "commands").mkdir(parents=True)
     (root / "agents").mkdir()

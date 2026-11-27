@@ -215,6 +215,42 @@ def _install_command_skill(src_dir: Path, root: Path, link: bool, force: bool) -
         raise SystemExit(1)
     lines = _drop_legacy(root)
     lines += [_place(src, dst, link) for src, dst in pairs]
+    shipped = {src.name for src, dst in pairs if dst.parent == root / "agents"}
+    lines += _drop_stale_agents(root, shipped, src_dir.parent, force)
+    return lines
+
+
+def _drop_stale_agents(root: Path, shipped: set[str], package: Path, force: bool) -> list[str]:
+    """Remove ailsa-*.md agents under root/agents that this version no longer ships.
+
+    Claude Code loads every agent file it finds, so an agent dropped from the package would
+    otherwise keep running its old text against a newer CLI. Links into an ailsa skill tree
+    are removed; copies only with --force; anything else is reported and kept.
+    """
+    folder = root / "agents"
+    lines: list[str] = []
+    if not folder.is_dir():
+        return lines
+    for path in sorted(folder.iterdir()):
+        name = path.name
+        if not (name.startswith("ailsa-") and name.endswith(".md")) or name in shipped:
+            continue
+        if path.is_symlink():
+            if _owned_link(path, package):
+                path.unlink()
+                lines.append(f"removed stale agent link {path}")
+            else:
+                lines.append(f"left alone (stale agent, link not into ailsa): {path}")
+        elif path.is_file():
+            if force:
+                path.unlink()
+                lines.append(f"removed stale agent copy {path}")
+            else:
+                lines.append(
+                    f"stale agent copy left: {path} (no longer shipped; --force removes it)"
+                )
+        else:
+            lines.append(f"left alone (not a file): {path}")
     return lines
 
 
