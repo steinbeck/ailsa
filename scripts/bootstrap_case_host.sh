@@ -92,7 +92,7 @@ ln -sfn "$REPO/$DB" "$HOME/.lucy/ailsa-derep.db"
 # ---------------------------------------------------------------------------
 say "4/6  CASE skill: install the packaged skill (commands + team agents) into ~/.claude"
 AILSA="$REPO/.venv/bin/ailsa"
-"$AILSA" skill install ailsa --target claude --link   # ailsa skill install ailsa
+"$AILSA" skill install ailsa --target claude --link
 
 # ---------------------------------------------------------------------------
 say "5/6  Enable agent teams"
@@ -112,6 +112,9 @@ ailsa predict c13 "CCO" --format json >/dev/null 2>&1 && echo "  [ok] predict c1
 [ -e "$HOME/.local/bin/ailsa" ] && echo "  [ok] ailsa on ~/.local/bin" || { echo "  [FAIL] ~/.local/bin/ailsa missing"; ok=0; }
 [ -e "$HOME/.local/bin/outlsd" ] && echo "  [ok] outlsd on ~/.local/bin" || { echo "  [FAIL] ~/.local/bin/outlsd missing"; ok=0; }
 ( cd /tmp && ailsa predict c13 "CCO" --format json >/dev/null 2>&1 ) && echo "  [ok] DB found from any dir (~/.lucy)" || { echo "  [FAIL] DB not found outside repo (~/.lucy/ailsa-derep.db)"; ok=0; }
+# The skill itself (step 4): the command and the reference files every run reads.
+[ -r "$HOME/.claude/commands/ailsa/case.md" ] && echo "  [ok] /ailsa:case installed" || { echo "  [FAIL] ~/.claude/commands/ailsa/case.md missing (skill install)"; ok=0; }
+[ -d "$HOME/.claude/ailsa/references" ] && echo "  [ok] skill references installed" || { echo "  [FAIL] ~/.claude/ailsa/references missing (skill install)"; ok=0; }
 
 if [ "$ok" = "1" ]; then
   say "DONE — host is CASE-capable. Next: a smoke CASE in a fresh Claude Code session:"

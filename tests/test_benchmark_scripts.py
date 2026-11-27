@@ -122,8 +122,13 @@ def test_watchdog_readme():
 
 def test_bootstrap_installs_packaged_skill():
     text = _read("scripts/bootstrap_case_host.sh")
-    assert "ailsa skill install ailsa" in text
-    assert ".claude/commands" not in text
+    # The command line itself, not a comment that mentions it.
+    assert re.search(r'^"\$AILSA" skill install ailsa --target claude --link\s*$', text, re.M)
+    assert not re.search(r"^\s*#.*skill install", text, re.M)
+    # The verify step checks the result of the install.
+    assert '[ -r "$HOME/.claude/commands/ailsa/case.md" ]' in text
+    assert '[ -d "$HOME/.claude/ailsa/references" ]' in text
+    assert "cp -r" not in text and "ln -s" not in text.split("skill install")[1]
 
 
 # --- result folders: no default, no paper arm, no model mixing -----------------------------
