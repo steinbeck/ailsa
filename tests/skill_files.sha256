@@ -1,7 +1,7 @@
-220f317f8698b2a342cac935c26e5a7c48df4bdad8bb5a7337add2d5ed496b75  ./INDEX.md
+89c2ae78dedd5823a4b03585aa6f1a5343cfe0e81509d4a7d3ae6360e7b22b3e  ./INDEX.md
 932baef39336fb974f3384ee9c684852e2e702ca0e6463358ea5987fb35240d2  ./agents/ailsa-devils-advocate.md
 6b077915f231e4dbf620a04b1084d09ead5c0104126749dad718f42495572643  ./agents/ailsa-diagnostic.md
-1d5c8c60c414fcf83407ff48f0cc57f1b39460dfd22fc9d595906048eee788cc  ./agents/ailsa-lsd-engineer.md
+9abdf1aa427658961f5a2a7b3a4a929efc5447c03135e9110b85f91d948d41ac  ./agents/ailsa-lsd-engineer.md
 02396ce87dd7a7c47dbb7ea620b0ddffdaddb7e6f80cfb694299a597b16493ae  ./agents/ailsa-nmr-chemist.md
 2a3ac3deb38e2c0a77025dedb890ed08b3d050784bac95f8ea0598ca2c971ed9  ./agents/ailsa-solution-analyst.md
 8969ea337d170eb3b2b1e223c2b5f617716c0cbbb2916d570fba260ffd81a181  ./commands/case.md
@@ -12,6 +12,8 @@ d263715753307cce1c028990125b94283e3f088078488b64546d4e641e22d178  ./commands/san
 f03c7c7cf889a93ca0eade7adcc3e6ee3bfcbcbb999e338ba53107b948315521  ./commands/status.md
 c71226ddbb0418ced171a34141c41175f3785c6fe2a349c7fc52b16cbcdcf32b  ./references/advisory-templates.md
 f242b50bee64204fde13d4c9fd2ef96a1bbb0090582672feb182d6cabafe26bb  ./references/loop-patterns.md
+7ccc166b46bb04771b4d7f4b4dff7b9063d1cea003a36024e4b36d253a1dcd75  ./references/lsd-reference.md
+130ccd94f3a38e4ba8496aaf6758c14ac3ade0945e1751477e5d7cf81726ed1f  ./references/lsd-search.md
 23c8a4d4bcda895f75aca2789720a3dd7db2096bacb03af0c9e4b749a0e508c7  ./references/multiplicity-ambiguity.md
 fb25f5d48082c080efda3a20235dc7d0d8374b6e881946cc216ea86b01c32e42  ./references/nmr-basics.md
 5b9691fa65492bdec5da9c32d44d2ffbd1d206073959c25a0f0e4cedd41f8930  ./references/progress-format.md

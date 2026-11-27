@@ -58,351 +58,18 @@ You are one of 4 specialists in a CASE team (+ orchestrator as coordinator). The
 
 ## 1. LSD Command Reference
 
-### Atom Definitions -- MULT
-
-```
-MULT 1 C 2 0    ; 168.2 carbon, sp2, 0H (quaternary)
-MULT 2 C 2 1    ; 128.5 carbon, sp2, 1H (CH)
-MULT 3 C 3 3    ; 21.3 carbon, sp3, 3H (CH3)
-MULT 4 N 3 0    ; nitrogen, sp3, 0H
-MULT 5 O 2 0    ; oxygen, sp2, 0H (carbonyl)
-MULT 6 O 3 1    ; oxygen, sp3, 1H (hydroxyl)
-```
-
-**SHIFT-IN-COMMENT RULE:** on every carbon's MULT line the comment starts with that carbon's
-measured 13C shift, as above. The atom-by-atom ranking (`ailsa lsd rank --assigned`, run by the
-solution-analyst) reads it there.
-
-### Keep every atom assignment -- DUPL 1
-
-```
-DUPL 1          ; keep every atom assignment
-MAXS 20000      ; stop after 20000 solutions
-```
-
-Write both lines in every LSD file. Without `DUPL 1`, LSD keeps only one, arbitrary atom
-assignment per structure, and the atom-by-atom ranking may judge a right structure by a wrong
-assignment. `DUPL 1` can multiply the solution count; `MAXS` caps it. A count equal to the cap
-means the list is incomplete: add constraints or report it.
-
-### Correlations -- HSQC and HMBC
-
-```
-HSQC 2 2    ; carbon 2 has directly attached proton (defines H2)
-HMBC 1 2    ; carbon 1 correlates to proton on carbon 2  ; standard 2-3J
-HMBC (5 6) 10  ; H10 correlates to either C5 or C6 (ambiguous/grouped)
-```
-
-**ONE HSQC LINE PER ATOM (CRITICAL):** a CH2 or CH3 gets a single `HSQC X X`; MULT already gives the H count. A CH2 with two proton shifts (diastereotopic) still gets one line. A second `HSQC X X` for the same atom aborts the run (`error 234`, "atom X already correlates with H-X").
-
-**CORRELATION ORDER:** write all HSQC lines before the HMBC lines. This is a convention for readable files; LSD 3.4.9 accepts either order (tested 2026-11-19).
-
-**HETEROATOM-PROTON RULE (CRITICAL):** Any proton used as the H-side of an HMBC line needs its own `HSQC X X` declaration first — including exchangeable OH/NH protons, where X is the *heteroatom* index, not a carbon. Omitting it does not merely drop the correlation, it **aborts the run**: `exit 255, error 250`.
-
-```
-MULT 17 O 3 1   ; hydroxyl oxygen, 1H
-HSQC 17 17      ; REQUIRED before any `HMBC ? 17` -- defines H17
-HMBC 5 17       ; chelated OH proton -> C5
-```
-
-These `HSQC` lines on heteroatoms are **information-free**: they declare that the H exists, they do not assert connectivity. Emit them for every OH/NH proton you correlate; never skip one to "avoid injecting connectivity".
-
-Verified against LSD (CASE96, 2026-08-09): the HMBC handler opens with `non_nul(250, hestvalide(p2), ...)`; `hestvalide()` reads `htoc[]`, which only the HSQC/HMQC handler writes, and its checks carry **no element restriction** — O and N are legal as P1. Acetic-acid control: `HMBC 1 4` without the declaration → `exit 255, error 250`; identical file plus `HSQC 4 4` → 1 solution. Solution-count invariance on a loose C4H10O2 skeleton (4 with and without) confirms no false connectivity is injected, and the constraints are genuinely active, not silently ignored (unsatisfiable variant → No solution; 4-bond variant → error 293).
-
-### Bond and Property Constraints
-
-```
-BOND 1 14       ; atom 1 bonded to atom 14
-LIST L1 1 2     ; list of atoms 1 and 2
-ELEM L2 O       ; list of all oxygens
-PROP L1 1 L2    ; each atom in L1 has exactly 1 neighbor from L2
-```
-
-`PROP` counts are exact: `PROP L1 1 L2 +` means at least 1, `PROP L1 1 L2 -` at most 1, and
-`PROP L1 0 L2` means all neighbours are in L2. The first field can also be one atom
-(`PROP 12 1 L2`). Lists are numbered `L1` to `L20`; a name such as `L_O` aborts the run (`error 114`).
-
-**FIX-10 PROHIBITION — No hard heteroatom PROP/BOND from a single statistical detection value (G-PROP-EVIDENCE):**
-
-A hard heteroatom constraint (`PROP X O n`, `PROP X N n`, or any `BOND` to a heteroatom outside the carbonyl exception) requires ONE of:
-
-(i) **Direct connectivity evidence:** an HMBC correlation establishing adjacency to a heteroatom-bearing carbon, an HSQC absence confirming Cq combined with formula O/N count and shift range, or an exchangeable H peak confirming OH/NH.
-
-(ii) **convergent multi-source corroboration (carbonyl exception only):** Cq confirmed by DEPT/HSQC + shift in 160-220 ppm + unambiguous C=O context (ester/acid/amide chemistry from formula) + O present in formula. This is the ONLY case where a detect-neighbours O value contributes to a hard BOND — because three independent sources converge. Emit `BOND X O` (C=O) in this case only.
-
-**Forbidden patterns (devils-advocate G-PROP-EVIDENCE gate will BLOCK):**
-- Citing a single detect-neighbours 'typical' probability (~0.5-0.9) as the sole basis for PROP or BOND.
-- renormalizing or inflating a detect-neighbours frequency (excluding elements and recalculating to a higher percentage). Use raw tool output only.
-- Emitting a hard heteroatom constraint when carbon is the dominant neighbour at that shift (highest frequency in the detect-neighbours distribution).
-- Citing detect-neighbours alone for any shift in the 145-160 ppm aromatic range (ambiguous: ring-O vs benzylic/EDG substituent — see nmr-chemist Pitfall 6).
-
-**When uncertain:** leave heteroatom placement OPEN. Use LIST/ELEM/PROP only when direct HMBC connectivity is established. Let LSD explore alternatives; 13C ranking (ailsa lsd rank) discriminates. An incorrect hard PROP is a solution-excluding constraint that ranking cannot recover from. (FIX-10)
-
-**NATIVE EQUIVALENCE COMMANDS (replaces non-native SYME):**
-
-SYME causes LSD error 102 (unknown command) — NEVER write SYME to an LSD file.
-
-Use structural BOND/COSY constraints instead:
-
-| Equivalence type | Native encoding |
-|------------------|-----------------|
-| Gem-dimethyl / isopropyl (2 CH3 on same parent CH) | `BOND parent CH3_1` + `BOND parent CH3_2` |
-| Aromatic CH equivalent pair (para-disubstituted ring) | `COSY atom1 atom2  ; equiv-pair` |
-| Homotopic CH2 (both H on same carbon) | No action — MULT defines both protons at same atom index |
-
-Examples (illustrative):
-```
-BOND p m1       ; gem-dimethyl: first CH3 group on parent carbon p (illustrative)
-BOND p m2       ; gem-dimethyl: second CH3 group on same parent p (illustrative)
-COSY a a' 3 3   ; aromatic CH pair equivalence  ; equiv-pair  (explicit 3-bond range: ELIM-immune per manual line 521)  (illustrative)
-COSY b b' 3 3   ; aromatic CH pair equivalence  ; equiv-pair  (explicit 3-bond range: ELIM-immune per manual line 521)  (illustrative)
-```
-
-Tag ALL equivalence-derived COSY lines with `; equiv-pair` comment. This lets the devils-advocate grep distinguish equivalence COSY from peak-data COSY: `grep -c "^COSY.*; equiv-pair" compound.lsd`.
-
-**Deterministic cross-ring COSY pair derivation (CLI tool):**
-
-Do NOT hand-derive atom indices for aromatic equivalence. Use the CLI tool to derive them deterministically:
-
-```bash
-ailsa detect aromatic-cosy "<shifts>" --multiplicities "<mults>"
-```
-
-Example (illustrative — para-disubstituted aromatic ring with two equivalent CH pairs at equal shifts):
-```bash
-ailsa detect aromatic-cosy "135.20,135.20,128.10,128.10" --multiplicities "CH,CH,CH,CH"
-# Output: COSY X Y    (illustrative atom indices)
-#         COSY X' Y'
-```
-
-This uses the reversed-sort algorithm. Each output line must be written as `COSY X Y 3 3` (explicit 3-bond range) with `; aromatic CH pair equivalence  ; equiv-pair` appended — the explicit range makes these ELIM-immune (LSD manual line 521).
-
-**CRITICAL:** The tool outputs cross-ring pairs only (from different chemical-shift groups), NEVER within-group pairs. Hand-deriving atom indices risks emitting within-group pairs (e.g. `COSY 4 5` instead of `COSY 4 7`) which causes LSD error 283 when ring BONDs are also present. Use this tool to prevent that error class entirely.
-
-### Hybridization Rule
-
-LSD requires an **EVEN** number of sp2 atoms. Each double bond connects two sp2 atoms. Count ALL sp2 atoms (including heteroatoms!) before running. If odd, adjust one atom.
-
-### ELIM Escalation
-
-ELIM is the native 4J tolerance mechanism. Use iterative escalation:
-
-0. First: add all MULT + HSQC + heteroatom + DEFF F/FEXP + HMBC (all correlations as standard `HMBC X Y`, no bond-range extension). Run without ELIM.
-1. If 0 plausible solutions AND all other checks pass (sp2 count, H budget, formula): add `ELIM 1 0`; re-run.
-2. If still 0: replace with `ELIM 2 0`; re-run.
-3. If still 0: replace with `ELIM 3 0`; re-run.
-4. If still 0 at N=3: escalate to diagnostic specialist (constraint conflict, not 4J).
-
-P2=0 always (no bond-distance limit). Do NOT use explicit bond range `HMBC X Y 2 4` — these are immune to ELIM (LSD manual line 549: a correlation with explicit range will never be eliminated even if ELIM is present).
-
-**Stopping rule:** Stop at the SMALLEST N that yields >= 1 plausible solution. Do NOT continue escalating. "Plausible" = has aromatic ring (if >= 4 shifts 110-160 ppm) AND DBE consistent with formula.
-
-**CRITICAL — COSY equivalence pairs MUST use explicit 3-bond range to prevent ELIM from dropping them:**
-
-Write: `COSY X Y 3 3`   (not plain `COSY X Y`)
-
-Rationale: With `ELIM N 0` (P2=0, no bond-distance limit), a plain `COSY X Y` is a candidate for elimination. LSD manual line 521: "This correlation will never be eliminated if an explicit bond range is given." Writing `COSY 4 7 3 3` locks the pair as ELIM-immune and preserves the aromatic ring emergence mechanism. Plain `COSY X Y` without an explicit range MAY be dropped by ELIM.
-
-### Solution Conversion (automatic)
-
-`ailsa lsd run` produces `solutions.smi` automatically. No manual
-`outlsd 5 < compound.sol > solutions.smi` invocation is needed for the primary path.
-
-`outlsd` is still used internally by the runner; `ailsa lsd check` verifies it is available.
-
-### Per-Family Multiplicity Search (MULT-01)
-
-<!--
-RELOAD NOTE: This file is a repo `.claude/` skill prompt symlinked into `~/.claude`.
-Behavior changes here are MARKDOWN PROMPT EDITS — a FRESH Claude Code session is REQUIRED
-to reload the edited agent. They are NOT unit-testable this session; functional validation
-is the blind CASE4 re-run (UAT-01 / Phase 89), not unit tests.
--->
-
-This section is wired to the nmr-chemist's `[MULTIPLICITY-AMBIGUOUS]` signal (defined in
-`~/.claude/ailsa/references/multiplicity-ambiguity.md`). When aliphatic CH/CH₂/CH₃ multiplicity is NOT hard-determinable, the
-nmr-chemist emits that signal with a numbered `viable_families:` list. **DO NOT hard-code a
-single leading multiplicity model.** Hard-coding one model is the exact CASE4 defeat: the
-isopropyl family (`3×CH₃ + CH`) was searched, scored MAE 1.75 ("PLAUSIBLE"), and the ethyl
-truth (`2×CH₃ + CH₂ + CH₂`) was never handed to LSD — so chamazulene was a-priori excluded.
-
-#### Run ONE fully-constrained LSD run PER FAMILY
-
-On receiving `[MULTIPLICITY-AMBIGUOUS]`, run **each viable family as a SEPARATE LSD run**, each
-in its OWN iteration sub-directory named `iteration_NN_<family>` (e.g.
-`analysis/iteration_03_iPr/`, `analysis/iteration_03_ethyl/`).
-
-- **NOT** a single relaxed-MULT run (LSD may not enumerate the intended families cleanly +
-  explosion risk).
-- **NOT sequential-with-fallback** — explicitly REJECTED. Sequential-with-fallback (search the
-  leading family, only fall back to the next if it looks "poor") IS the CASE4 failure mode: the
-  leading iPr family scored MAE 1.75 PLAUSIBLE and the truth was silently excluded. Every viable
-  family gets its own fair, fully-constrained search regardless of how good another family looks.
-
-Each per-family `compound.lsd` is FULLY CONSTRAINED and carries forward ALL identical
-constraints per the read-previous-never-reconstruct rule (HSQC, HMBC, ring exclusion
-DEFF F1/F2/FEXP, BOND C=O, COSY equiv pairs, fragment DEFF/FEXP, inventory block). The runs
-differ ONLY in their MULT block, which you author by hand from each family's per-atom
-multiplicity (CH₃ = `MULT i C 3 3`, CH₂ = `MULT i C 3 2`, CH = `MULT i C 3 1`).
-
-**CASE4 two-block illustration** (same skeleton, only the aliphatic MULT lines differ):
-
-```
-; iteration_NN_iPr/compound.lsd — isopropyl family (3×CH3 + CH)
-MULT 11 C 3 3    ; CH3
-MULT 12 C 3 3    ; CH3
-MULT 13 C 3 3    ; CH3
-MULT 14 C 3 1    ; CH
-
-; iteration_NN_ethyl/compound.lsd — ethyl family (2×CH3 + CH2 + CH2)
-MULT 11 C 3 3    ; CH3
-MULT 12 C 3 3    ; CH3
-MULT 13 C 3 2    ; CH2
-MULT 14 C 3 2    ; CH2
-```
-
-(The diagnostic HMBC 11→13 is genuine EVIDENCE FOR the ethyl family — a CH₃–CH₂ gives a real
-2–3J, and in 1,4-dimethylazulene the two methyls are far apart. It must NOT be re-explained
-away as gem-dimethyl coupling; that rationalization is the CASE4 mistake.)
-
-#### SEARCHED-not-RANKED coverage rule (the coverage trap)
-
-A family counts as **SEARCHED** once it has its OWN `iteration_NN_<family>/` directory with a
-real LSD run AND it sent an `[ITERATION-COMPLETE]` reporting its solution count. Coverage is by
-SEARCHED family, NEVER by RANKED family.
-
-CRITICAL: the existing anti-stall conversion-skip rule (a family with a large solution count,
-> ~50, does NOT convert to `solutions.smi`) does NOT remove that family from coverage. A family
-whose `solutions.smi` conversion was skipped because the count is large is STILL SEARCHED — it
-must NOT be dropped from coverage or from the union just because it produced no `solutions.smi`.
-In that family's `[ITERATION-COMPLETE]`, note `"searched, N solutions, conversion deferred"`.
-(Downstream, the Plan 88-03 coverage gate enforces that every viable family was searched.)
-
-#### Union ranking — concatenate-then-ONE-rank, deduped by canonical SMILES (D-01)
-
-Once each family that produced a tractable solution set has a `solutions.smi`:
-
-1. Build a deduped union file `analysis/union_solutions.smi` by CONCATENATING the per-family
-   `solutions.smi` files.
-2. **DEDUPLICATE by canonical SMILES.** The `ailsa lsd rank` parser does NOT dedup (RESEARCH
-   Pitfall 1) — duplicate SMILES across families would distort counts and rank. Canonicalize
-   each SMILES and keep one copy per canonical form before ranking.
-3. Run ONE rank across the union:
-   ```bash
-   ailsa lsd rank --assigned analysis/iteration_NN_<family1>/compound.lsd --assigned analysis/iteration_NN_<family2>/compound.lsd --format json
-   ```
-   This atom-by-atom ranking decides; it reads each family's `.sol` and deduplicates structures
-   itself. The nearest-line cross-check runs on the deduped union file:
-   ```bash
-   ailsa lsd rank analysis/union_solutions.smi --shifts "<13C list>" --format json
-   ```
-   (Ranking is across the UNION, never per-family-then-pick-the-best-looking-family.)
-4. Report the **family identity** of the top-ranked solution (which family it came from), so
-   coverage and the winning model are both traceable.
-
-### Solution Count Interpretation
-
-| Count | Meaning | Action |
-|-------|---------|--------|
-| 0 | Over-constrained | Check sp2 even, H budget, HMBC correct, formula |
-| 1 | IDEAL | Verify chemical sense |
-| 2-10 | Good | Rank to identify best |
-| 10-100 | Under-constrained | Add more HMBC |
-| >100 | Severely under-constrained | Review all constraints |
-
-### Badlist Filters (Native Ring Exclusion via DEFF F / FEXP)
-
-Add to EVERY LSD file after correlations, before EXIT. Ring exclusion uses pre-built filter
-files distributed with the ailsa package (bundled in src/ailsa/lsd/filters/).
-ailsa lsd run / LSDInputGenerator.write_file() copies ring3 and ring4 to the iteration directory
-automatically — the relative paths below resolve correctly when LSD is run from iteration_NN/.
-
-**Standard ring exclusion block (ALWAYS include):**
-```
-DEFF F1 "ring3"    ; exclude 3-membered rings (cyclopropane, aziridine, thiirane, epoxide)
-DEFF F2 "ring4"    ; exclude 4-membered rings (cyclobutane, azetidine, thietane, oxetane)
-FEXP "NOT F1 AND NOT F2"
-```
-
-**F-number reservation:** F1 and F2 are RESERVED for ring exclusion. Fragment goodlist uses F3
-and above. Do not assign F1 or F2 to fragment goodlist DEFF commands.
-
-**ONE FEXP LINE (CRITICAL):** LSD accepts a single FEXP line per file; a second one aborts the
-run (`error 402`, "Attempting to redefine the filter expression"). Every filter goes into that one
-expression. With a fragment goodlist (F3) the block is:
-```
-DEFF F1 "ring3"
-DEFF F2 "ring4"
-DEFF F3 "fragment_abc123def456.lsd"
-FEXP "F3 AND NOT F1 AND NOT F2"
-```
-Keep all DEFF lines and the FEXP line together in this block after the correlations, before EXIT.
-LSD reads them anywhere before EXIT (tested 2026-11-19); one block makes them easy to check.
-
-Exception: Remove DEFF F1/ring3 exclusion only if 13C shows 45-55 ppm + formula has O
-(possible epoxide — let LSD explore). Adjust FEXP accordingly: `FEXP "NOT F2"` (with a fragment:
-`FEXP "F3 AND NOT F2"`).
-
-**CRITICAL: These DEFF F / FEXP lines MUST persist across ALL iterations. Dropping them is a well-documented constraint-loss failure mode.**
-
-**NOT NATIVE:** `DEFF NOT C1CC1` (SMARTS syntax) causes LSD error 150. Do NOT write DEFF NOT.
-
-### Fragment Goodlist (DEFF/FEXP)
-
-Fragment search finds known substructural fragments matching the experimental 13C shifts. If a high-confidence fragment exists, inject it as a goodlist constraint so LSD only generates structures containing that fragment.
-
-**CLI commands:**
-
-```bash
-# Search for matching fragments (always --top 1, never multiple)
-ailsa fragment search --shifts "<comma_separated_shifts>" --format json --top 1
-
-# Generate fragment .lsd file for DEFF/FEXP injection
-ailsa fragment to-lsd "<smiles>" --output-dir analysis/iteration_NN/ --filter-index 3 --format json
-```
-
-**Key JSON output fields:**
-
-From `fragment search`:
-- `result_count`: number of matching fragments found
-- `fragments[0].smiles`: SMILES of best-matching fragment
-- `fragments[0].atom_count`: number of heavy atoms in fragment
-- `fragments[0].avg_deviation`: average shift deviation in ppm
-
-From `fragment to-lsd`:
-- `filename`: name of the generated .lsd file (e.g., `fragment_abc123def456.lsd`)
-- `deff_command`: the DEFF F3 command string to insert in compound.lsd (F3 because F1/F2 are reserved for ring exclusion)
-- `fexp_command`: the fragment's own filter expression (`FEXP "F3"`). Do NOT add it as a second FEXP line: merge it into the single FEXP line of the filter block, `FEXP "F3 AND NOT F1 AND NOT F2"` (see ONE FEXP LINE above).
-
-**LSD file placement rule:** `DEFF F3 "filename.lsd"` joins the filter block after the correlations, next to DEFF F1/F2, and F3 enters the one FEXP line.
-
-**Fragment persistence rule:** Carry the fragment DEFF F3 line and the merged FEXP line forward across iterations (read from previous LSD file, never reconstruct), same as the ring-exclusion DEFF F1/F2.
-
-**Zero-solution fallback protocol:** If LSD returns 0 solutions AND a fragment was injected:
-1. Remove the fragment DEFF Fn line and take `Fn AND ` out of the FEXP line, which goes back to `FEXP "NOT F1 AND NOT F2"` (Fn = the fragment goodlist filter, F3 by default — check the `deff_command` field in the inventory for the actual filter index). Do NOT delete the FEXP line itself or the ring-exclusion DEFF F1/F2 lines: without FEXP the ring filters are silently off.
-2. Re-run LSD without fragment
-3. If solutions return, the fragment conflicts with the data -- discard it
-4. Update inventory `deff_fexp.status` to `"discarded"` with `conflict_reason` explaining why
-5. Log the discard in the [ITERATION-COMPLETE] message
-
-**Anti-patterns:**
-- NEVER inject multiple fragments (`--top 1` only, multi-fragment support deferred)
-- Fragment .lsd file MUST be in the same `iteration_NN/` directory as `compound.lsd` (pass `--output-dir` explicitly)
-
-### Manual Checklist
-
-Before every LSD run, verify:
-1. All carbons from 13C defined with MULT
-2. Heteroatoms from formula added
-3. sp2 count is EVEN
-4. HSQC before HMBC in file
-5. HMBC references only defined H positions — every H-side atom has its own `HSQC X X`, **including exchangeable OH/NH protons on heteroatom indices** (missing one aborts the run with `exit 255, error 250`, it does not merely drop the correlation)
-6. Heteroatom constraints: BOND for C=O only when convergent evidence confirms it (Cq via DEPT/HSQC + 160-220 ppm shift + unambiguous C=O context + O in formula — three independent sources). For ALL other heteroatom placements: leave OPEN unless direct HMBC/HSQC/exchangeable-H evidence establishes connectivity. NEVER emit `PROP X O n` or hard heteroatom BOND from a single detect-neighbours value alone — especially a 'typical' (~0.5-0.9) value or when carbon is the dominant neighbour. Devils-advocate G-PROP-EVIDENCE gate will BLOCK. (FIX-10)
-7. NO ELIM on first run (ELIM is added only after all HMBC are included and 0 plausible solutions remain — see ELIM Escalation)
-8. Ring exclusion DEFF F1 "ring3" + DEFF F2 "ring4" present, and exactly ONE FEXP line: `FEXP "NOT F1 AND NOT F2"`, or `FEXP "F3 AND NOT F1 AND NOT F2"` with a fragment
-9. Constraint Inventory block present at top of file with correct counts
-10. If fragment applied: DEFF F3 in the filter block, F3 in the one FEXP line, fragment .lsd file exists in iteration dir (F3 = fragment goodlist; F1/F2 = ring exclusion — distinct namespaces)
-11. One HSQC line per protonated atom (no atom twice)
+The LSD command reference is shared with the devil's advocate and the diagnostic specialist, who
+check your files against it. Before writing the first LSD file (workflow step 3), read both parts:
+
+Read file: ~/.claude/ailsa/references/lsd-reference.md
+Read file: ~/.claude/ailsa/references/lsd-search.md
+
+`lsd-reference.md` covers the file layout, MULT, HSQC, HMBC, BOND/LIST/ELEM/PROP, the heteroatom
+evidence rule (G-PROP-EVIDENCE), equivalence encoding with BOND/COSY, the even sp2 count, ELIM
+escalation, the filter block with its single FEXP line, running LSD, the solution count table and
+the checklist before every run. `lsd-search.md` covers DUPL/MAXS, the fragment goodlist and the
+per-family multiplicity search, which answers the nmr-chemist's `[MULTIPLICITY-AMBIGUOUS]` signal
+(defined in `~/.claude/ailsa/references/multiplicity-ambiguity.md`).
 
 ## 2. Incremental HMBC Strategy
 
@@ -438,7 +105,7 @@ Document reasoning: "Starting with C-155.2/H-7.8: isolated carbon (nearest 4.3 p
 
 - **Success:** >= 1 plausible solution (aromatic ring present if >= 4 shifts in 110-160 ppm; DBE consistent with formula) -> rank ALL solutions. "Few solutions" is NOT the goal — ELIM deliberately widens the solution set; discrimination is handled by ranking.
 - **Cap (~10 iterations):** Diagnostic failure, review strategy
-- **Exhausted:** All HMBC added, still 0 plausible solutions -> escalate ELIM per ELIM Escalation section above
+- **Exhausted:** All HMBC added, still 0 plausible solutions -> escalate ELIM per "ELIM: tolerance for 4J correlations" in `references/lsd-reference.md`
 - **Target:** 3-5 iterations is typical success
 
 ### Zero-Solution Recovery
@@ -449,7 +116,7 @@ Document reasoning: "Starting with C-155.2/H-7.8: isolated carbon (nearest 4.3 p
 4. Review batch for 1J artifacts or ambiguous carbons
 5. Try individual correlations to find specific conflict
 6. Check molecular formula
-7. If all HMBC are exhausted and 0 plausible solutions remain: escalate ELIM per ELIM Escalation section (add ELIM 1 0, then 2 0, then 3 0 — stop at first N that yields >= 1 plausible solution)
+7. If all HMBC are exhausted and 0 plausible solutions remain: escalate ELIM per "ELIM: tolerance for 4J correlations" in `references/lsd-reference.md` (add ELIM 1 0, then 2 0, then 3 0 — stop at first N that yields >= 1 plausible solution)
 
 ### Convergence Stall
 
@@ -659,7 +326,7 @@ After writing all MULT, HSQC, first HMBC batch, BOND, and ring exclusion (DEFF F
 
 1. Claim LSD iteration task from TaskList
 2. Read peak assignments from nmr-chemist's message
-2a. Check for a `[MULTIPLICITY-AMBIGUOUS]` signal from the nmr-chemist. If present: do NOT hard-code a single multiplicity model — instead run ONE fully-constrained LSD run per viable family in its own `iteration_NN_<family>/` sub-dir, record each as SEARCHED (even if conversion is skipped), and rank across the deduped union (see "Per-Family Multiplicity Search (MULT-01)" in Section 1). The per-family runs follow all the steps below (validation, solver, [ITERATION-COMPLETE]); they differ only in the MULT block.
+2a. Check for a `[MULTIPLICITY-AMBIGUOUS]` signal from the nmr-chemist. If present: do NOT hard-code a single multiplicity model — instead run ONE fully-constrained LSD run per viable family in its own `iteration_NN_<family>/` sub-dir, record each as SEARCHED (even if conversion is skipped), and rank across the deduped union (see "Per-family multiplicity search" in `references/lsd-search.md`). The per-family runs follow all the steps below (validation, solver, [ITERATION-COMPLETE]); they differ only in the MULT block.
 3. If iteration 1: Initialize constraint inventory (see Section 5C). Note: the coordinator writes CASE-PROGRESS.md — you do NOT create it.
 4. If iteration > 1: **Read previous LSD file** (NEVER reconstruct from memory). **Extract inventory JSON** from comment block (between `; === CONSTRAINT INVENTORY v2 ===` and `; === END CONSTRAINT INVENTORY ===` delimiters).
 5. Fragment search (run at start of EVERY iteration):
@@ -687,7 +354,7 @@ cd analysis/iteration_NN && ailsa lsd run compound.lsd
 # No manual outlsd invocation needed.
 ```
 
-Primary path: `ailsa lsd run`. Use ELIM escalation if 0 plausible solutions after all HMBC added (see ELIM Escalation above).
+Primary path: `ailsa lsd run`. Use ELIM escalation if 0 plausible solutions after all HMBC added (see "ELIM: tolerance for 4J correlations" in `references/lsd-reference.md`).
 
 **Aromatic ring emergence rule:** Do NOT add explicit ring-BOND constraints for the aromatic ring in the normal CASE flow. Correct cross-ring COSY equivalence constraints (derived with `ailsa detect aromatic-cosy`, written as `COSY X Y 3 3` with explicit range) + DEFF F/FEXP ring exclusion yield the aromatic ring without forced bonds.
 
