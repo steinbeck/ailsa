@@ -339,10 +339,7 @@ def install_cmd(
         if not force:
             click.echo(f"Error: {destination} exists. Use --force to replace it.")
             raise SystemExit(1)
-        if destination.is_symlink():
-            destination.unlink()
-        else:
-            shutil.rmtree(destination)
+        _remove_owned(destination)
     folder.mkdir(parents=True, exist_ok=True)
     shutil.copytree(info["path"], destination)
     click.echo(f"Installed {name} {info['version']} to {destination}")

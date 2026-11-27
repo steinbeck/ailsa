@@ -324,6 +324,15 @@ def test_lite_force_over_symlink_unlinks(fake_pkg: Path, tmp_path: Path) -> None
     assert (old / "marker.txt").read_text() == "m\n"
 
 
+def test_lite_force_over_regular_file(fake_pkg: Path, tmp_path: Path) -> None:
+    dest = tmp_path / "dest-skills"
+    dest.mkdir()
+    (dest / "ailsa-lite").write_text("file\n")
+    code, out = _run("install", "ailsa-lite", "--dest", str(dest), "--force")
+    assert code == 0, out
+    assert (dest / "ailsa-lite" / "SKILL.md").read_text() == LITE
+
+
 def test_real_package_has_command_skill() -> None:
     from ailsa.cli.skill import available_skills
 
