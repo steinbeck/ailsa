@@ -412,8 +412,10 @@ pkill -KILL -f '[b]lind_case_batch.py' 2>/dev/null || true
 pkill -TERM -f '[t]imeout 3600' 2>/dev/null || true
 sleep 3
 pkill -KILL -f '[t]imeout 3600' 2>/dev/null || true
-pkill -KILL -f '[c]laude -p /ailsa:case' 2>/dev/null || true
-pkill -KILL -f '[c]laude --resume' 2>/dev/null || true
+# Match the arguments, not argv[0]: the runner starts the pinned binary by its full path,
+# which need not end in "claude". The bracket keeps pkill from matching its own command line.
+pkill -KILL -f -- '-p /ailsa:cas[e] ' 2>/dev/null || true
+pkill -KILL -f -- '--resum[e] .* --dangerously-skip-permissions' 2>/dev/null || true
 
 # Whatever the finally did or did not manage, reconcile against the manifest.
 python3 - <<'PYEOF'

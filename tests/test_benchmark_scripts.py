@@ -66,7 +66,25 @@ def test_watchdog_pins():
 
 
 def test_watchdog_abort_pattern():
-    assert "[c]laude -p /ailsa:case" in _read("scripts/uat_watchdog.py")
+    """The abort's pkill patterns must match the argv the runner really starts."""
+    mod = _load_watchdog()
+    patterns = re.findall(r"pkill -KILL -f -- '([^']+)'", mod._ABORT_SCRIPT)
+    assert len(patterns) == 2
+    run_sh = _read("tests/case-benchmark/blind_case_run.sh")
+    assert '"$CLAUDE_BIN" -p "/ailsa:case $CASE_DIR $MF$SMOKE"' in run_sh
+    assert '"$CLAUDE_BIN" --resume "$SID" -p "$NUDGE"' in run_sh
+    assert run_sh.count("--dangerously-skip-permissions") == 2
+    binary = mod.REMOTE_ENV["CLAUDE_BIN"]
+    tail = ("--model claude-opus-5-5 --dangerously-skip-permissions "
+            "--append-system-prompt BLIND CASE EVALUATION. --add-dir /data/CASE1")
+    new_run = f"{binary} -p /ailsa:case /data/CASE1 C6H6 --session-id 1234-abcd {tail}"
+    resume = f"{binary} --resume 1234-abcd -p Continue the in-progress CASE workflow {tail}"
+    assert any(re.search(p, new_run) for p in patterns)
+    assert any(re.search(p, resume) for p in patterns)
+    # Never the abort script itself, nor an interactive session on the host.
+    for innocent in (mod._ABORT_SCRIPT, "/home/chris/.local/bin/claude",
+                     "claude --resume 1234-abcd", "claude -p hi"):
+        assert not any(re.search(p, innocent) for p in patterns), innocent
 
 
 def test_host_scripts_have_no_old_name():
