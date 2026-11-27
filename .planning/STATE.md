@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v11.0
 milestone_name: AILSA Rename
-status: ready_to_plan
+status: executing
 last_updated: 2026-11-24T22:57:27.737Z
-last_activity: 2026-11-24 -- Phase 106.1 run record core complete and verified
+last_activity: 2026-11-27 -- Phase 106.2 planned (12 plans), execution started
 progress:
   total_phases: 11
   completed_phases: 3
   total_plans: 36
   completed_plans: 36
   percent: 18
-stopped_at: Phase 106.1 complete (20/20, verified) — next Phase 106 (skill rename), then 106.2
+stopped_at: Phase 106.2 planned (12 plans, 9 waves) — executing
 ---
 
 # lucy-ng State
@@ -25,10 +25,11 @@ See: .planning/PROJECT.md (updated 2026-07-21)
 
 ## Current Position
 
-Phase: 106.1 (run-record-core) — COMPLETE, verified 2026-11-24
-Plan: 20 of 20
-Status: next Phase 106 (skill rename; not discussed yet), then 106.2
-Last activity: 2026-11-24 -- Phase 106.1 complete and verified
+Phase: 106.2 (frontier-skill-writes-the-run-record) — PLANNED 2026-11-27, executing
+Plan: 0 of 12 (9 waves; plan 11 = team proof run with owner checkpoint)
+Status: planned without a discussion round (owner choice 2026-11-27); research defaults OD-1..OD-11
+  are stated assumptions in the plans; plan check passed (3 warnings, no blockers)
+Last activity: 2026-11-27 -- Phase 106.2 research, pattern map, 12 plans, plan check
 
 **Resume here (2026-11-27, after Phase 106):**
 
