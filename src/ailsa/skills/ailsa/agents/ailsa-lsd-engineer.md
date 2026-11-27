@@ -313,7 +313,7 @@ Once each family that produced a tractable solution set has a `solutions.smi`:
 ### Badlist Filters (Native Ring Exclusion via DEFF F / FEXP)
 
 Add to EVERY LSD file after correlations, before EXIT. Ring exclusion uses pre-built filter
-files distributed with the ailsa package (bundled in src/ailsa/fragments/).
+files distributed with the ailsa package (bundled in src/ailsa/lsd/filters/).
 ailsa lsd run / LSDInputGenerator.write_file() copies ring3 and ring4 to the iteration directory
 automatically — the relative paths below resolve correctly when LSD is run from iteration_NN/.
 
