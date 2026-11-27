@@ -57,6 +57,31 @@ coordinate with each other — is described in [The CASE agent layer](ARCHITECTU
 
 ---
 
+## Benchmark environment and skill states
+
+The benchmark ran the CASE skill in two states. The paper skill is checked out as described in
+[SKILLS.md](SKILLS.md).
+
+| Tag | Commit | Runs | Difference |
+|---|---|---|---|
+| `paper-skill-v1` | `f9aa7b3` | 45 (11-14 August 2026) | none |
+| `paper-skill-v2` | `6d2d126` | 211 | adds the rule that an exchangeable OH/NH proton used in an HMBC line needs its own HSQC declaration (`d62d833`) |
+
+Environment of the compute host:
+
+| Item | Value |
+|---|---|
+| Claude Code | 2.1.205 (the 4.8 baseline arm used 2.1.204 and 2.1.205; the binary is no longer on the host) |
+| LSD | 3.5.3 |
+| Reference database | schema 3, 928 443 compounds; the detection statistics tables were absent, so statistical detection returned no data |
+| Fragment database | not installed |
+| Execution | headless (`claude -p`), no agent team; specialists inherited the coordinator's model through the `opus` alias |
+
+Later runs (the Phase 106 acceptance run onward) use Claude Code 2.1.332 with Opus 5.5 and the
+restructured skill, so they are not part of the paper benchmark.
+
+---
+
 ## How blindness is enforced
 
 Four mechanisms, because a prompt instruction alone is not evidence of anything:

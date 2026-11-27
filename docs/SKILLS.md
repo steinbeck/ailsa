@@ -6,7 +6,7 @@ command line. There are three skill states. One is frozen, two are maintained si
 | Skill | For | Where | Status |
 |---|---|---|---|
 | **Paper skill** | the blind benchmark reported in the paper | git tags `paper-skill-v1`, `paper-skill-v2` | frozen, never edited |
-| **`ailsa`** (frontier skill) | Anthropic's frontier models in Claude Code: large context, an agent team | `.claude/commands/`, `.claude/agents/` (moves with the skill rebuild) | maintained, the standard skill |
+| **`ailsa`** (frontier skill) | Anthropic's frontier models in Claude Code: large context, an agent team | `src/ailsa/skills/ailsa/`, installed with `ailsa skill install ailsa --target claude` (maintainers add `--link`) | maintained, the standard skill |
 | **`ailsa-lite`** (lean skill) | small open-weight models (about 20–35 B parameters, 64–128 k context) in OpenCode or any harness that reads Agent Skills: the same tools and rules as the frontier skill, condensed for one agent | `src/ailsa/skills/ailsa-lite/`, installed with `ailsa skill install` | maintained, new |
 
 ## Contents
@@ -32,8 +32,9 @@ an agent team: the coordinator called one specialist subagent at a time.
 | `paper-skill-v1` | `f9aa7b3` | 45 (11–14 August 2026) | — |
 | `paper-skill-v2` | `6d2d126` | 211 | adds one rule: an exchangeable OH/NH proton used in an HMBC line needs its own `HSQC` declaration (`d62d833`) |
 
-The skill files on `master` were still byte-identical to `paper-skill-v2` when the tags were
-set. To get the paper skill as it ran:
+At the start of Phase 106 the frontier skill on `master` (commit `2535715`) differed from
+`paper-skill-v2` by two later commits: `9377d45` (atom-by-atom ranking) and `6a80d9e` (corrected
+LSD facts). To get the paper skill as it ran:
 
 ```bash
 git worktree add ../ailsa-paper-skill paper-skill-v2
@@ -88,8 +89,8 @@ The lean skill is package data of `ailsa`. `ailsa skill install ailsa-lite --tar
 harness's skill directory, so a user never combines a skill with a CLI it was not written for.
 The skill states the package version it was written for, and `ailsa skill list` shows both.
 
-The frontier skill is still symlinked from the repository into `~/.claude`. It moves to the same
-mechanism when it is rebuilt.
+The frontier skill is package data too: `ailsa skill install ailsa --target claude` copies it
+(maintainers working from a source checkout add `--link` to get symlinks instead).
 
 ## Which skill does a change touch
 
@@ -117,6 +118,9 @@ Run by `pytest` (the answer scan only locally):
 - **Hygiene:** no model IDs, no project history (phase numbers, dates, bug numbers), no dataset
   numbers, no dead file references, one name per role.
 - **Commands:** the contract test from Rule 2.
+- **Frontier skill:** `tests/test_skill_frontier.py` (size, contents table, history, datasets,
+  model IDs, dead references, terms, emphasis, DB credit).
+- **Answer scan:** `tests/test_skill_answer_scan.py` (local, skipped without the key).
 - **Blindness:** no compound of the evaluation set appears in a skill, by name or by structure.
   This scan runs against the private answer key on the maintainer's machine and before every
   benchmark, never in CI, because the key must not enter the repository.
