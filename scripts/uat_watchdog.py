@@ -417,6 +417,13 @@ for _ in 1 2 3 4 5 6 7 8 9 10; do
   sleep 1
 done
 pkill -KILL -f '[b]lind_case_batch.py' 2>/dev/null || true
+# The launcher kills its harness tree and closes the record on SIGTERM, so stop it
+# before the harness patterns below.
+pkill -TERM -f '[a]ilsa run start .*--skill ailsa' 2>/dev/null || true
+for _ in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15; do
+  pgrep -f '[a]ilsa run start .*--skill ailsa' >/dev/null || break
+  sleep 1
+done
 pkill -TERM -f '[t]imeout 3600' 2>/dev/null || true
 sleep 3
 pkill -KILL -f '[t]imeout 3600' 2>/dev/null || true

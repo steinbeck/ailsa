@@ -45,7 +45,15 @@ def test_runner_files_have_no_old_name():
 
 def test_runner_calls_new_command():
     text = _read("tests/case-benchmark/blind_case_run.sh")
-    assert '-p "/ailsa:case $CASE_DIR' in text
+    assert 'run start "$CASE_DIR" --skill ailsa' in text
+    assert "--headless --blind" in text
+    assert "--resume-attempts" in text and "--deadline" in text
+    assert 'AILSA_WORKSPACE="$RESULTS_DIR/ailsa-runs"' in text
+    assert "rm -rf" not in text
+    assert "--resume " not in text
+    assert 'timeout "$CALL_TIMEOUT"' not in text
+    # No stop condition on a file in the dataset.
+    assert '$CASE_DIR/analysis' not in text and "${CASE_DIR}/analysis" not in text
     assert not re.search(r"\bCASE\d+\b", text)
 
 
@@ -79,25 +87,31 @@ def test_preflight_halts_with_copy_command_when_pin_missing(monkeypatch):
 
 
 def test_watchdog_abort_pattern():
-    """The abort's pkill patterns must match the argv the runner really starts."""
+    """The abort's pkill patterns must match the argv the launcher really builds."""
+    from ailsa.record.launcher import build_argv, build_resume_argv
+
     mod = _load_watchdog()
     patterns = re.findall(r"pkill -KILL -f -- '([^']+)'", mod._ABORT_SCRIPT)
     assert len(patterns) == 2
-    run_sh = _read("tests/case-benchmark/blind_case_run.sh")
-    assert '"$CLAUDE_BIN" -p "/ailsa:case $CASE_DIR $MF$SMOKE"' in run_sh
-    assert '"$CLAUDE_BIN" --resume "$SID" -p "$NUDGE"' in run_sh
-    assert run_sh.count("--dangerously-skip-permissions") == 2
-    binary = mod.REMOTE_ENV["CLAUDE_BIN"]
-    tail = ("--model claude-opus-5-5 --dangerously-skip-permissions "
-            "--append-system-prompt BLIND CASE EVALUATION. --add-dir /data/CASE1")
-    new_run = f"{binary} -p /ailsa:case /data/CASE1 C6H6 --session-id 1234-abcd {tail}"
-    resume = f"{binary} --resume 1234-abcd -p Continue the in-progress CASE workflow {tail}"
+    term = re.findall(r"pkill -TERM -f '(\[a\]ilsa run start[^']*)'", mod._ABORT_SCRIPT)
+    assert len(term) == 1
+    extra = ["--append-system-prompt", "BLIND CASE EVALUATION."]
+    new_run = " ".join(build_argv(
+        harness="claude", model="claude-opus-5-5",
+        prompt="/ailsa:case /data/CASE1 C6H6", headless=True, run_dir="/tmp/run",
+        dataset="/data/CASE1", session_id="1234-abcd", extra=extra))
+    resume = " ".join(build_resume_argv(
+        model="claude-opus-5-5", nudge="Continue", session_id="1234-abcd",
+        run_dir="/tmp/run", dataset="/data/CASE1", extra=extra))
     assert any(re.search(p, new_run) for p in patterns)
     assert any(re.search(p, resume) for p in patterns)
+    launcher = ("/home/chris/.venv/bin/ailsa run start /data/CASE1 --skill ailsa "
+                "--headless --blind --model claude-opus-5-5")
+    assert re.search(term[0], launcher)
     # Never the abort script itself, nor an interactive session on the host.
     for innocent in (mod._ABORT_SCRIPT, "/home/chris/.local/bin/claude",
-                     "claude --resume 1234-abcd", "claude -p hi"):
-        assert not any(re.search(p, innocent) for p in patterns), innocent
+                     "claude --resume 1234-abcd", "claude -p hi", "claude"):
+        assert not any(re.search(p, innocent) for p in patterns + term), innocent
 
 
 def test_host_scripts_have_no_old_name():
@@ -195,6 +209,7 @@ def _batch(tmp_path: Path, results: Path, model: str, claude_bin: str):
         CASE_RUN_CALL_TIMEOUT="20",
         CASE_RUN_DEADLINE_S="20",
         TMPDIR=str(tmp_path),
+        AILSA_BIN=str(Path(sys.executable).parent / "ailsa"),
     )
     env.pop("CASE_ANSWERKEY_PATHS", None)
     return subprocess.run(
