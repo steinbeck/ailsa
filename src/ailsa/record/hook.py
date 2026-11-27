@@ -95,6 +95,7 @@ def _post_tool_use(data: dict[str, Any]) -> list[Mapped]:
         ]
     if tool == "Agent":
         target = tool_input.get("subagent_type")
+        resp = response if isinstance(response, dict) else {}
         out: list[Mapped] = [
             (
                 "agent.message",
@@ -103,11 +104,12 @@ def _post_tool_use(data: dict[str, Any]) -> list[Mapped]:
                     "to": target,
                     "kind": "task",
                     "text": _cap(tool_input.get("prompt", ""), TEXT_CAP),
+                    "name": tool_input.get("name"),
+                    "agent_id": resp.get("agentId"),
                 },
                 {},
             )
         ]
-        resp = response if isinstance(response, dict) else {}
         actual = resp.get("resolvedModel")
         if not actual:
             used = resp.get("modelsUsed")

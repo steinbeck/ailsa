@@ -81,6 +81,13 @@ def _describe(ev: dict[str, Any], first_prompt_seq: int | None) -> str:
         return f"Note from {md_escape(p.get('sender', '?'))}: {md_escape(p.get('text', ''))}"
     if etype == "agent.message":
         return f"Message {md_escape(p.get('from', '?'))} to {md_escape(p.get('to', '?'))}"
+    if etype == "agent.model_reported":
+
+        def _f(key: str) -> str:
+            value = p.get(key)
+            return "unknown" if value is None else md_escape(value)
+
+        return f"Model for {_f('agent')}: {_f('actual')} (source: {_f('source')})"
     template = DIARY_TEMPLATES.get(etype)
     if template is None:
         return md_escape(etype)

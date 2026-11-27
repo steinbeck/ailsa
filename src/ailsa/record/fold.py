@@ -265,6 +265,34 @@ def _h_spawned(m: dict[str, Any], ev: dict[str, Any], s: dict[str, Any]) -> None
     aid = str(p.get("agent_id"))
     m["agents"].setdefault(aid, {"reports": []})["agent_type"] = p.get("agent_type")
     s["open_agent"][aid] = ev.get("utc")
+    if p.get("agent_type"):
+        s["type_to_agent"][str(p.get("agent_type"))] = aid
+    s["spawned"].add(aid)
+
+
+def _h_message(m: dict[str, Any], ev: dict[str, Any], s: dict[str, Any]) -> None:
+    p = _payload(ev)
+    if p.get("name") and p.get("agent_id"):
+        s["name_to_agent"][str(p["name"])] = str(p["agent_id"])
+
+
+# Strongest evidence first: a self-report never overrides the others in the headline.
+SOURCE_PRECEDENCE = ("transcript", "harness", "self-report", "launcher")
+
+
+def _resolve_agent(key: str, s: dict[str, Any]) -> str:
+    if key in s["spawned"]:
+        return key
+    if key == "coordinator":
+        return "main"
+    for table, probe in (
+        (s["name_to_agent"], key),
+        (s["type_to_agent"], key),
+        (s["type_to_agent"], "ailsa-" + key),
+    ):
+        if probe in table:
+            return str(table[probe])
+    return key
 
 
 def _h_stopped(m: dict[str, Any], ev: dict[str, Any], s: dict[str, Any]) -> None:
@@ -275,14 +303,23 @@ def _h_stopped(m: dict[str, Any], ev: dict[str, Any], s: dict[str, Any]) -> None
 
 def _h_model_reported(m: dict[str, Any], ev: dict[str, Any], s: dict[str, Any]) -> None:
     p = _payload(ev)
-    key = str(p.get("agent") or "main")
+    key = _resolve_agent(str(p.get("agent") or "main"), s)
     entry = m["agents"].setdefault(key, {"reports": []})
     entry["reports"].append(
         {"requested": p.get("requested"), "actual": p.get("actual"), "source": p.get("source")}
     )
-    entry["requested"] = p.get("requested")
-    entry["actual"] = p.get("actual")
-    entry["source"] = p.get("source")
+    reports = entry["reports"]
+
+    def rank(r: dict[str, Any]) -> int:
+        src = r.get("source")
+        return SOURCE_PRECEDENCE.index(src) if src in SOURCE_PRECEDENCE else len(SOURCE_PRECEDENCE)
+
+    best = min(rank(r) for r in reports)
+    # Among equally strong reports the latest one wins (as before).
+    head = [r for r in reports if rank(r) == best][-1]
+    entry["requested"] = next((r["requested"] for r in reports if r.get("requested")), None)
+    entry["actual"] = head.get("actual")
+    entry["source"] = head.get("source")
 
 
 def _h_phase(m: dict[str, Any], ev: dict[str, Any], s: dict[str, Any]) -> None:
@@ -309,6 +346,7 @@ HANDLERS: dict[str, Handler] = {
     "warning.raised": _h_warning,
     "prompt.submitted": _h_prompt,
     "agent.spawned": _h_spawned,
+    "agent.message": _h_message,
     "agent.stopped": _h_stopped,
     "agent.model_reported": _h_model_reported,
     "phase.started": _h_phase,
@@ -396,6 +434,9 @@ def fold(
         "first_prompt": None,
         "open_solver": {},
         "open_agent": {},
+        "type_to_agent": {},
+        "name_to_agent": {},
+        "spawned": set(),
         "open_phase": None,
         "last_input_seq": 0,
         "last_solver_seq": 0,

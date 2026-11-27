@@ -381,3 +381,24 @@ def test_finished_run_heartbeat_is_left_alone(new_run, tmp_path):
     run_hook(load("session_end"), run, tmp_path)
     assert events_of(run, "session.ended")
     assert (run / HEARTBEAT).read_bytes() == before
+
+
+def test_named_agent_payload_records_name_and_agent_id(new_run, tmp_path):
+    _, run = new_run
+    run_hook(load("post_tool_use_agent_named"), run, tmp_path)
+    (msg,) = events_of(run, "agent.message")
+    assert msg["payload"]["name"] == "nmr-chemist"
+    assert msg["payload"]["agent_id"] == "a1b2c3"
+    assert msg["payload"]["to"] == "ailsa-nmr-chemist"
+    assert msg["payload"]["kind"] == "task"
+
+
+def test_unnamed_agent_payload_stores_none(new_run, tmp_path):
+    data = {
+        "hook_event_name": "PostToolUse",
+        "tool_name": "Agent",
+        "tool_input": {"prompt": "p", "subagent_type": "t"},
+    }
+    ((t, p, _),) = map_hook_event(data)
+    assert t == "agent.message"
+    assert p["name"] is None and p["agent_id"] is None

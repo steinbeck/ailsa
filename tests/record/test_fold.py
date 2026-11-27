@@ -270,3 +270,91 @@ def test_rebuild_is_byte_stable(tmp_path: Path) -> None:
     rebuild_manifest(run, now=NOW)
     assert (run / MANIFEST).read_bytes() == first
     assert json.loads(first)["schema"] == "ailsa.run-manifest"
+
+
+def _rep(seq: int, agent: str, source: str, actual: str = "m-actual", requested=None) -> dict:
+    return {
+        "seq": seq,
+        "type": "agent.model_reported",
+        "payload": {"agent": agent, "requested": requested, "actual": actual, "source": source},
+    }
+
+
+def _spawn(seq: int, aid: str, atype: str) -> dict:
+    return {"seq": seq, "type": "agent.spawned", "payload": {"agent_id": aid, "agent_type": atype}}
+
+
+def _fold_events(events: list[dict]) -> dict:
+    return fold(events, {"clean": True}, now=NOW)
+
+
+def test_three_sources_join_one_agent_entry() -> None:
+    m = _fold_events(
+        [
+            _spawn(1, "a1b2c3", "ailsa-nmr-chemist"),
+            _rep(2, "a1b2c3", "harness"),
+            _rep(3, "ailsa-nmr-chemist", "self-report", actual="m-claimed"),
+            _rep(4, "a1b2c3", "transcript"),
+        ]
+    )
+    assert "ailsa-nmr-chemist" not in m["agents"]
+    entry = m["agents"]["a1b2c3"]
+    assert [r["source"] for r in entry["reports"]] == ["harness", "self-report", "transcript"]
+    assert entry["source"] == "transcript" and entry["actual"] == "m-actual"
+
+
+def test_self_report_joins_by_teammate_name() -> None:
+    msg = {
+        "seq": 2,
+        "type": "agent.message",
+        "payload": {
+            "from": "main",
+            "to": "t",
+            "kind": "task",
+            "text": "x",
+            "name": "nmr-chemist",
+            "agent_id": "a1b2c3",
+        },
+    }
+    m = _fold_events([_spawn(1, "a1b2c3", "other"), msg, _rep(3, "nmr-chemist", "self-report")])
+    assert list(m["agents"]) == ["a1b2c3"]
+    assert m["agents"]["a1b2c3"]["reports"][0]["source"] == "self-report"
+
+
+def test_self_report_joins_by_type_prefix() -> None:
+    m = _fold_events([_spawn(1, "a1b2c3", "ailsa-lsd-engineer"), _rep(2, "lsd-engineer", "self-report")])
+    assert list(m["agents"]) == ["a1b2c3"]
+
+
+def test_coordinator_alias_joins_main() -> None:
+    m = _fold_events([_rep(1, "main", "launcher"), _rep(2, "coordinator", "self-report")])
+    assert list(m["agents"]) == ["main"]
+    assert len(m["agents"]["main"]["reports"]) == 2
+
+
+def test_repeated_spawn_joins_most_recent() -> None:
+    m = _fold_events(
+        [
+            _spawn(1, "h1", "ailsa-nmr-chemist"),
+            _spawn(2, "h2", "ailsa-nmr-chemist"),
+            _rep(3, "ailsa-nmr-chemist", "self-report"),
+        ]
+    )
+    assert m["agents"]["h2"]["reports"] and not m["agents"]["h1"]["reports"]
+
+
+def test_unknown_sender_keeps_own_key() -> None:
+    m = _fold_events([_rep(1, "stranger", "self-report")])
+    assert list(m["agents"]) == ["stranger"]
+
+
+def test_self_report_does_not_override_harness_headline() -> None:
+    m = _fold_events(
+        [
+            _spawn(1, "h1", "t"),
+            _rep(2, "h1", "harness", actual="m-actual", requested="m-req"),
+            _rep(3, "h1", "self-report", actual="m-claimed"),
+        ]
+    )
+    e = m["agents"]["h1"]
+    assert (e["actual"], e["source"], e["requested"]) == ("m-actual", "harness", "m-req")

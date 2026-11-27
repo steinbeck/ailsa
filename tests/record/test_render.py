@@ -128,3 +128,13 @@ def test_alternative_without_reason_has_no_empty_parentheses() -> None:
     text = render_final(m, None, decl)
     assert "Candidate 2: excluded (no reason given)" in text
     assert "()" not in text
+
+
+def test_model_report_diary_line_is_escaped() -> None:
+    from ailsa.record.render import _describe
+
+    ev = {
+        "type": "agent.model_reported",
+        "payload": {"agent": "a_1", "actual": None, "source": "self*report"},
+    }
+    assert _describe(ev, None) == "Model for a\\_1: unknown (source: self\\*report)"
