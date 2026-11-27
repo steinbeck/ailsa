@@ -434,8 +434,8 @@ decisions in `106.1-CONTEXT.md`.
 **Plans**: 12 plans in 9 waves (planned 2026-11-27; executed one after another on one checkout)
 
 Plans:
-- [ ] 106.2-01-PLAN.md — package: model reports joined per agent, teammate names recorded, frontier skill version and installed files in the environment record
-- [ ] 106.2-02-PLAN.md — coordinator creates the record first, notes every message, declares or closes every run; run-record reference; web-view launch, timing and dataset manifest removed from the skill
+- [x] 106.2-01-PLAN.md — package: model reports joined per agent, teammate names recorded, frontier skill version and installed files in the environment record
+- [x] 106.2-02-PLAN.md — coordinator creates the record first, notes every message, declares or closes every run; run-record reference; web-view launch, timing and dataset manifest removed from the skill
 - [ ] 106.2-03-PLAN.md — launcher starts the frontier skill (`--skill ailsa`) and resumes a headless run inside one record (`--resume-attempts`, `--deadline`)
 - [ ] 106.2-04-PLAN.md — the five agents work in the run's work folder; analyst reports the ranking id instead of writing a report; name gate before the declaration
 - [ ] 106.2-05-PLAN.md — old web view removed (code, command, tests, extra, docs) with a structural test
