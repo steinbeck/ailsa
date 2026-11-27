@@ -22,7 +22,7 @@ here; terminate_team runs the finalize script.
    the LSD engineer's rule to send `[ITERATION-COMPLETE]` the instant the solver exits, the rule
    that keeps a run from hanging. A `date` call is instantaneous; still, take the `phase_end` stamp
    for an arriving reply first, then write its CASE-PROGRESS.md section and push the next
-   `[BEGIN]`. Stamping does not gate the next directive.
+   `[BEGIN]`. Do not let stamping gate the next directive.
 
 ## Mechanism: one append per event
 
