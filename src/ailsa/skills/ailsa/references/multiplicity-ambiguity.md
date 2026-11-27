@@ -93,7 +93,7 @@ not send this record and assigns multiplicities normally from the sign evidence.
 ## Who uses the record
 
 - **Coordinator:** records the message and keeps the coverage ledger as `Multiplicity coverage:`
-  notes, read in the generated progress log. Its pre-accept coverage gate closes the record: the
+  notes, read in the generated progress log. Its pre-accept coverage gate closes the ledger: the
   run does not accept until every viable family, and every model the DA has mandated, has been
   searched in its own LSD run.
 - **LSD engineer:** runs each viable family as a separate, fully constrained LSD run in its own
