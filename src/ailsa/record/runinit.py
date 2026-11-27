@@ -126,10 +126,18 @@ def _packaged_skill(name: str) -> Path | None:
         return None
 
 
-def _skill_location(name: str | None) -> tuple[Path | None, str | None, bool | None]:
-    """(folder hashed, label of the place, hashes equal the packaged copy)."""
+_COMMAND_SKILL_PARTS = ("INDEX.md", "commands/", "agents/", "references/")
+
+
+def _skill_location(
+    name: str | None,
+) -> tuple[Path | None, str | None, bool | None, dict[str, str] | None]:
+    """(folder hashed, label of the place, hashes equal the packaged copy, installed files).
+
+    The last item is set only for an installed command skill (label ``global-claude-commands``).
+    """
     if not name:
-        return None, None, None
+        return None, None, None, None
     cwd = Path.cwd()
     home = Path.home()
     candidates = (
@@ -139,19 +147,35 @@ def _skill_location(name: str | None) -> tuple[Path | None, str | None, bool | N
         ("global-opencode", home / ".config" / "opencode" / "skills" / name),
     )
     packaged = _packaged_skill(name)
+    is_command_skill = (
+        packaged is not None
+        and (packaged / "INDEX.md").is_file()
+        and (packaged / "commands").is_dir()
+    )
+    if packaged is not None and is_command_skill:
+        from ailsa.record.env import command_skill_files, skill_file_hashes
+
+        installed = command_skill_files()
+        if installed is not None:
+            wanted = {
+                k: v
+                for k, v in skill_file_hashes(packaged).items()
+                if k.startswith(_COMMAND_SKILL_PARTS)
+            }
+            return packaged, "global-claude-commands", installed == wanted, installed
     chosen: tuple[Path, str] | None = None
     for label, path in candidates:
         if path.is_dir():
             chosen = (path, label)
             break
     if chosen is None:
-        return (packaged, "packaged", True) if packaged else (None, None, None)
+        return (packaged, "packaged", True, None) if packaged else (None, None, None, None)
     from ailsa.record.env import skill_file_hashes
 
     same = None
     if packaged is not None:
         same = skill_file_hashes(chosen[0]) == skill_file_hashes(packaged)
-    return chosen[0], chosen[1], same
+    return chosen[0], chosen[1], same, None
 
 
 def _entry_from_log(run_dir: Path, run_id: str) -> dict[str, Any]:
@@ -454,7 +478,7 @@ def init_run(
     def capture_env() -> None:
         from ailsa.record.env import detect_harness, probe_environment
 
-        skill_dir, where, same = _skill_location(skill)
+        skill_dir, where, same, installed = _skill_location(skill)
         harness_name = harness or detect_harness(dict(environ))
         payload = probe_environment(
             skill_dir=skill_dir,
@@ -463,6 +487,8 @@ def init_run(
             web_tools=effective_web,
             harness=harness_name,
         )
+        if installed is not None and isinstance(payload.get("skill"), dict):
+            payload["skill"]["files"] = installed  # what actually ran
         payload["skill_location"] = where
         payload["skill_matches_packaged"] = same
         append_event(run_dir, "env.captured", payload, actor=_TOOL, fsync=True)

@@ -127,3 +127,76 @@ def test_probe_environment_keys(
     assert "python" in out
     assert out["lsd"]["version"] == "3.4.9"
     assert "PATH" not in str(out)
+
+
+def _packaged_frontier() -> Path:
+    from ailsa.record.runinit import _packaged_skill
+
+    path = _packaged_skill("ailsa")
+    assert path is not None
+    return path
+
+
+def _index_version(skill: Path) -> str:
+    import re
+
+    text = (skill / "INDEX.md").read_text(encoding="utf-8")
+    found = re.search(r'^\s+version:\s*"?([^"\n]+)"?', text, re.MULTILINE)
+    assert found
+    return found.group(1).strip()
+
+
+def install_command_skill(root: Path, *, link: bool) -> None:
+    import shutil
+
+    pkg = _packaged_frontier()
+    (root / "commands").mkdir(parents=True)
+    (root / "agents").mkdir()
+    (root / "ailsa").mkdir()
+
+    def put(src: Path, dst: Path) -> None:
+        if link:
+            dst.symlink_to(src)
+        elif src.is_dir():
+            shutil.copytree(src, dst)
+        else:
+            shutil.copy2(src, dst)
+
+    put(pkg / "commands", root / "commands" / "ailsa")
+    put(pkg / "references", root / "ailsa" / "references")
+    put(pkg / "INDEX.md", root / "ailsa" / "INDEX.md")
+    for agent in sorted((pkg / "agents").glob("*.md")):
+        put(agent, root / "agents" / agent.name)
+
+
+def _expected_packaged() -> dict[str, str]:
+    hashes = env.skill_file_hashes(_packaged_frontier())
+    return {k: v for k, v in hashes.items() if k != "CHANGELOG.md"}
+
+
+def test_skill_info_reads_index_md() -> None:
+    pkg = _packaged_frontier()
+    info = env.skill_info(pkg)
+    assert info["name"] == "ailsa"
+    assert info["version"] == _index_version(pkg)
+    assert info["files"] == env.skill_file_hashes(pkg)
+
+
+def test_skill_info_lean_still_reads_skill_md(tmp_path: Path) -> None:
+    (tmp_path / "SKILL.md").write_text('name: lean\n  version: "0.3"\n')
+    (tmp_path / "INDEX.md").write_text('name: other\n  version: "9"\n')
+    info = env.skill_info(tmp_path)
+    assert (info["name"], info["version"]) == ("lean", "0.3")
+
+
+@pytest.mark.parametrize("link", [True, False])
+def test_command_skill_files_link_and_copy(tmp_path: Path, link: bool) -> None:
+    root = tmp_path / ".claude"
+    install_command_skill(root, link=link)
+    got = env.command_skill_files(root)
+    assert got == _expected_packaged()
+    assert "INDEX.md" in got and any(k.startswith("agents/") for k in got)
+
+
+def test_command_skill_files_none_when_not_installed(tmp_path: Path) -> None:
+    assert env.command_skill_files(tmp_path / ".claude") is None

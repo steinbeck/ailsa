@@ -189,12 +189,43 @@ def skill_file_hashes(skill_dir: Path) -> dict[str, str]:
     return out
 
 
+def command_skill_files(root: Path | None = None) -> dict[str, str] | None:
+    """Hashes of an installed frontier command skill, keyed by the packaged relative path.
+
+    ``root`` is the Claude folder (default ``~/.claude``). Link installs are followed so the
+    hashes are those of the files that actually ran. None if no command skill is installed.
+    """
+    base = Path.home() / ".claude" if root is None else Path(root)
+    if not (base / "commands" / "ailsa" / "case.md").is_file():
+        return None
+    out: dict[str, str] = {}
+    for sub, src in (
+        ("commands", base / "commands" / "ailsa"),
+        ("references", base / "ailsa" / "references"),
+    ):
+        if src.is_dir():
+            for rel, digest in skill_file_hashes(src.resolve()).items():
+                out[f"{sub}/{rel}"] = digest
+    index = base / "ailsa" / "INDEX.md"
+    if index.is_file():
+        out["INDEX.md"] = sha256_file(index.resolve())
+    agents = base / "agents"
+    if agents.is_dir():
+        for path in sorted(agents.glob("ailsa-*.md")):
+            real = path.resolve()
+            if real.is_file():
+                out[f"agents/{path.name}"] = sha256_file(real)
+    return dict(sorted(out.items()))
+
+
 def skill_info(skill_dir: Path | None) -> dict[str, Any]:
     if skill_dir is None:
         return {"name": None, "version": None, "files": {}}
     root = Path(skill_dir)
     name = version = None
     skill_md = root / "SKILL.md"
+    if not skill_md.is_file():
+        skill_md = root / "INDEX.md"  # the frontier command skill has no SKILL.md
     if skill_md.is_file():
         text = skill_md.read_text(encoding="utf-8", errors="replace")
         m = re.search(r"^name:\s*(\S+)", text, re.MULTILINE)

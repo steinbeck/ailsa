@@ -315,3 +315,60 @@ def test_view_export_child_finishes_and_leaves_events(
             pass
     assert not marker.exists()
     assert "spectrum.processed" in _types(res["run_dir"])
+
+
+def _install_frontier(home: Path, *, link: bool) -> None:
+    from .test_env import install_command_skill
+
+    install_command_skill(home / ".claude", link=link)
+
+
+def test_skill_location_link_install_matches(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from ailsa.record.runinit import _skill_location
+
+    monkeypatch.setenv("HOME", str(tmp_path / "home"))
+    monkeypatch.chdir(tmp_path)
+    _install_frontier(tmp_path / "home", link=True)
+    _, label, same, installed = _skill_location("ailsa")
+    assert (label, same) == ("global-claude-commands", True)
+    assert installed and "CHANGELOG.md" not in installed
+
+
+def test_skill_location_differing_copy(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from ailsa.record.runinit import _skill_location
+
+    monkeypatch.setenv("HOME", str(tmp_path / "home"))
+    monkeypatch.chdir(tmp_path)
+    _install_frontier(tmp_path / "home", link=False)
+    agent = next((tmp_path / "home" / ".claude" / "agents").glob("ailsa-*.md"))
+    agent.write_text(agent.read_text() + "\nlocal edit\n")
+    _, label, same, _ = _skill_location("ailsa")
+    assert (label, same) == ("global-claude-commands", False)
+
+
+def test_skill_location_absent_falls_back_to_packaged(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from ailsa.record.runinit import _packaged_skill, _skill_location
+
+    monkeypatch.setenv("HOME", str(tmp_path / "home"))
+    monkeypatch.chdir(tmp_path)
+    assert _skill_location("ailsa") == (_packaged_skill("ailsa"), "packaged", True, None)
+
+
+def test_env_captured_for_frontier_skill(
+    workspace: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from .test_env import _index_version, _packaged_frontier
+
+    monkeypatch.setenv("HOME", str(tmp_path / "home"))
+    _install_frontier(tmp_path / "home", link=True)
+    res = _init(_dataset(tmp_path), skill="ailsa")
+    payload = read_events(res["run_dir"])["events"][1]["payload"]
+    assert payload["skill"]["name"] == "ailsa"
+    assert payload["skill"]["version"] == _index_version(_packaged_frontier())
+    assert payload["skill_location"] == "global-claude-commands"
+    assert payload["skill_matches_packaged"] is True
+    assert "CHANGELOG.md" not in payload["skill"]["files"]
