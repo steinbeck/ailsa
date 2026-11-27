@@ -31,6 +31,15 @@ Applies to: ailsa (frontier skill) only; the lean skill writes the record since 
 - The web-view launch, the wall-clock timing stamps and the run manifest written into the dataset
   are gone; the record's event times and the phase notes replace the timing.
 - References `timing` and `progress-format` are replaced by `run-record`.
+- The solution analyst writes no report file and no ranking file: it ranks from the absolute work
+  folder, reports the `ranking_id` of the atom-by-atom ranking as `Ranking id:` (the cross-check
+  ranking is recorded later and would otherwise count as the newest) and sends a
+  `Declaration draft:` (outcome, candidate, confidence, caveats, open questions, next steps) in
+  `[RANKING-COMPLETE]`. The verdict-keyed identity rules now govern the message's `Identity:`
+  line instead of a report header.
+- The devil's advocate's name gate runs after `[RANKING-COMPLETE]` and before the result is
+  declared, on the reported name and top SMILES in the coordinator's `[BEGIN] G-IDENT` message;
+  a flag becomes a caveat of the declaration. Its file paths are under the work folder.
 
 ## 0.1.0
 

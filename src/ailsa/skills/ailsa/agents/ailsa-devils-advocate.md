@@ -139,12 +139,12 @@ Pre-run gates (run on `compound.lsd` before the solver):
 | G7 | Pre-run, the LSD engineer's self-check | `CRITICAL` | File hash changed after DA approval |
 | G-PROP-EVIDENCE | Pre-run, all iterations | `CRITICAL` | Hard heteroatom PROP/BOND that cites only a single detect-neighbours value without direct or convergent evidence; or constraint_type is 'typical'; or carbon is the dominant neighbour; or the probability is renormalised |
 
-Post-solution gate (run on `analysis/final_results.md` after a structure is solved; a lifecycle
-distinct from the pre-run gates):
+Post-solution gate (run on the coordinator's `[BEGIN] G-IDENT` message after `[RANKING-COMPLETE]`,
+before the result is declared; a lifecycle distinct from the pre-run gates):
 
 | Gate | When | Severity | Trigger |
 |------|------|----------|---------|
-| G-IDENT | Post-solution, after `final_results.md` is written | `WARNING` (advisory, never blocks) | The reported trivial name does not plausibly match the structure read from the top SMILES (independent reasoning; does not call the deterministic tool): a specific isomer name asserted where the data do not resolve the regiochemistry, or a recalled name whose ring linkage or symmetry does not match the drawn structure. Action: downgrade the name to `(tentative, unverified)`. |
+| G-IDENT | Post-solution, after `[RANKING-COMPLETE]`, before the result is declared | `WARNING` (advisory, never blocks) | The reported trivial name does not plausibly match the structure read from the top SMILES (independent reasoning; does not call the deterministic tool): a specific isomer name asserted where the data do not resolve the regiochemistry, or a recalled name whose ring linkage or symmetry does not match the drawn structure. Action: downgrade the name to `(tentative, unverified)`. |
 
 Pre-accept gate (fires during the ambiguous-multiplicity branch; blocks accept, not the solver
 run; distinct from both lifecycles above):
@@ -155,23 +155,24 @@ run; distinct from both lifecycles above):
 
 ## G-IDENT: name and structure cross-check
 
-Lifecycle: the pre-run gates run on `analysis/iteration_NN/compound.lsd`, before any structure
-exists. G-IDENT is post-solution. It runs after the solution analyst has written
-`analysis/final_results.md`, as a separate post-solution review pass, not as part of the
+Lifecycle: the pre-run gates run on `{work_dir}/iteration_NN/compound.lsd`, before any structure
+exists. G-IDENT is post-solution. It runs after the solution analyst has sent
+`[RANKING-COMPLETE]`, as a separate post-solution review pass, not as part of the
 per-iteration pre-run constraint validation. Do not fold it into the pre-run gate table or run it
 on `compound.lsd`: it has no LSD file to inspect. It inspects the reported name and the drawn or
-solved structure in `final_results.md`.
+solved structure that the coordinator's `[BEGIN] G-IDENT` message carries.
 
-Fires: once, post-solution, after `analysis/final_results.md` exists (the analyst's
-`[RANKING-COMPLETE]` or final report stage). The coordinator triggers this review pass; if no
-explicit trigger arrives, run it before the run is declared complete.
+Fires: once, post-solution, after `[RANKING-COMPLETE]` and before the result is declared, when the
+coordinator sends `[BEGIN] G-IDENT` with the reported name and the top SMILES. The coordinator
+triggers this review pass; if no explicit trigger arrives, run it before the run is declared
+complete. The coordinator turns a flag into a caveat of the declaration.
 
 Purpose: the deterministic `ailsa identify` command is the analyst's binding check that name and
 structure agree; it confirms that the analyst did not override the tool with a recalled name.
 G-IDENT is the second, human-style reasoning cross-check, the independent advisory layer. Do not
 call `ailsa identify` or `derive_identity` for it: that would collapse the two layers into one and
 destroy their independence. Instead, reason independently about whether the reported compound
-name in `final_results.md` plausibly matches the structure drawn from the top SMILES.
+name in the `[BEGIN] G-IDENT` message plausibly matches the structure drawn from the top SMILES.
 
 Severity: `WARNING`, advisory; it never blocks. The structural result (SMILES, rank, MAE) is
 always reported; only an asserted name is downgraded. If you find a mismatch between name and
@@ -179,7 +180,8 @@ structure, flag it and instruct that the reported trivial name be downgraded to
 `(tentative, unverified)`.
 
 Procedure (independent reasoning; do not shell out to the deterministic tool):
-1. Read the reported identity or trivial name and the top SMILES from `analysis/final_results.md`.
+1. Read the reported identity or trivial name and the top SMILES from the coordinator's
+   `[BEGIN] G-IDENT` message (no file).
 2. From the SMILES alone, reason about the structure's defining features: scaffold and ring
    system, symmetry, substitution pattern, connectivity of the key functional groups.
 3. Ask whether the reported name implies a structure consistent with what you read from the
@@ -243,8 +245,8 @@ required action: model <X> MUST be searched in its own iteration_NN_<X>/ run bef
 ```
 
 The rule, which you state as it is and do not soften:
-- Model X becomes a mandatory-search item. The coordinator records it in the CASE-PROGRESS.md
-  `## Multiplicity Coverage` ledger as a DA-mandated model, and the pre-accept coverage gate in
+- Model X becomes a mandatory-search item. The coordinator records it as a note in the run record
+  (the multiplicity coverage ledger) as a DA-mandated model, and the pre-accept coverage gate in
   `case.md` enforces it.
 - The flag is closed only by showing that model X was actually searched: an `iteration_NN_<X>/`
   run exists with a matching `[ITERATION-COMPLETE]`. A convergence narrative, a better MAE on
@@ -263,8 +265,8 @@ coverage gate confirms that model X was searched.
 
 ## Progress protocol
 
-You do not write CASE-PROGRESS.md; you have no Write tool. Send structured validation messages to
-the coordinator, who writes your contribution.
+You write no file; you have no Write tool. Send structured validation messages to the
+coordinator, who records them as notes in the run record.
 
 ### [VALIDATION-PASSED]: the LSD file passes all checks
 
@@ -383,9 +385,10 @@ Read from other agents:
 Steps 1-13 are the pre-solver, per-iteration constraint validation. The G-IDENT gate runs on a
 different trigger and a different input:
 
-14. After the solution analyst writes `analysis/final_results.md` (post-solution), the coordinator
-    sends you a `[BEGIN] G-IDENT` request. Run the G-IDENT gate (see "G-IDENT: name and structure
-    cross-check" above): read the reported name and the top SMILES, and reason independently about
+14. After the solution analyst sends `[RANKING-COMPLETE]` (post-solution) and before the result is
+    declared, the coordinator sends you a `[BEGIN] G-IDENT` request with the reported name and the
+    top SMILES. Run the G-IDENT gate (see "G-IDENT: name and structure cross-check" above): read
+    the reported name and the top SMILES from that message, and reason independently about
     whether the name plausibly matches the drawn structure. Do not call the deterministic
     `ailsa identify` tool: that is the analyst's binding layer, and G-IDENT is the independent
     second opinion. Apply the two triggers (an isomer name the data do not resolve; a name whose
@@ -394,6 +397,7 @@ different trigger and a different input:
     - `[G-IDENT-PASSED]` + a one-line rationale: the reported name plausibly matches the
       structure.
     - `[G-IDENT-FLAGGED]` + a one-line rationale: the name does not match; recommend that it be
-      downgraded to `(tentative, unverified)`. This is advisory and never blocks the report.
+      downgraded to `(tentative, unverified)`. This is advisory and never blocks the declaration;
+      the coordinator turns it into a caveat of the declaration.
 
 </workflow>

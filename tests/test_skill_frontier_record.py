@@ -1,9 +1,12 @@
-"""Grep-contract tests for how the frontier coordinator writes the run record.
+"""Grep-contract tests for how the frontier coordinator and its agents write the run record.
 
 They pin the coordinator text (src/ailsa/skills/ailsa/commands/case.md): the record is created
 first, before any team, task or spawn; every spawn prompt carries the absolute work folder; prose
 goes into notes; every exit declares the result or closes the run; CASE-PROGRESS.md and
 final_results.md are renderings, never hand-written. They replace the old web-view contract test.
+They also pin the agent texts (src/ailsa/skills/ailsa/agents/): the solution analyst reports the
+ranking id and a declaration draft instead of writing a report, and the devil's advocate's name
+gate reads the coordinator's message before the result is declared.
 
 All file reads use repo-relative paths (src/ailsa/skills/ailsa/...), so the tests work from any
 checkout without touching ~/.claude.
@@ -23,6 +26,12 @@ SKILL_DIR = Path(__file__).resolve().parents[1] / "src/ailsa/skills/ailsa"
 CASE_MD = SKILL_DIR / "commands/case.md"
 RUN_RECORD_MD = SKILL_DIR / "references/run-record.md"
 INDEX_MD = SKILL_DIR / "INDEX.md"
+AGENTS_DIR = SKILL_DIR / "agents"
+ANALYST_MD = AGENTS_DIR / "ailsa-solution-analyst.md"
+DEVILS_ADVOCATE_MD = AGENTS_DIR / "ailsa-devils-advocate.md"
+
+# The heading of the devil's advocate's name-gate section.
+G_IDENT_HEADING = "## G-IDENT: name and structure cross-check"
 
 # The marker that begins the terminate_team step in case.md.
 TERMINATE_TEAM_MARKER = '<step name="terminate_team">'
@@ -61,6 +70,14 @@ def _task_blocks(text: str) -> list[str]:
                 blocks.append("\n".join(current))
                 current = None
     return blocks
+
+
+def _section(text: str, heading: str) -> str:
+    """Text of one '## ' section, from its heading line to the next '## ' heading."""
+    assert heading in text, f"no section {heading!r}"
+    after = text.split(heading, 1)[1]
+    match = re.search(r"^## ", after, re.MULTILINE)
+    return after[: match.start()] if match else after
 
 
 def _first_task_line_index(text: str) -> int:
@@ -175,3 +192,30 @@ def test_retired_references_gone() -> None:
     )
     assert RUN_RECORD_MD.exists(), "references/run-record.md is missing"
     assert "references/run-record.md" in INDEX_MD.read_text(), "INDEX.md does not link run-record"
+
+
+def test_analyst_reports_ranking_id() -> None:
+    """The analyst names the decisive ranking and drafts the declaration instead of a report file.
+
+    The coordinator declares against the ranking id the analyst reports, because the later
+    cross-check ranking would otherwise be the newest; a hand-written report is not the record.
+    """
+    text = ANALYST_MD.read_text()
+    for field in ("Ranking id:", "Declaration draft:"):
+        assert field in text, f"the solution analyst's file lacks {field!r}"
+    assert "ranking_results.json" not in text, "the solution analyst still saves ranking_results.json"
+    writes = [
+        line.strip()
+        for line in text.splitlines()
+        if re.search(r"(?i)write[^\n]{0,40}final_results\.md", line)
+    ]
+    assert not writes, f"the solution analyst still writes final_results.md: {writes}"
+
+
+def test_devils_advocate_gate_reads_message() -> None:
+    """The name gate reads the coordinator's G-IDENT message after the ranking, not a report file."""
+    text = DEVILS_ADVOCATE_MD.read_text()
+    assert "analysis/" not in text, "the devil's advocate's file still names analysis/"
+    assert "[BEGIN] G-IDENT" in text, "the devil's advocate's file names no [BEGIN] G-IDENT message"
+    gate = _section(text, G_IDENT_HEADING)
+    assert "[RANKING-COMPLETE]" in gate, "the G-IDENT section does not name [RANKING-COMPLETE]"
