@@ -107,8 +107,8 @@ After an intervention is generated, increment the counter for this pattern only.
 - **Counter for this pattern == 2:** delegate to the diagnostic specialist (proceed to the
   delegate_specialist step).
 - **Counter for this pattern >= 3 and < 10:** use the specialist-informed advisory if
-  `analysis/DIAGNOSTIC-REPORT.md` exists in the compound directory, otherwise fall back to the basic
-  advisory (proceed to the deliver_advisory step).
+  `{work_dir}/DIAGNOSTIC-REPORT.md` exists, otherwise fall back to the basic advisory (proceed to
+  the deliver_advisory step).
 - **Counter for this pattern >= 10:** escalate to the user (proceed to the escalate step).
 
 Threshold = 2: the basic diagnosis handles the common issues (odd sp2 count, missing H); the
@@ -148,7 +148,9 @@ report.
 <Pattern-specific recommendation based on diagnostic findings>
 
 ### Next Steps
-Manual review required. See CASE-PROGRESS.md for full iteration history.
+Manual review required. See the generated progress log (<CASE-PROGRESS.md path printed by `ailsa run render`>) for full iteration history.
 ```
 
-**After presenting the escalation report:** stop. The user has to investigate.
+**After presenting the escalation report:** stop. The user has to investigate. terminate_team then
+declares the run `handed_to_human`, with the pattern and the 10 failed cycles as the termination
+reason, before the team shuts down.

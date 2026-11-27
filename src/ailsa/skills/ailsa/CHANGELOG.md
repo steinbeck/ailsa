@@ -48,6 +48,16 @@ Applies to: ailsa (frontier skill) only; the lean skill writes the record since 
   the generated progress log and writes `DIAGNOSTIC-REPORT.md` into the work folder. "Contribution
   Protocol" sections became "Message protocol to the coordinator": the coordinator records the
   agents' messages as notes, and no agent writes a progress log.
+- The coordinator's procedures (monitoring, gates, advisory and result templates, intervention,
+  loop patterns, multiplicity ambiguity, smoke test) run on the record: each reply becomes a note,
+  each `[BEGIN]` push is preceded by a `--phase` note instead of a timing stamp, and history is
+  read from the progress log that `ailsa run render` generates. The ranking directive asks for the
+  ranking id and a declaration draft instead of a report file; the run is done once the result is
+  declared. Both gates run after `[RANKING-COMPLETE]` and before the declaration, read the
+  `Multiplicity coverage:` notes, and turn a name flag into a `--caveat`. Elapsed time comes from
+  the `Run created` row of the generated log; the diagnostic specialist gets the work folder and
+  the log path and writes its report to `{work_dir}/DIAGNOSTIC-REPORT.md`; an escalation is
+  declared `handed_to_human` and a smoke test closes the record.
 
 ## 0.1.0
 

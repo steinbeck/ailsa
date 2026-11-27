@@ -28,30 +28,40 @@ TaskList is read only as a status ledger: the workflow advances because you push
 Before processing any structured message, run validate_message to check its required fields.
 
 **Shift list retention:** when processing [SETUP-COMPLETE] from the NMR chemist, extract and retain
-the experimental 13C shift list (comma-separated ppm values). The ranking tasks need it later.
+the experimental 13C shift list (comma-separated ppm values). The ranking tasks need it later. The
+setup note carries it as `13C shifts:`.
 
 **Loop:** receive structured messages from teammates (they arrive as conversation turns),
-optionally read `TaskList()` for status, and read `<compound_path>/analysis/CASE-PROGRESS.md` for
-loop detection. On each structured message ([SETUP-COMPLETE], [ITERATION-COMPLETE],
-[VALIDATION-PASSED], [VALIDATION-BLOCKED], [RANKING-COMPLETE]): take the `phase_end` timing stamp
-first, then write the corresponding section to CASE-PROGRESS.md per write_progress, then take a
-`phase_start` stamp for the next step and push its `[BEGIN]` directive to whichever agent owns it,
-then continue monitoring. Timing invariant: every `[BEGIN]` you push is preceded by a
-`phase_start`; every completion reply you receive gets its `phase_end` before anything else.
+optionally read `TaskList()` for status, and for loop detection run `ailsa run render` and read
+the progress log at the path it prints. On each structured message ([SETUP-COMPLETE],
+[ITERATION-COMPLETE], [VALIDATION-PASSED], [VALIDATION-BLOCKED], [RANKING-COMPLETE]): first record
+one note that summarises it, in the note format of record_progress, with the sending agent as
+sender; then write the note that starts the next step,
+`ailsa run note "<one line>" --phase <task> --sender coordinator`, push that step's `[BEGIN]`
+directive to whichever agent owns it, and continue monitoring. Phase invariant: every `[BEGIN]` you
+push is preceded by a `--phase` note; the record times each phase from these notes, so you take no
+separate stamps. You write nothing into the progress log by hand: `ailsa run render` generates it
+from the notes and the tools' own events.
 
-**Parse from CASE-PROGRESS.md:** solution count per iteration, constraints added and removed, sp2
-checks, H budget status, HMBC correlations used (X/Y), last iteration number.
+**Read from the generated progress log** (after `ailsa run render`): solution count per iteration,
+constraints added and removed, sp2 checks, H budget status, HMBC correlations used (X/Y), last
+iteration number.
 
 ## Push iteration 1
 
 This push is due right after [SETUP-COMPLETE]. The lsd-iteration-01 task created at spawn does not
-start on its own: immediately after writing the Setup section, push the LSD engineer:
+start on its own: immediately after recording the setup note, open the phase and push the LSD
+engineer:
+
+```bash
+ailsa run note "LSD iteration 1" --phase lsd-iteration-01 --sender coordinator
+```
 
 ```
 SendMessage(
   type="message",
   recipient="lsd-engineer",
-  content="[BEGIN] lsd-iteration-01 — peak assignments are ready (see analysis/CASE-PROGRESS.md ## Setup). Build the initial LSD file in analysis/iteration_01/ (MULT from HSQC, first 3-5 HMBC), request DA validation, run the solver. Send [ITERATION-COMPLETE] with the solution count the instant the solver exits; do not block it on SMILES conversion (skip conversion if the count is large). Ending your turn after a solver run without [ITERATION-COMPLETE] hangs the whole run.",
+  content="[BEGIN] lsd-iteration-01 — peak assignments are ready (see the setup note in the progress log that `ailsa run render` generates). Build the initial LSD file in {work_dir}/iteration_01/ (MULT from HSQC, first 3-5 HMBC), request DA validation, run the solver. Send [ITERATION-COMPLETE] with the solution count the instant the solver exits; do not block it on SMILES conversion (skip conversion if the count is large). Ending your turn after a solver run without [ITERATION-COMPLETE] hangs the whole run.",
   summary="Kick off LSD iteration 1"
 )
 ```
@@ -63,11 +73,12 @@ is the LSD engineer sending [ITERATION-COMPLETE] the instant the solver exits, w
 lsd-iteration directive repeats. As a backstop: whenever you are woken for any reason (another
 teammate's message, a user nudge) and an lsd-iteration directive is still outstanding with no
 [ITERATION-COMPLETE], do not wait passively again. Check the filesystem directly: if
-`analysis/iteration_NN/solncounter` (or a `*.sol` file) exists and no LSD process is running, the
+`{work_dir}/iteration_NN/solncounter` (or a `*.sol` file) exists and no LSD process is running, the
 solver has already finished and the engineer stalled before signalling. Read the solution count
-from `solncounter` yourself, write the [ITERATION-COMPLETE] section to CASE-PROGRESS.md from the
-filesystem, and resume the workflow by pushing the next directive. This turns an indefinite hang
-into an immediate recovery.
+from `solncounter` yourself, record the iteration note from the filesystem with
+`--sender coordinator` (the solver row in the generated log shows the same count, because
+`ailsa lsd run` records it itself), and resume the workflow by pushing the next directive. This
+turns an indefinite hang into an immediate recovery.
 
 ## Smoke test early exit
 
@@ -93,18 +104,20 @@ When all three checkpoints are complete, or any checkpoint fails with an error o
 - the DA flags an issue → detect_loops
 
 **Do not go straight from [RANKING-COMPLETE] to present_results or terminate_team.** Once
-`analysis/final_results.md` exists, the run is not done until (a), when a `[MULTIPLICITY-AMBIGUOUS]`
+[RANKING-COMPLETE] has arrived, the run is not done until (a), when a `[MULTIPLICITY-AMBIGUOUS]`
 record exists, the pre-accept coverage_gate step has passed, and (b) the post-solution
-identity_gate step has run (the DA's independent G-IDENT cross-check of name and structure). The
-coverage_gate runs first, because it can reopen the run to search a missing family; only once it
-passes does identity_gate run. Skipping identity_gate silently drops the independent advisory
-layer, so a recalled name that does not match the structure goes out unchallenged; skipping
-coverage_gate silently accepts a run in which a viable multiplicity family was never searched.
+identity_gate step has run (the DA's independent G-IDENT cross-check of name and structure), and
+the result is declared with `ailsa run finalize` in terminate_team (or the record is closed with
+`ailsa run close`); a report file is no result. The coverage_gate runs first, because it can
+reopen the run to search a missing family; only once it passes does identity_gate run. Skipping
+identity_gate silently drops the independent advisory layer, so a recalled name that does not
+match the structure goes out unchallenged; skipping coverage_gate silently accepts a run in which a
+viable multiplicity family was never searched.
 
 ## Iteration management
 
-**Relay the DA decision.** After writing the DA section to CASE-PROGRESS.md, relay the approval
-decision to the LSD engineer.
+**Relay the DA decision.** After recording the DA note, relay the approval decision to the LSD
+engineer.
 
 If [VALIDATION-PASSED] was received:
 ```
@@ -130,38 +143,38 @@ SendMessage(
 ```
 
 **Create the next tasks.** After receiving [ITERATION-COMPLETE] from the LSD engineer and
-[VALIDATION-PASSED] or [VALIDATION-BLOCKED] from the DA, and after writing both sections to
-CASE-PROGRESS.md:
+[VALIDATION-PASSED] or [VALIDATION-BLOCKED] from the DA, and after recording both notes:
 
 1. Extract solution_count from the [ITERATION-COMPLETE] message.
 2. Run detect_loops.
 3. **If no loop, solution_count > 10 and iterations < 10 (safety cap):**
 
-   Use the shift list retained from [SETUP-COMPLETE]. The coordinator wrote it to the NMR
-   chemist's subsection of `## Setup` in CASE-PROGRESS.md; read it from there if needed.
+   Use the shift list retained from [SETUP-COMPLETE]. The setup note in the generated progress
+   log carries it as `13C shifts:`; read it from there if needed.
 
    Create the next iteration task:
    ```
    TaskCreate(
      subject="lsd-iteration-{next_iter:02d}",
      description="Build LSD file for iteration {next_iter} of {formula} at {compound_path}.
-                  Read previous: analysis/iteration_{current_iter:02d}/compound.lsd
+                  Read previous: {work_dir}/iteration_{current_iter:02d}/compound.lsd
                   Use constraint inventory to copy all constraints forward.
-                  Add next HMBC batch (3-5 correlations, best remaining from CASE-PROGRESS.md Setup).
+                  Add next HMBC batch (3-5 correlations, best remaining from the setup note in the generated progress log).
                   Send validation request to the devil's advocate.
                   Wait for approval before running solver.
-                  Run LSD from analysis/iteration_{next_iter:02d}/.
+                  Run LSD from {work_dir}/iteration_{next_iter:02d}/.
                   Send [ITERATION-COMPLETE] to coordinator.",
      activeForm="LSD iteration {next_iter}"
    )
    ```
 
-   Then push it at once; the LSD engineer is idle and does not pick it up on its own:
+   Then write the phase note `--phase lsd-iteration-{next_iter:02d}` and push the task at once;
+   the LSD engineer is idle and does not pick it up on its own:
    ```
    SendMessage(
      type="message",
      recipient="lsd-engineer",
-     content="[BEGIN] lsd-iteration-{next_iter:02d} — build iteration {next_iter} now: read analysis/iteration_{current_iter:02d}/compound.lsd, carry all constraints forward, add the next HMBC batch, request DA validation, then run the solver. Send [ITERATION-COMPLETE] with the solution count the instant the solver exits; do not block it on SMILES conversion (skip conversion if the count is large). Ending your turn after a solver run without [ITERATION-COMPLETE] hangs the whole run.",
+     content="[BEGIN] lsd-iteration-{next_iter:02d} — build iteration {next_iter} now: read {work_dir}/iteration_{current_iter:02d}/compound.lsd, carry all constraints forward, add the next HMBC batch, request DA validation, then run the solver. Send [ITERATION-COMPLETE] with the solution count the instant the solver exits; do not block it on SMILES conversion (skip conversion if the count is large). Ending your turn after a solver run without [ITERATION-COMPLETE] hangs the whole run.",
      summary="Kick off LSD iteration {next_iter}"
    )
    ```
@@ -172,55 +185,59 @@ CASE-PROGRESS.md:
    TaskCreate(
      subject="hmbc-selection-{next_iter:02d}",
      description="Select next HMBC batch (3-5 correlations) for iteration {next_iter}.
-                  Review CASE-PROGRESS.md for already-used correlations.
+                  Review the iteration notes in the generated progress log for already-used correlations.
                   Apply selection criteria: isolated carbons, unique protons, strong intensity.
                   Send selected batch to lsd-engineer via SendMessage.",
      activeForm="Selecting HMBC batch {next_iter}"
    )
    ```
 
-   Then push it at once to the NMR chemist:
+   Then write the phase note `--phase hmbc-selection-{next_iter:02d}` and push the task at once
+   to the NMR chemist:
    ```
    SendMessage(
      type="message",
      recipient="nmr-chemist",
-     content="[BEGIN] hmbc-selection-{next_iter:02d} — select the next 3-5 HMBC correlations now (avoid already-used ones in CASE-PROGRESS.md) and send the batch to lsd-engineer.",
+     content="[BEGIN] hmbc-selection-{next_iter:02d} — select the next 3-5 HMBC correlations now (avoid already-used ones in the iteration notes of the progress log that `ailsa run render` generates) and send the batch to lsd-engineer.",
      summary="Kick off HMBC selection {next_iter}"
    )
    ```
 
 4. **If solution_count <= 10:**
 
-   Read the shift list from the NMR chemist's subsection of `## Setup` in CASE-PROGRESS.md (the
-   13C peak positions written from [SETUP-COMPLETE]).
+   Read the shift list from the setup note in the generated progress log (the `13C shifts:`
+   field, the 13C peak positions from [SETUP-COMPLETE]).
 
    Create the ranking task with the shifts embedded:
    ```
    TaskCreate(
      subject="ranking-iteration-{current_iter:02d}",
      description="Rank LSD solutions from iteration {current_iter}.
-                  LSD input: analysis/iteration_{current_iter:02d}/compound.lsd
-                  solutions.smi path: analysis/iteration_{current_iter:02d}/solutions.smi
+                  LSD input: {work_dir}/iteration_{current_iter:02d}/compound.lsd
+                  solutions.smi path: {work_dir}/iteration_{current_iter:02d}/solutions.smi
                   Experimental 13C shifts: {shift_list}
-                  Run (decides): ailsa lsd rank --assigned analysis/iteration_{current_iter:02d}/compound.lsd
-                  Cross-check: ailsa lsd rank analysis/iteration_{current_iter:02d}/solutions.smi --shifts '{shift_list}'
+                  Run (decides): ailsa lsd rank --assigned {work_dir}/iteration_{current_iter:02d}/compound.lsd
+                  Cross-check: ailsa lsd rank {work_dir}/iteration_{current_iter:02d}/solutions.smi --shifts '{shift_list}'
                   Assess chemical plausibility of top candidates.
-                  Write analysis/final_results.md with full report.
+                  Report the Ranking id of the atom-by-atom ranking and a Declaration draft in [RANKING-COMPLETE]; write no report file.
                   Send [RANKING-COMPLETE] to coordinator.",
      activeForm="Ranking LSD solutions"
    )
    ```
 
-   Then push it at once to the solution analyst. Embed the shift list and the path in the message,
-   so that the analyst never needs the TaskList:
+   Then write the phase note `--phase ranking` and push the task at once to the solution analyst.
+   Embed the shift list and the path in the message, so that the analyst never needs the TaskList:
    ```
    SendMessage(
      type="message",
      recipient="solution-analyst",
-     content="[BEGIN] ranking — rank solutions now. LSD input: analysis/iteration_{current_iter:02d}/compound.lsd (rank atom by atom with --assigned; this decides) ; solutions.smi: analysis/iteration_{current_iter:02d}/solutions.smi ; experimental 13C: {shift_list} (nearest-line cross-check). Assess plausibility, write analysis/final_results.md, send [RANKING-COMPLETE].",
+     content="[BEGIN] ranking — rank solutions now. LSD input: {work_dir}/iteration_{current_iter:02d}/compound.lsd (rank atom by atom with --assigned; this decides) ; solutions.smi: {work_dir}/iteration_{current_iter:02d}/solutions.smi ; experimental 13C: {shift_list} (nearest-line cross-check). Assess plausibility, then send [RANKING-COMPLETE] with the Ranking id of the atom-by-atom ranking and a Declaration draft; write no report file.",
      summary="Kick off ranking"
    )
    ```
+
+   The declaration names that ranking id, never the newest ranking: the cross-check ranking comes
+   after the atom-by-atom one.
 
 5. **If iterations >= 10 (safety cap) and solution_count > 10:** create the ranking task (same as
    above), push the [BEGIN] ranking directive to the solution analyst, and proceed to

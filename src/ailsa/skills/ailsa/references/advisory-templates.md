@@ -15,6 +15,9 @@
 <step name="deliver_advisory">
 Deliver advisory constraints to the running team via SendMessage. Do not kill and re-spawn the agent to deliver an advisory.
 
+Before sending, record the intervention note:
+`ailsa run note "Intervention: Pattern: <pattern_name>; Counter: <n>/10; Advisory sent: <one line>" --sender coordinator`.
+
 **Why SendMessage instead of re-spawn:**
 - Team retains all context and state (no restart overhead)
 - Constraint inventory and progress are preserved
@@ -28,8 +31,8 @@ SendMessage(
   recipient="lsd-engineer",
   content="[SUPERVISOR ADVISORY] {advisory_text_from_intervene_step}
 
-  Apply this advisory guidance in your next iteration. Read CASE-PROGRESS.md
-  for current state. Resume from iteration {N+1}.
+  Apply this advisory guidance in your next iteration. Read the generated progress
+  log for current state (run `ailsa run render`; it prints the path). Resume from iteration {N+1}.
 
   Do not restart from scratch. Apply the fix to your existing constraint set.",
   summary="Supervisor advisory: {pattern_name} detected"
@@ -55,11 +58,11 @@ After delivering advisory, return to monitor_progress step to check if issue res
 <step name="present_results">
 When agent achieves convergence (solution_count ≤ 10) or reaches safety cap (~10 iterations), present final results.
 
-Read the latest iteration from CASE-PROGRESS.md and any solution files generated.
+Run `ailsa run render`, then read the latest iteration from the generated progress log and any solution files generated under `{work_dir}`.
 
 **Compute elapsed time:**
-Parse the `**Started (UTC):** <timestamp>` line from the CASE-PROGRESS.md file header.
-Record current time. Compute elapsed time = current - started.
+The first row of the generated progress log is `Run created`, with its UTC time.
+Record the current time with `date -u`. Compute elapsed time = current - run created.
 Report in the results section below.
 
 **If solution_count ≤ 10 (success):**
@@ -90,7 +93,8 @@ Report:
 
 ### Full Iteration History
 
-See: <compound_path>/analysis/CASE-PROGRESS.md
+See: <CASE-PROGRESS.md path printed by `ailsa run render`>
+Declared result: <final_results.md path printed by `ailsa run render` after the declaration>
 ```
 
 **If solution_count > 10 at safety cap:**
@@ -131,7 +135,8 @@ Consider:
 
 ### Full Iteration History
 
-See: <compound_path>/analysis/CASE-PROGRESS.md
+See: <CASE-PROGRESS.md path printed by `ailsa run render`>
+Declared result: <final_results.md path printed by `ailsa run render` after the declaration>
 ```
 
 **If no solutions at end:**
@@ -149,7 +154,7 @@ LSD could not find any valid structures matching the given constraints.
 
 ### Likely Causes
 
-<Based on CASE-PROGRESS.md diagnostics>
+<Based on the diagnostics in the generated progress log>
 
 1. Molecular formula incorrect (verify HRMS data)
 2. Peak assignments incorrect (review 13C, HSQC, HMBC picking)
@@ -157,7 +162,8 @@ LSD could not find any valid structures matching the given constraints.
 
 ### Recommendation
 
-Manual review required. See CASE-PROGRESS.md for full diagnostics.
+Manual review required. See <CASE-PROGRESS.md path printed by `ailsa run render`> for full diagnostics.
+Declared result: <final_results.md path printed by `ailsa run render` after the declaration>
 ```
 </step>
 
@@ -166,7 +172,7 @@ Delegate to diagnostic specialist agent for deep root cause analysis.
 
 **This step executes when:** counter for detected pattern == 2 (routed from track_and_decide).
 
-**Note:** The diagnostic specialist is spawned via Task() without team_name -- it operates independently from the team for objectivity. It reads team artifacts (CASE-PROGRESS.md, LSD files) but does not participate in team communication.
+**Note:** The diagnostic specialist is spawned via Task() without team_name -- it operates independently from the team for objectivity. It reads team artifacts (the generated progress log CASE-PROGRESS.md, the LSD files under `{work_dir}`) but does not participate in team communication.
 
 **Identify failure type from detected pattern:**
 - ZERO_SOLUTION_LOOP -> failure_type = "0 solutions"
@@ -175,18 +181,19 @@ Delegate to diagnostic specialist agent for deep root cause analysis.
 - CONSTRAINT_CHURNING -> failure_type = "other"
 
 **Extract latest LSD filename:**
-Read CASE-PROGRESS.md, find most recent iteration, extract the LSD file reference.
+Run `ailsa run render` and keep the progress log path it prints. Read the generated progress log, find the most recent iteration note and take its `LSD file:` path.
 
 **Spawn diagnostic specialist via Task tool:**
 ```
 Task(
   agent_type="ailsa-diagnostic",
   model="opus",
-  instructions="Analyze LSD failure for compound at <compound_path>.
+  instructions="Analyze LSD failure for compound at <compound_path> (read-only).
+  Work folder: {work_dir} (absolute). Write every file there and use absolute paths in every command.
 
   Read:
-  - <compound_path>/analysis/CASE-PROGRESS.md (iteration history with per-agent sections)
-  - <compound_path>/analysis/<latest_iteration>/compound.lsd (latest LSD file)
+  - <progress log path> (the generated progress log, CASE-PROGRESS.md: iteration history with the notes of every agent)
+  - {work_dir}/<latest_iteration>/compound.lsd (latest LSD file)
     Note: The LSD file header contains a JSON constraint inventory block between
     ; === CONSTRAINT INVENTORY v1 === and ; === END CONSTRAINT INVENTORY ===
     Extract this inventory in Step 1 — it tracks hmbc_batches, deff_not_patterns,
@@ -199,7 +206,7 @@ Task(
   Document all checks (PASS and FAIL).
   Identify root cause with evidence.
 
-  Write structured report to <compound_path>/analysis/DIAGNOSTIC-REPORT.md.
+  Write structured report to {work_dir}/DIAGNOSTIC-REPORT.md.
   Include: findings, root cause, recommended fixes with LSD command examples.
   Rate all findings and recommendations as HIGH/MEDIUM/LOW confidence.
   "
@@ -213,10 +220,10 @@ Task(
 Read and parse DIAGNOSTIC-REPORT.md to extract root cause and primary fix for specialist-informed advisory generation.
 
 **Check report exists:**
-Verify file exists at <compound_path>/analysis/DIAGNOSTIC-REPORT.md.
+Verify file exists at {work_dir}/DIAGNOSTIC-REPORT.md.
 
 If DIAGNOSTIC-REPORT.md is missing:
-- Log: "Diagnostic specialist completed but analysis/DIAGNOSTIC-REPORT.md not found"
+- Log: "Diagnostic specialist completed but {work_dir}/DIAGNOSTIC-REPORT.md not found"
 - Fall back to basic advisory from the intervene step
 - Counter still increments (specialist delegation was attempted)
 - Proceed to deliver_advisory step with basic advisory
@@ -233,7 +240,7 @@ If DIAGNOSTIC-REPORT.md is missing:
 ```
 Diagnostic specialist identified root cause: <root_cause_primary>
 
-See analysis/DIAGNOSTIC-REPORT.md for full analysis.
+See {work_dir}/DIAGNOSTIC-REPORT.md for full analysis.
 
 Fix: <fix_action>
 <include LSD command examples from fix if present>
@@ -320,7 +327,8 @@ dictate the MULT lines):**
 [SUPERVISOR ADVISORY - MULTIPLICITY COVERAGE GAP]
 
 The run cannot accept yet: a viable aliphatic multiplicity family was identified but never
-searched. Coverage check (CASE-PROGRESS.md ## Multiplicity Coverage) is the source of truth.
+searched. Coverage check (the latest `Multiplicity coverage:` note in the run record) is the
+source of truth.
 
 Missing from the searched set: <family/model name(s), each with its CH₃/CH₂/CH partition,
 and/or a DA-mandated model X from [MULT-EVIDENCE-FOR]>.
@@ -346,7 +354,8 @@ Do not restart from scratch. Add the missing family(ies) alongside the families 
 defect). Optionally notify the devil's advocate (`devils-advocate`) to confirm each
 [MULT-EVIDENCE-FOR] model is now in the searched set.
 **After delivering advisory:** Return to monitor_progress. On the missing family/model's
-[ITERATION-COMPLETE], update searched_families in the ledger, re-run the union rank, and
+[ITERATION-COMPLETE], record the updated searched_families in a new `Multiplicity coverage:` note,
+re-run the union rank, and
 re-enter the coverage_gate. Do not proceed to identity_gate until coverage_gate passes.
 
 </step>

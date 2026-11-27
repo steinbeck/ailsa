@@ -6,7 +6,9 @@ goes into notes; every exit declares the result or closes the run; CASE-PROGRESS
 final_results.md are renderings, never hand-written. They replace the old web-view contract test.
 They also pin the agent texts (src/ailsa/skills/ailsa/agents/): the solution analyst reports the
 ranking id and a declaration draft instead of writing a report, and the devil's advocate's name
-gate reads the coordinator's message before the result is declared.
+gate reads the coordinator's message before the result is declared. Finally they pin the
+references (src/ailsa/skills/ailsa/references/): the procedures read history from the generated
+progress log, open every phase with a note and point into the run's work folder, never the dataset.
 
 All file reads use repo-relative paths (src/ailsa/skills/ailsa/...), so the tests work from any
 checkout without touching ~/.claude.
@@ -37,6 +39,19 @@ AGENT_FILES = (
     ANALYST_MD,
     DEVILS_ADVOCATE_MD,
     DIAGNOSTIC_MD,
+)
+REFERENCES_DIR = SKILL_DIR / "references"
+MONITORING_MD = REFERENCES_DIR / "monitoring.md"
+GATES_MD = REFERENCES_DIR / "coordinator-gates.md"
+# The references the coordinator reads at named steps of the run.
+COORDINATOR_REFERENCES = (
+    MONITORING_MD,
+    GATES_MD,
+    REFERENCES_DIR / "advisory-templates.md",
+    REFERENCES_DIR / "intervention.md",
+    REFERENCES_DIR / "loop-patterns.md",
+    REFERENCES_DIR / "multiplicity-ambiguity.md",
+    REFERENCES_DIR / "smoke-test.md",
 )
 
 # The heading of the devil's advocate's name-gate section.
@@ -259,3 +274,28 @@ def test_diagnostic_writes_report_to_work_dir() -> None:
     text = DIAGNOSTIC_MD.read_text()
     assert "{work_dir}" in text, "the diagnostic specialist's file names no {work_dir}"
     assert "DIAGNOSTIC-REPORT.md" in text, "the diagnostic specialist's file names no report"
+
+
+def test_coordinator_references_use_record() -> None:
+    """The coordinator's procedures read and write the record, not the dataset or a hand log.
+
+    No path into the dataset's analysis folder, no header line or stamps of the hand-written log;
+    history comes from the generated progress log, every push opens a phase, a name flag becomes a
+    caveat of the declaration, and the ranking directive asks for no report file.
+    """
+    assert len(COORDINATOR_REFERENCES) == 7, "expected seven coordinator references"
+    for path in COORDINATOR_REFERENCES:
+        assert path.exists(), f"{path.name} is missing"
+        text = path.read_text()
+        for legacy in ("analysis/", "Started (UTC)", "timing"):
+            assert legacy not in text, f"{path.name} still contains {legacy!r}"
+    monitoring = MONITORING_MD.read_text()
+    for token in ("ailsa run render", "--phase", "Ranking id"):
+        assert token in monitoring, f"monitoring.md does not name {token!r}"
+    writes = [
+        line.strip()
+        for line in monitoring.splitlines()
+        if re.search(r"(?i)write[^\n]{0,40}final_results\.md", line)
+    ]
+    assert not writes, f"monitoring.md still asks for final_results.md: {writes}"
+    assert "--caveat" in GATES_MD.read_text(), "coordinator-gates.md turns no flag into a caveat"

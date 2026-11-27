@@ -24,4 +24,6 @@ SMOKE TEST RESULTS
 Overall: PASS / FAIL (N/4 checkpoints passed)
 ```
 
-**After the report:** proceed to the terminate_team step (normal team cleanup).
+**After the report:** proceed to the terminate_team step (normal team cleanup). terminate_team then
+closes the record with `ailsa run close --reason "smoke test"`; the record reads "stopped before a
+result", which is right for a smoke test.

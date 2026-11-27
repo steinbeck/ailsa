@@ -65,7 +65,7 @@ viable; list both.
 
 Cap the viable families at 3. If more than 3 partitions are formally valid, rank them by prior
 chemical plausibility, list the top 3, and state the truncation explicitly so that the
-coordinator records it in CASE-PROGRESS.md. Do not drop a valid family silently; a truncation is
+coordinator records it in a note. Do not drop a valid family silently; a truncation is
 always documented.
 
 ## The [MULTIPLICITY-AMBIGUOUS] record
@@ -92,9 +92,10 @@ not send this record and assigns multiplicities normally from the sign evidence.
 
 ## Who uses the record
 
-- **Coordinator:** records the message and keeps a `## Multiplicity Coverage` ledger in
-  CASE-PROGRESS.md. Its pre-accept coverage gate closes the record: the run does not accept until
-  every viable family, and every model the DA has mandated, has been searched in its own LSD run.
+- **Coordinator:** records the message and keeps the coverage ledger as `Multiplicity coverage:`
+  notes, read in the generated progress log. Its pre-accept coverage gate closes the record: the
+  run does not accept until every viable family, and every model the DA has mandated, has been
+  searched in its own LSD run.
 - **LSD engineer:** runs each viable family as a separate, fully constrained LSD run in its own
   `iteration_NN_<family>/` directory.
 - **DA:** the multiplicity gate (G-MULT). Positive spectral evidence for a whole-molecule model

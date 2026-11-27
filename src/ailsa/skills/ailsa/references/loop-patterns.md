@@ -110,8 +110,9 @@ run, but its trigger is missing coverage, not a poor MAE/plausibility.
 - A DA `[MULT-EVIDENCE-FOR] model=X` (G-MULT) was emitted and model X is not in
   `searched_families`.
 
-**Data source:** the CASE-PROGRESS.md `## Multiplicity Coverage` section (viable_families /
-searched_families / DA-mandated models / gate verdict). This pattern is evaluated by the
+**Data source:** the `Multiplicity coverage:` notes in the run record, read in the generated
+progress log; the latest such note is the ledger (viable_families / searched_families /
+DA-mandated models / gate verdict). This pattern is evaluated by the
 case.md `coverage_gate` step, not by detect_loops' MAE/count heuristics.
 
 **Counting rule — searched, not ranked:** a family counts as searched once it has its own
