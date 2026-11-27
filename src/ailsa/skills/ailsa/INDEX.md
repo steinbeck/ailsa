@@ -44,10 +44,8 @@ A coordinator command runs the workflow and hands the chemistry to four speciali
 - [monitoring](references/monitoring.md): how the coordinator drives a run: reacting to replies, iterating, ranking, stall recovery, loop detection and diagnosis
 - [multiplicity-ambiguity](references/multiplicity-ambiguity.md): searching every aliphatic multiplicity family when the spectra leave it open
 - [nmr-basics](references/nmr-basics.md): NMR facts the agents rely on
-- [progress-format](references/progress-format.md): format of the progress log
 - [run-record](references/run-record.md): what the coordinator notes, how it reads the generated progress log, how it declares or closes the run
 - [smoke-test](references/smoke-test.md): the pass/fail report of the coordinator's smoke-test mode
-- [timing](references/timing.md): the coordinator's wall-clock timing: when to stamp, the log, the timing summary
 - [validation-checks](references/validation-checks.md): the devil's advocate's pre-solver checks on every LSD file, each with its severity
 
 ## Install

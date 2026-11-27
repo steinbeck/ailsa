@@ -11,6 +11,26 @@ Applies to: ailsa (frontier skill) only; the lean skill writes the record since 
   field names loop detection reads are unchanged), how it reads the progress log that
   `ailsa run render` generates, how model self-reports are recorded, and how every exit path
   declares the result with `ailsa run finalize` or closes the run with `ailsa run close`.
+- The coordinator creates the run record as its first step after the environment checks
+  (`ailsa run init <compound_path> --formula <formula> --skill ailsa --mode team`), before any
+  team, task or spawn; after a context compaction the same command reads the run back.
+- Every spawn prompt and the first push carry the absolute work folder `{work_dir}`; agents write
+  there, and the dataset folder stays read-only. The coordinator no longer creates `analysis/` in
+  the dataset.
+- The coordinator records one `ailsa run note` per validated structured message and a `--phase`
+  note before every `[BEGIN]` push; it reads the progress log that `ailsa run render` generates
+  instead of writing `CASE-PROGRESS.md` itself. The multiplicity coverage ledger is kept as
+  `Multiplicity coverage:` notes.
+- Every exit path declares the result with `ailsa run finalize` naming the ranking id from
+  `[RANKING-COMPLETE]` explicitly (never the newest ranking, which is the analyst's cross-check),
+  or closes the run with `ailsa run close`, then renders; `final_results.md` is a rendering.
+  `[RANKING-COMPLETE]` now requires `Ranking id` and `Declaration draft`; the solution analyst
+  writes no report file.
+- Each specialist's `[MODEL]` line is recorded as a self-report note under the agent's frontmatter
+  name; the coordinator records its own model the same way.
+- The web-view launch, the wall-clock timing stamps and the run manifest written into the dataset
+  are gone; the record's event times and the phase notes replace the timing.
+- References `timing` and `progress-format` are replaced by `run-record`.
 
 ## 0.1.0
 

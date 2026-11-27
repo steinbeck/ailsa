@@ -19,4 +19,5 @@ fi
 cd "$root" || exit 1
 exec "$PY" -m pytest -q --no-header \
   tests/test_skill_frontier.py tests/test_skill_lite.py \
-  tests/test_skill_files_unchanged.py tests/test_skill_answer_scan.py
+  tests/test_skill_files_unchanged.py tests/test_skill_frontier_record.py \
+  tests/test_skill_answer_scan.py

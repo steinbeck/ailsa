@@ -19,10 +19,11 @@ allowed-tools:
 <objective>
 Coordinate the full Computer-Assisted Structure Elucidation (CASE) workflow: spawn a team of four
 specialists (the NMR chemist, the LSD engineer, the solution analyst and the devil's advocate (DA))
-and supervise it. Monitor progress through CASE-PROGRESS.md, which the coordinator writes as sole
-author, and through TaskList; detect unproductive loop patterns, diagnose root causes, intervene
-with advisory constraints via SendMessage, and escalate to the user after 10 failed intervention
-cycles per pattern. The coordinator does not perform CASE work itself; it delegates to the team.
+and supervise it. Monitor progress through the run record (one note for every validated message,
+and the progress log that `ailsa run render` generates from the record) and through TaskList;
+detect unproductive loop patterns, diagnose root causes, intervene with advisory constraints via
+SendMessage, and escalate to the user after 10 failed intervention cycles per pattern. The
+coordinator does not perform CASE work itself; it delegates to the team.
 
 Do not attempt dereplication. Dereplication is a completely separate workflow; CASE starts from
 scratch with the NMR spectra only.
@@ -34,9 +35,9 @@ The steps in run order; those marked "reference" read their procedure from a ref
 
 - parse_arguments: compound path, formula, smoke-test mode
 - validate_prerequisites: environment checks before any spawn
+- start_record: create the run record and the work folder, recovery after compaction
 - spawn_case_team: coordination protocol, team and tasks, spawn calls, model disclosure, headless caveat, kick-off
-- write_progress: CASE-PROGRESS.md as sole author, the multiplicity coverage ledger
-- timing: wall-clock stamps (reference)
+- record_progress: notes for every validated message, multiplicity coverage notes, reading the generated log (reference)
 - validate_message: required fields of each structured message
 - monitor_progress: the run loop, iterations, ranking, stall recovery (reference)
 - detect_loops: loop patterns (reference)
@@ -45,10 +46,10 @@ The steps in run order; those marked "reference" read their procedure from a ref
 - track_and_decide: intervention counters and decision (reference)
 - escalate: escalation report (reference)
 - coverage_gate: multiplicity coverage before accept (reference)
-- identity_gate: G-IDENT review before the results (reference)
+- identity_gate: G-IDENT review before the result is declared (reference)
 - deliver_advisory_and_results: advisory and result templates (reference)
 - smoke_test_report: smoke-test report (reference)
-- terminate_team: timing finalize, shutdown, cleanup
+- terminate_team: declare or close the run, render, shutdown, cleanup
 
 ## Process
 
@@ -118,6 +119,25 @@ spawn the team.
 4. `ls <compound_path>`: the directory must exist.
 </step>
 
+<step name="start_record">
+Create the run record as the first step after the checks, before any team, task or spawn:
+```bash
+ailsa run init <compound_path> --formula <formula> --skill ailsa --mode team
+```
+It prints `RUN:` (the run id) and `WORK:` (the absolute work folder). Keep the `WORK:` value as
+`{work_dir}` and the run id. The record has to exist before anything happens, so that every later
+tool step lands in it. The work folder lies outside the dataset: `{compound_path}` stays read-only,
+so a later blind run of the same data finds no earlier results there.
+
+- If the command refuses (for example a blind refusal because earlier results are readable), stop,
+  show its message and spawn nothing.
+- After a context compaction, run the same command again to read the run and the work folder back;
+  it creates nothing new.
+- From here on every exit, a failure and the smoke test included, ends in terminate_team with
+  `ailsa run finalize` or `ailsa run close`, so no record is left open. A check that failed before
+  this step needs no close.
+</step>
+
 <step name="spawn_case_team">
 Spawn the four-agent CASE specialist team via TeamCreate and Task(team_name). The coordinator is
 this command itself. Do not spawn a coordinator agent: the command manages the team, creates
@@ -150,7 +170,6 @@ TaskCreate(
   subject="peak-picking",
   description="Pick 13C, HSQC, HMBC peaks for {compound_path} with formula {formula}.
                Run statistical detection (hybridisation, neighbours, hhb, grouping).
-               Write analysis/ directory structure.
                Send structured [SETUP-COMPLETE] message to coordinator via SendMessage with all peak assignments, detection results, and quality assessment.",
   activeForm="Picking NMR peaks"
 )
@@ -159,7 +178,7 @@ TaskCreate(
   subject="lsd-iteration-01",
   description="Build initial LSD file from peak assignments. Use HSQC for MULT definitions,
                add first HMBC batch (3-5 high-confidence correlations). Run LSD from
-               analysis/iteration_01/ directory. Send [ITERATION-COMPLETE] message to coordinator after LSD run.
+               {work_dir}/iteration_01/ directory. Send [ITERATION-COMPLETE] message to coordinator after LSD run.
                solutions.smi is produced automatically by ailsa lsd run (no manual outlsd step).",
   activeForm="Running LSD iteration 1"
 )
@@ -173,6 +192,7 @@ Task(
   team_name="case-{compound_name}",
   subagent_type="ailsa-nmr-chemist",
   prompt="You are the NMR chemist for CASE of {formula} at {compound_path}.
+          Work folder: {work_dir} (absolute). Write every file there and use absolute paths in every command; {compound_path} stays read-only.
           Begin only when the coordinator sends you a [BEGIN] peak-picking directive — do not poll or wait on the TaskList (idle agents are not woken by tasks, only by messages).
           Execute peak picking and statistical detection using the ailsa CLI.
           Send [SETUP-COMPLETE] message to coordinator via SendMessage with all peak assignments, detection results, and quality assessment.
@@ -184,8 +204,9 @@ Task(
   team_name="case-{compound_name}",
   subagent_type="ailsa-lsd-engineer",
   prompt="You are the LSD engineer for CASE of {formula} at {compound_path}.
+          Work folder: {work_dir} (absolute). Write every file there and use absolute paths in every command; {compound_path} stays read-only.
           Act only on the coordinator's [BEGIN] lsd-iteration directives sent to you via SendMessage — do not poll or wait on the TaskList (idle agents are woken by messages, not by tasks).
-          On each [BEGIN] lsd-iteration-NN directive: build the LSD file in analysis/iteration_NN/, run the LSD solver.
+          On each [BEGIN] lsd-iteration-NN directive: build the LSD file in {work_dir}/iteration_NN/ and run the LSD solver there.
           Send [ITERATION-COMPLETE] message to coordinator via SendMessage after every iteration.
           Read the previous LSD file; never reconstruct it from memory, because constraints rebuilt from memory get dropped.
           Follow incremental HMBC strategy: 3-5 correlations per iteration.
@@ -197,11 +218,12 @@ Task(
   team_name="case-{compound_name}",
   subagent_type="ailsa-solution-analyst",
   prompt="You are the solution analyst for CASE of {formula} at {compound_path}.
+          Work folder: {work_dir} (absolute). Write every file there and use absolute paths in every command; {compound_path} stays read-only.
           Act only when the coordinator sends you a [BEGIN] ranking directive via SendMessage — do not poll or monitor the TaskList (idle agents are woken by messages, not by tasks).
           The [BEGIN] ranking directive embeds the full experimental 13C shift list and the solutions.smi path.
           Assess chemical plausibility of top candidates.
-          Write analysis/final_results.md with ranked structures.
-          Send [RANKING-COMPLETE] message to coordinator via SendMessage with ranking summary."
+          Write no report file: the record renders the results.
+          Send [RANKING-COMPLETE] message to coordinator via SendMessage with ranking summary, the ranking id of the atom-by-atom ranking (the ranking_id field in the JSON output of the assigned ailsa lsd rank call) and a declaration draft (outcome, candidate rank, confidence, caveats, open questions, next steps)."
 )
 
 Task(
@@ -209,13 +231,14 @@ Task(
   team_name="case-{compound_name}",
   subagent_type="ailsa-devils-advocate",
   prompt="You are the devil's advocate for CASE of {formula} at {compound_path}.
+          Work folder: {work_dir} (absolute). Write every file there and use absolute paths in every command; {compound_path} stays read-only.
           Act only on requests received via SendMessage (from lsd-engineer or the coordinator) — do not poll the TaskList.
           On a pre-solver validation request:
           1. Diff current LSD file against previous iteration
           2. Check for dropped constraints (ring exclusion DEFF F/FEXP, COSY equivalence pairs, grouped notation)
           3. Verify sp2 count is even, H budget matches formula
           4. Send [VALIDATION-PASSED] or [VALIDATION-BLOCKED] to coordinator via SendMessage.
-          On a post-solution [BEGIN] G-IDENT request (after analysis/final_results.md exists): run only your G-IDENT gate, the name and structure cross-check — read the reported trivial name + top SMILES, reason independently about whether the name matches the structure (do not call ailsa identify), apply the two G-IDENT triggers (an isomer name the data do not resolve; a recalled name whose ring linkage or symmetry does not match the drawn structure), and reply [G-IDENT-PASSED] or [G-IDENT-FLAGGED] with a one-line rationale.
+          On a post-solution [BEGIN] G-IDENT request (after [RANKING-COMPLETE], before the result is declared): run only your G-IDENT gate, the name and structure cross-check — read the reported trivial name + top SMILES from the coordinator's G-IDENT message, reason independently about whether the name matches the structure (do not call ailsa identify), apply the two G-IDENT triggers (an isomer name the data do not resolve; a recalled name whose ring linkage or symmetry does not match the drawn structure), and reply [G-IDENT-PASSED] or [G-IDENT-FLAGGED] with a one-line rationale.
           Report constraint persistence status after every validation."
 )
 ```
@@ -226,11 +249,15 @@ behind every agent is on record at the top of every run. Append this line to eac
 ```
 The first line of your very first SendMessage to the coordinator is exactly: [MODEL] <the exact model id shown in your system context> — copy the real id, do not guess or use an alias.
 ```
-As each teammate's first message arrives, read its `[MODEL]` line and record it. After all four
-have reported (or at the [SETUP-COMPLETE] boundary), write the Team Models block
-(`### Team Models` under `## Setup`) into CASE-PROGRESS.md per progress-format.md: one line per
-teammate with the model it reported, and one line for the coordinator with its own runtime model,
-read from your environment or system context.
+As each teammate's first message arrives, record its `[MODEL]` line as a self-report under the
+agent's frontmatter name (`ailsa-nmr-chemist`, `ailsa-lsd-engineer`, `ailsa-solution-analyst`,
+`ailsa-devils-advocate`):
+```bash
+ailsa run note "model reported" --sender <agent name> --self-reported-model <model id>
+```
+Record your own runtime model once the same way with `--sender coordinator`, read from your
+environment or system context. The record joins these statements with the harness evidence by
+agent name; a self-report stays provisional.
 
 **Execution-mode caveat: headless, non-interactive runs (`claude -p`, batch or benchmark harness).**
 It governs the kick-off below and every later wait for a reply. The message ping-pong of the
@@ -242,9 +269,12 @@ event loop to re-enter a finished turn: if you send a `[BEGIN]` and then end you
 interactive user; invoked via `claude -p` or a harness). In it:
 - Do not end a turn expecting to be woken. Do not background and wait.
 - Drive every stage inline within one continuous turn: after each `[BEGIN]`, actively poll for
-  completion in a loop. Read the `TaskList()` status and check the expected filesystem artefacts
-  (`analysis/iteration_NN/solncounter` or `*.sol`, `analysis/final_results.md`), then proceed to
-  the next stage yourself, without waiting for a wake-up.
+  completion in a loop. Read the `TaskList()` status and check the expected artefacts
+  (`{work_dir}/iteration_NN/solncounter` or `*.sol`; `ailsa run status` for the iterations and the
+  last solver outcome; the rankings the tool wrote under the run folder, `{work_dir}/../rankings/`),
+  then proceed to the next stage yourself, without waiting for a wake-up.
+- The run is done when you have declared the result yourself: do not stop before
+  `ailsa run finalize` or `ailsa run close`.
 - Treat teammate replies as best-effort: if a `[*-COMPLETE]` has not arrived but the artefact is
   on disk, read the result from the filesystem (as in the stall recovery of monitor_progress) and
   continue.
@@ -255,59 +285,16 @@ not stall. In an interactive session, the normal message-wake path applies uncha
 **Step 5: Kick off.** The team does not start on its own: the freshly spawned teammates are idle
 and do nothing until messaged, so push the first directive immediately after spawning.
 
-**First, stamp timing** (the timing step; read its reference before this first stamp): take the
-`run_start` stamp (this one also runs `mkdir -p <compound_path>/analysis`), then a `phase_start`
-stamp for `peak-picking`, both before the push below.
-
-**Write the run manifest** (trusted local absolute path). The web view's spectra router reads it to
-locate the raw Bruker dataset. Write it before the web-view launch below, so that the dashboard's
-first poll can read it. Both come after the `run_start` stamp, because that stamp creates `analysis/`:
+Before the push, start the first phase, so the record times peak picking from here:
 ```bash
-cat > "<compound_path>/analysis/.run_manifest.json" <<JSON
-{"bruker_data_dir": "<compound_path (absolute)>", "formula": "<formula>"}
-JSON
+ailsa run note "start: formula <formula>" --phase peak-picking --sender coordinator
 ```
-
-**Launch the web-view dashboard** (non-blocking, returns in about 0.5 s):
-```bash
-WEBVIEW_OUTPUT=$(ailsa webview serve "<compound_path>/analysis" 2>&1)
-WEBVIEW_EXIT=$?
-if [ $WEBVIEW_EXIT -eq 0 ]; then
-  echo "$WEBVIEW_OUTPUT"
-else
-  echo "Note: Webview dashboard unavailable — $WEBVIEW_OUTPUT"
-  echo "Install ailsa[webview] to enable the live dashboard."
-fi
-```
-
-This call is foreground and non-blocking: `ailsa webview serve` launches a detached uvicorn
-subprocess via `start_new_session=True`, waits about 0.5 s for a startup probe, then returns. The
-server outlives this session, and the call is compatible with the headless caveat because it
-returns at once. Do not append `&`, do not background and wait, do not pass `--port` or `--open`,
-and do not abort the CASE run if the call fails: the dashboard is observability only.
-
-When the server starts, its output already contains:
-- `Webview server running at http://127.0.0.1:NNNNN`
-- `Stop with: ailsa webview stop <compound_path>/analysis`
-
-Store the URL from the output in a variable (e.g. `WEBVIEW_URL`) so it can be recorded in the
-`**Dashboard:**` field of the CASE-PROGRESS.md header (see write_progress).
-
-**Now create the CASE-PROGRESS.md header, before the `[BEGIN] peak-picking` push and not at
-`[SETUP-COMPLETE]`.** Using the file-header trigger of write_progress (trigger 1 in
-progress-format.md), write `<compound_path>/analysis/CASE-PROGRESS.md` with `**Compound:**` (the
-data path), `**Formula:**` (the molecular formula; both are known at run start),
-`**Started (UTC):**` (the `run_start` stamp), `**Team:**`, and `**Dashboard:**` (`WEBVIEW_URL`, or
-the note "unavailable — [webview] extra not installed" if the launch warned). This fills the
-dashboard's Run Log panel with the run context from the start instead of leaving it at "Waiting
-for log data…" until peak picking finishes, so do not defer the header to `[SETUP-COMPLETE]`.
-Then continue to the `phase_start` stamp and the `[BEGIN] peak-picking` push regardless of the
-web-view outcome.
+Then push:
 ```
 SendMessage(
   type="message",
   recipient="nmr-chemist",
-  content="[BEGIN] peak-picking — start now. Pick 13C/HSQC/HMBC for {compound_path} (formula {formula}), run statistical detection, write the analysis/ structure, then send [SETUP-COMPLETE] with all peak assignments, detection results, and quality assessment. Prepend your first message with the [MODEL] line.",
+  content="[BEGIN] peak-picking — start now. Pick 13C/HSQC/HMBC for {compound_path} (formula {formula}; work folder {work_dir}), run statistical detection, then send [SETUP-COMPLETE] with all peak assignments, detection results, and quality assessment. Prepend your first message with the [MODEL] line.",
   summary="Kick off nmr-chemist peak-picking"
 )
 ```
@@ -317,22 +304,24 @@ arrives as a turn that wakes you; on each reply, immediately push the next `[BEG
 Do not rely on the teammate to poll the TaskList.
 </step>
 
-<step name="write_progress">
-Read the full CASE-PROGRESS.md format before writing any progress entry:
+<step name="record_progress">
+Read the note formats, the fields loop detection reads and the declaration table before the first
+note:
 
-Read file: ~/.claude/ailsa/references/progress-format.md
+Read file: ~/.claude/ailsa/references/run-record.md
 
-The coordinator is the sole author of CASE-PROGRESS.md. It creates the header at run start, in
-spawn_case_team step 5 right after the web-view launch (file-header trigger 1, with the
-`**Dashboard:**` field), not at [SETUP-COMPLETE]. Then it appends the `## Setup` section after
-[SETUP-COMPLETE] from the NMR chemist, and updates the file after every [ITERATION-COMPLETE],
-[VALIDATION-PASSED/BLOCKED] and [RANKING-COMPLETE] message.
+The coordinator never writes CASE-PROGRESS.md or final_results.md: both are renderings that
+`ailsa run render` generates from the record, and a hand-written copy is not the record. It records
+one `ailsa run note` per validated structured message ([SETUP-COMPLETE], [ITERATION-COMPLETE],
+[VALIDATION-PASSED/BLOCKED], [RANKING-COMPLETE]) with the sending agent as sender, and a note with
+`--phase <task>` before every `[BEGIN]` push. Before each loop check it runs `ailsa run render` and
+reads the progress log at the path that command prints.
 
-**The `## Multiplicity Coverage` ledger** (only when a `[MULTIPLICITY-AMBIGUOUS]` record exists).
+**The multiplicity coverage ledger** (only when a `[MULTIPLICITY-AMBIGUOUS]` record exists).
 When the NMR chemist has sent a `[MULTIPLICITY-AMBIGUOUS]` signal (see
-`~/.claude/ailsa/references/multiplicity-ambiguity.md`), keep a `## Multiplicity Coverage` section
-in CASE-PROGRESS.md as the single source of truth that the pre-accept coverage gate reads. Record
-four things:
+`~/.claude/ailsa/references/multiplicity-ambiguity.md`), keep the ledger as notes whose text begins
+with `Multiplicity coverage:` (format in run-record.md); the latest such note in the generated log
+is the single source of truth that the pre-accept coverage gate reads. Record four things:
 
 - **viable_families**: the numbered list from the NMR chemist's `[MULTIPLICITY-AMBIGUOUS]`
   signal, each family with its CH₃/CH₂/CH partition.
@@ -346,14 +335,8 @@ four things:
   `iteration_NN_X/` search.
 - **gate verdict**: PASS or FAIL, written by the coverage_gate step.
 
-If no `[MULTIPLICITY-AMBIGUOUS]` record exists, omit this section; the single-family flow is
+If no `[MULTIPLICITY-AMBIGUOUS]` record exists, write no coverage note; the single-family flow is
 unaffected.
-</step>
-
-<step name="timing">
-Real UTC stamps at every phase boundary and agent hand-back, turned into `analysis/timing.json`
-and a `## Timing Summary` before shutdown. Read it before the first stamp (`run_start`, kick-off):
-Read file: ~/.claude/ailsa/references/timing.md
 </step>
 
 <step name="validate_message">
@@ -368,7 +351,7 @@ fields; if any are missing, request a resend via SendMessage.
   Constraint inventory delta, sp2 count, H budget; HMBC correlations used, Why, Constraint
   effectiveness, Confidence; Fragment search, Fragment file
 - [RANKING-COMPLETE]: Solutions, Top solution, Strained rings, Aromatic warning; Chemical
-  plausibility, Quality, Recommendation
+  plausibility, Quality, Recommendation; Ranking id, Declaration draft
 
 **Validation procedure.** On receiving any structured message (identified by its `[TAG]` prefix),
 identify the message type from the tag and check the message text for each required field label
@@ -426,8 +409,9 @@ Read file: ~/.claude/ailsa/references/intervention.md (section "Escalate")
 </step>
 
 <step name="coverage_gate">
-Only with a `[MULTIPLICITY-AMBIGUOUS]` record, after the ranking and before identity_gate: accept
-only if every viable family and every model the devil's advocate mandated was searched, else reopen.
+Only with a `[MULTIPLICITY-AMBIGUOUS]` record, after the ranking and before identity_gate and before
+the result is declared: accept only if every viable family and every model the devil's advocate
+mandated was searched, else reopen.
 Read file: ~/.claude/ailsa/references/coordinator-gates.md (section "Coverage gate")
 A FAIL reopens the run with the multiplicity-coverage reopen advisory (the Multiplicity Coverage
 Gap pattern in `loop-patterns.md`):
@@ -435,7 +419,8 @@ Read file: ~/.claude/ailsa/references/advisory-templates.md
 </step>
 
 <step name="identity_gate">
-Once, after the ranking and a passed coverage_gate (where it applies), before the results: push the
+Once, after the ranking and a passed coverage_gate (where it applies), before the result is
+declared: push the
 devil's advocate's G-IDENT review of name and structure. A flag downgrades the name, never blocks.
 Read file: ~/.claude/ailsa/references/coordinator-gates.md (section "Identity gate")
 </step>
@@ -453,19 +438,31 @@ Read file: ~/.claude/ailsa/references/smoke-test.md
 </step>
 
 <step name="terminate_team">
-Shut down all teammates gracefully and clean up the team resources. This step runs after
-present_results (successful or failed CASE), escalate (user escalation) or smoke_test_report
-(smoke-test mode).
+Declare or close the run, then shut down all teammates gracefully and clean up the team
+resources. This step runs after present_results (successful or failed CASE), escalate (user
+escalation), smoke_test_report (smoke-test mode) or any failure after start_record.
 
-**The web-view server stays running.** The server started at run start is intentionally left
-running here, so that the user can review the dashboard after the CASE run ends. The manual stop
-hint was printed at run start (spawn_case_team step 5). Do not add a stop call to this step.
+**Step 0: Declare or close the run (before shutdown).** Pick the command from the exit-path table
+in run-record.md. After an accepted ranking, declare against the ranking id rkNN from
+`[RANKING-COMPLETE]`, not the newest ranking, because the analyst's cross-check ranking comes after
+the decisive atom-by-atom one:
+```bash
+ailsa run finalize --outcome proposal --ranking rkNN --candidate N --confidence <level> --caveat "..." --open-question "..." --next-step "..."
+```
+- `--outcome proposal_under_determined` with the same options when the confidence is low or
+  ambiguity remains; `--outcome inconclusive --ranking rkNN` when the ranking exists but no
+  candidate is trusted.
+- `--outcome handed_to_human --termination-reason "..."` after escalate;
+  `--outcome no_structure_fits` when no solution remains after every diagnosis;
+  `--outcome insufficient_data` when the spectra are unusable. These need no ranking.
+- A devil's advocate flag from identity_gate becomes a `--caveat`; it never blocks the declaration.
+- Smoke test: `ailsa run close --reason "smoke test"`. Any failure after start_record:
+  `ailsa run close --reason "<failure>"`.
+- If `finalize` refuses because a solver ran after the ranking, ask the solution analyst to rank
+  again and declare against the new id.
 
-**Step 0: Finalize timing (before shutdown).** Take the `run_end` stamp, then run the timing
-finalize (timing step): it writes `analysis/timing.json` and prints the `## Timing Summary` block,
-which you append to `analysis/CASE-PROGRESS.md` (and to `analysis/final_results.md` if it exists).
-Do this on every exit path (success, escalation or smoke test), so that a wall-clock duration is
-always on record.
+Then run `ailsa run render` and present the `final_results.md` whose path it prints. Do this on
+every exit path, so that every record ends declared or closed and rendered.
 
 **Step 1: Send shutdown requests to all four teammates:**
 ```
