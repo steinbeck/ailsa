@@ -1,19 +1,32 @@
 # CASE Progress Format Reference
 
+## Contents
+
+- Rules: sole writer, append-only, real timestamps
+- Writing Triggers: the ten entries in order, from the file header to the timing summary
+- Fields Read by Loop Detection
+- When to Write
+
 <step name="write_progress">
+
+## Rules
+
 Write CASE-PROGRESS.md entries as the sole writer. No agent writes this file directly — agents send structured messages and the coordinator writes their contributions.
 
 **File location:** `<compound_path>/analysis/CASE-PROGRESS.md`
 
-**Rule:** Append-only. NEVER overwrite previous content. NEVER let agents write this file.
+**Rule:** Append-only. Do not overwrite previous content: loop detection reads the earlier
+iterations from this file. Do not let agents write this file: concurrent writes corrupt it.
 
-**Timestamp rule:** Every `(UTC)` field below is a REAL wall-clock timestamp taken with `date -u`
-per the case.md `timing` step — an ISO-8601 UTC value like `2026-07-01T09:12:03Z`. NEVER fill a
-timestamp from context or `currentDate` (that has no time-of-day). These fields mirror the
+**Timestamp rule:** Every `(UTC)` field below is a real wall-clock timestamp taken with `date -u`
+per the case.md `timing` step — an ISO-8601 UTC value like `2026-07-01T09:12:03Z`. Do not fill a
+timestamp from context or `currentDate`: that value has no time of day. These fields mirror the
 append-only `analysis/timing.jsonl` log; the final `## Timing Summary` block + `analysis/timing.json`
 are produced from that log at the end of the run.
 
-**Writing triggers and order:**
+## Writing Triggers
+
+The entries, in the order they are written:
 
 1. **File header** — write immediately after team spawns (before any agent messages):
 
@@ -29,7 +42,7 @@ are produced from that log at the end of the run.
 ---
 ```
 
-2. **Setup section** — write after receiving [SETUP-COMPLETE] from nmr-chemist:
+2. **Setup section** — write after receiving [SETUP-COMPLETE] from the NMR chemist:
 
 ```markdown
 ## Setup
@@ -73,7 +86,7 @@ are produced from that log at the end of the run.
 **Iteration goal:** <brief goal for this iteration>
 ```
 
-4. **LSD-Engineer section** — append after receiving [ITERATION-COMPLETE] from lsd-engineer:
+4. **LSD engineer section** (`### LSD-Engineer`) — append after receiving [ITERATION-COMPLETE] from the LSD engineer:
 
 ```markdown
 ### LSD-Engineer
@@ -93,7 +106,7 @@ are produced from that log at the end of the run.
 **Confidence:** <from message>
 ```
 
-5. **Devils-Advocate section** — append after receiving [VALIDATION-PASSED] or [VALIDATION-BLOCKED]:
+5. **Devil's advocate section** (`### Devils-Advocate`) — append after receiving [VALIDATION-PASSED] or [VALIDATION-BLOCKED]:
 
 ```markdown
 ### Devils-Advocate
@@ -116,7 +129,7 @@ If [VALIDATION-BLOCKED]: also append:
 **Action required:** <from message>
 ```
 
-6. **Coordinator solution count** — append after running LSD (or after lsd-engineer reports solution count):
+6. **Coordinator solution count** — append after running LSD (or after the LSD engineer reports solution count):
 
 ```markdown
 ### Coordinator
@@ -124,7 +137,7 @@ If [VALIDATION-BLOCKED]: also append:
 **HMBC correlations used:** X/Y
 ```
 
-7. **Solution-Analyst section** — append after receiving [RANKING-COMPLETE] (only when solution_count <= 10 or as needed):
+7. **Solution analyst section** (`### Solution-Analyst`) — append after receiving [RANKING-COMPLETE] (only when solution_count <= 10 or as needed):
 
 ```markdown
 ### Solution-Analyst
@@ -142,7 +155,7 @@ If [VALIDATION-BLOCKED]: also append:
 ```markdown
 ## Diagnostic Intervention (After Iteration N)
 
-### Orchestrator
+### Coordinator
 **Pattern detected:** <pattern_name>
 **Specialist spawned:** ailsa-diagnostic at <ISO-8601 UTC from `date -u`>
 **Report:** DIAGNOSTIC-REPORT.md
@@ -171,7 +184,7 @@ If [VALIDATION-BLOCKED]: also append:
 <fields from revised validation message>
 ```
 
-10. **Timing Summary** — the LAST block, appended once at the end of the run (produced by the
+10. **Timing Summary** — the last block, appended once at the end of the run (produced by the
 case.md `timing` finalize step, not hand-written). The coordinator appends the printed block
 verbatim; it is generated from `analysis/timing.jsonl` alongside the machine-readable
 `analysis/timing.json`:
@@ -194,16 +207,26 @@ verbatim; it is generated from `analysis/timing.jsonl` alongside the machine-rea
 `analysis/timing.json` carries the same data as structured JSON (`run_start_utc`, `run_end_utc`,
 `total_duration_s`, `total_duration_hms`, and a `phases` array) for aggregation across runs.
 
-**Backward-compatibility note:** The orchestrator's detect_loops step parses these fields from CASE-PROGRESS.md via LLM reading:
-- `Solution count: N` — now in ### Coordinator or ### LSD-Engineer sub-sections within ## Iteration N:
-- `Constraints added:` — in ### LSD-Engineer
-- `sp2 count:` — in ### Devils-Advocate
-- `H budget:` — in ### Devils-Advocate
-- `HMBC correlations used: X/Y` — in ### Coordinator or ### LSD-Engineer
-- `Fragment search:` — in ### LSD-Engineer
-- `Fragment file:` — in ### LSD-Engineer
+## Fields Read by Loop Detection
 
-All field names are IDENTICAL to v3.0. Section nesting is one level deeper (### within ##). LLM parsing handles this transparently — no regex changes needed. New v5.0 fields (`Fragment search:`, `Fragment file:`, `DEFF FEXP:`, `Fragment ordering:`) are additive -- no backward-compatibility concern.
+The coordinator's detect_loops step reads these fields from CASE-PROGRESS.md (an LLM reads them;
+no regex parser is involved):
+- `Solution count: N` — in the `### Coordinator` or `### LSD-Engineer` sub-sections within `## Iteration N:`
+- `Constraints added:` — in `### LSD-Engineer`
+- `sp2 count:` — in `### Devils-Advocate`
+- `H budget:` — in `### Devils-Advocate`
+- `HMBC correlations used: X/Y` — in `### Coordinator` or `### LSD-Engineer`
+- `Fragment search:` — in `### LSD-Engineer`
+- `Fragment file:` — in `### LSD-Engineer`
 
-**IMPORTANT:** The write_progress step is a REFERENCE, not a sequential step. The coordinator writes CASE-PROGRESS.md entries continuously throughout the workflow as messages arrive. It is referenced from monitor_progress whenever a message is received.
+Write these field names exactly as shown: loop detection finds the fields by these names. The
+sections sit one heading level deep (`###` within `##`); the LLM reading handles this, and no regex
+needs changing. The fields `Fragment search:`, `Fragment file:`, `DEFF FEXP:` and
+`Fragment ordering:` are additions; nothing that reads the older fields depends on them.
+
+## When to Write
+
+The write_progress step is a reference, not a sequential step. The coordinator writes
+CASE-PROGRESS.md entries continuously throughout the workflow as messages arrive. It is referenced
+from monitor_progress whenever a message is received.
 </step>

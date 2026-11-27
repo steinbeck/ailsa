@@ -2,9 +2,10 @@
 
 Encodes the skill form (size, contents list, no history, no dataset numbers, no model IDs, no dead
 references, one term per role, no capital-letter emphasis, database credit) as machine checks.
-Files that are not yet restructured are listed in PENDING; their per-file checks are skipped with
-a visible reason, and test_restructure_complete fails strictly (xfail) while PENDING is not empty.
-Set AILSA_LINT_IGNORE_PENDING=1 to run every check on every file.
+PENDING lists files that are not yet restructured (empty since the restructure is complete); their
+per-file checks are skipped with a visible reason, and test_restructure_complete fails strictly
+(xfail) while PENDING is not empty. Set AILSA_LINT_IGNORE_PENDING=1 to run every check on every
+file.
 """
 
 from __future__ import annotations
@@ -31,32 +32,17 @@ AGENTS = {
     "ailsa-devils-advocate",
     "ailsa-diagnostic",
 }
-REFS = {"advisory-templates", "loop-patterns", "nmr-basics", "progress-format"}
 RUN_ARTEFACTS = {"CASE-PROGRESS.md", "final_results.md", "DIAGNOSTIC-REPORT.md"}
 TEAMMATE_ADDRESSES = {"nmr-chemist", "lsd-engineer", "solution-analyst", "devils-advocate"}
 CREDIT = (
     "COCONUT 13C shifts: from J.-M. Nuzillard, Zenodo, doi:10.5281/zenodo.6561449, CC BY 4.0"
 )
 
-# Paths relative to SKILL_DIR still awaiting restructure. Plan 10 empties this set.
-PENDING: frozenset[str] = frozenset(
-    {f"commands/{c}.md" for c in COMMANDS}
-    | {f"agents/{a}.md" for a in AGENTS}
-    | {f"references/{r}.md" for r in REFS}
-) - {
-    "agents/ailsa-nmr-chemist.md",
-    "agents/ailsa-solution-analyst.md",
-    "agents/ailsa-lsd-engineer.md",
-    "agents/ailsa-diagnostic.md",
-    "agents/ailsa-devils-advocate.md",
-    "commands/case.md",
-    "commands/sanitise.md",
-    "commands/dereplicate.md",
-    "commands/predict.md",
-    "commands/status.md",
-    "commands/help.md",
-    "references/nmr-basics.md",
-}
+# Paths relative to SKILL_DIR still awaiting restructure. Empty: every file is restructured, so
+# every per-file check runs on every file. A file added here is skipped with a visible reason and
+# turns test_restructure_complete into a strict xfail until it is removed again.
+PENDING: frozenset[str] = frozenset()
+
 _ACTIVE_PENDING: frozenset[str] = (
     frozenset() if os.environ.get("AILSA_LINT_IGNORE_PENDING") == "1" else PENDING
 )

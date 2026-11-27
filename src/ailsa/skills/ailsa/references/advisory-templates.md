@@ -1,15 +1,27 @@
 # Advisory and Results Templates Reference
 
+## Contents
+
+- deliver_advisory: send the advisory to the running team
+- present_results: success, incomplete convergence, failure
+- delegate_specialist: spawn the diagnostic specialist
+- extract_diagnostic_findings: turn its report into an advisory
+- quality_convergence_advisory: re-examination by the NMR chemist
+- multiplicity_coverage_reopen_advisory: search the missing multiplicity family
+- What Not to Do
+
+## Templates
+
 <step name="deliver_advisory">
-Deliver advisory constraints to the running team via SendMessage. This REPLACES the earlier pattern of killing and re-spawning the agent.
+Deliver advisory constraints to the running team via SendMessage. Do not kill and re-spawn the agent to deliver an advisory.
 
 **Why SendMessage instead of re-spawn:**
 - Team retains all context and state (no restart overhead)
 - Constraint inventory and progress are preserved
-- Devils-advocate can immediately verify the fix
+- The devil's advocate (DA) can immediately verify the fix
 - No risk of losing team coordination state
 
-**Deliver advisory to lsd-engineer (primary recipient):**
+**Deliver advisory to the LSD engineer (`lsd-engineer`, primary recipient):**
 ```
 SendMessage(
   type="message",
@@ -19,12 +31,12 @@ SendMessage(
   Apply this advisory guidance in your next iteration. Read CASE-PROGRESS.md
   for current state. Resume from iteration {N+1}.
 
-  Do NOT restart from scratch. Apply the fix to your existing constraint set.",
+  Do not restart from scratch. Apply the fix to your existing constraint set.",
   summary="Supervisor advisory: {pattern_name} detected"
 )
 ```
 
-**Notify devils-advocate to monitor the fix:**
+**Notify the devil's advocate (`devils-advocate`) to monitor the fix:**
 ```
 SendMessage(
   type="message",
@@ -41,12 +53,12 @@ After delivering advisory, return to monitor_progress step to check if issue res
 </step>
 
 <step name="present_results">
-When agent achieves convergence (solution_count ≤ 10) OR reaches safety cap (~10 iterations), present final results.
+When agent achieves convergence (solution_count ≤ 10) or reaches safety cap (~10 iterations), present final results.
 
 Read the latest iteration from CASE-PROGRESS.md and any solution files generated.
 
 **Compute elapsed time:**
-Parse the `**Started:** <timestamp>` line from the CASE-PROGRESS.md file header.
+Parse the `**Started (UTC):** <timestamp>` line from the CASE-PROGRESS.md file header.
 Record current time. Compute elapsed time = current - started.
 Report in the results section below.
 
@@ -122,7 +134,7 @@ Consider:
 See: <compound_path>/analysis/CASE-PROGRESS.md
 ```
 
-**If NO solutions at end:**
+**If no solutions at end:**
 Report failure:
 ```markdown
 ## CASE Failed
@@ -154,7 +166,7 @@ Delegate to diagnostic specialist agent for deep root cause analysis.
 
 **This step executes when:** counter for detected pattern == 2 (routed from track_and_decide).
 
-**Note:** The diagnostic specialist is spawned via Task() WITHOUT team_name -- it operates independently from the team for objectivity. It reads team artifacts (CASE-PROGRESS.md, LSD files) but does not participate in team communication.
+**Note:** The diagnostic specialist is spawned via Task() without team_name -- it operates independently from the team for objectivity. It reads team artifacts (CASE-PROGRESS.md, LSD files) but does not participate in team communication.
 
 **Identify failure type from detected pattern:**
 - ZERO_SOLUTION_LOOP -> failure_type = "0 solutions"
@@ -179,12 +191,12 @@ Task(
     ; === CONSTRAINT INVENTORY v1 === and ; === END CONSTRAINT INVENTORY ===
     Extract this inventory in Step 1 — it tracks hmbc_batches, deff_not_patterns,
     syme_pairs, bond_constraints, list_prop_constraints, elim_value, and detection results.
-    The inventory history reveals WHAT changed between iterations (drops, additions).
+    The inventory history reveals what changed between iterations (drops, additions).
 
   Failure type: <failure_type>
 
-  Run systematic diagnostic checks per your inlined knowledge.
-  Document ALL checks (PASS and FAIL).
+  Run systematic diagnostic checks per your agent definition.
+  Document all checks (PASS and FAIL).
   Identify root cause with evidence.
 
   Write structured report to <compound_path>/analysis/DIAGNOSTIC-REPORT.md.
@@ -228,10 +240,10 @@ Fix: <fix_action>
 
 Verification: <fix_verification>
 
-<optional pattern-specific guidance, e.g., for ELIM_THRASHING: "Do NOT add ELIM again until this fix is verified.">
+<optional pattern-specific guidance, e.g., for ELIM_THRASHING: "Do not add ELIM again until this fix is verified.">
 ```
 
-**Key difference from basic advisory:** Specialist-informed advisory is SPECIFIC (exact atom, exact command, exact verification) because the specialist ran systematic checks with quantitative evidence. Basic advisory is PROCEDURAL (check these conditions, verify these things).
+**Key difference from basic advisory:** Specialist-informed advisory is specific (exact atom, exact command, exact verification) because the specialist ran systematic checks with quantitative evidence. Basic advisory is procedural (check these conditions, verify these things).
 
 Proceed to deliver_advisory step with the specialist-informed advisory.
 </step>
@@ -240,10 +252,10 @@ Proceed to deliver_advisory step with the specialist-informed advisory.
 
 ## Advisory: Quality Convergence Failure
 
-**Deliver to:** nmr-chemist (reactivation advisory) via SendMessage.
+**Deliver to:** the NMR chemist (`nmr-chemist`, reactivation advisory) via SendMessage.
 
 **When to use:** QUALITY_CONVERGENCE_FAILURE detected (count_quality == 0). All top-3
-solutions are IMPLAUSIBLE/QUESTIONABLE despite a converged solution count.
+solutions are `IMPLAUSIBLE`/`QUESTIONABLE` despite a converged solution count.
 
 **Advisory text:**
 
@@ -251,7 +263,7 @@ solutions are IMPLAUSIBLE/QUESTIONABLE despite a converged solution count.
 [SUPERVISOR ADVISORY - QUALITY CONVERGENCE FAILURE]
 
 All top solutions are IMPLAUSIBLE or QUESTIONABLE. The LSD constraint logic appears
-sound (solutions converged), but the 13C INTERPRETATION going into LSD may be wrong.
+sound (solutions converged), but the 13C interpretation going into LSD may be wrong.
 
 Re-examination checklist (perform in order, stop when a concrete defect is found):
 
@@ -262,10 +274,10 @@ Re-examination checklist (perform in order, stop when a concrete defect is found
 
 2. Intensity-symmetry: were any aromatic CH peaks flagged as 2C-equivalence candidates
    (intensity ≥ 1.6× class median)?
-   - If yes AND they were NOT passed to `ailsa detect aromatic-cosy`: re-run
+   - If yes and they were not passed to `ailsa detect aromatic-cosy`: re-run
      `ailsa detect aromatic-cosy` with the correct grouped shifts. Send updated
      HMBC equivalence groups to lsd-engineer for the next iteration.
-   - If yes AND they were already passed: confirm lsd-engineer used grouped notation
+   - If yes and they were already passed: confirm lsd-engineer used grouped notation
      `HMBC (C1 C2) H` syntax in the LSD file (carbon side grouped; a grouped proton side,
      `HMBC C (H1 H2)`, aborts LSD with error 116).
 
@@ -278,14 +290,14 @@ After re-examination:
   - If no defect found: respond "Re-examination complete: no correctable peak-picking
     defect found." The coordinator will close with honest termination.
 
-Budget: THIS IS THE ONLY re-examination cycle. Do not initiate a further re-pick
+Budget: this is the only re-examination cycle. Do not initiate a further re-pick
 unless a concrete suspicion exists (empty expected-region despite DBE deficit with
 SNR 3-20 evidence). A blind re-pick at lower threshold is not warranted — the SNR
 floor is already at k=3.
 ```
 
-**SendMessage target:** nmr-chemist (NOT lsd-engineer — the defect is in picking, not constraints).
-**After delivering advisory:** Return to monitor_progress. Do not trigger a full new LSD run yet — wait for nmr-chemist to respond with [DETECTION-COMPLETE] or "no defect found."
+**SendMessage target:** `nmr-chemist`, not `lsd-engineer`: the defect is in picking, not constraints.
+**After delivering advisory:** Return to monitor_progress. Do not trigger a full new LSD run yet — wait for the NMR chemist to respond with [DETECTION-COMPLETE] or "no defect found."
 
 </step>
 
@@ -293,20 +305,15 @@ floor is already at k=3.
 
 ## Advisory: Multiplicity Coverage Gap (reopen)
 
-<!--
-RELOAD NOTE: this reference is a repo `.claude/` skill file symlinked into `~/.claude`. This is a
-MARKDOWN PROMPT EDIT — a FRESH Claude Code session is REQUIRED to reload. NOT unit-testable this
-session; functional validation is the blind CASE4 re-run (UAT-01 / Phase 89).
--->
+**Deliver to:** the LSD engineer (`lsd-engineer`) via SendMessage.
 
-**Deliver to:** lsd-engineer via SendMessage.
-
-**When to use:** the case.md `coverage_gate` step returned FAIL — a `[MULTIPLICITY-AMBIGUOUS]`
+**When to use:** the case.md `coverage_gate` step returned `FAIL` — a `[MULTIPLICITY-AMBIGUOUS]`
 run is about to accept but a viable multiplicity family (`viable_families ⊄ searched_families`)
-or a Devils-Advocate `[MULT-EVIDENCE-FOR] model=X` was never searched. This is COVERAGE-triggered,
-NOT MAE-triggered — do not wait for a poor MAE.
+or the model X of a DA `[MULT-EVIDENCE-FOR] model=X` message was never searched. This advisory is
+triggered by coverage, not by MAE: do not wait for a poor MAE, because a structure of the wrong
+multiplicity class can score a low MAE.
 
-**Advisory text (WHAT not HOW — name the missing family/model and the search requirement; do NOT
+**Advisory text (what, not how — name the missing family/model and the search requirement; do not
 dictate the MULT lines):**
 
 ```
@@ -315,70 +322,71 @@ dictate the MULT lines):**
 The run cannot accept yet: a viable aliphatic multiplicity family was identified but never
 searched. Coverage check (CASE-PROGRESS.md ## Multiplicity Coverage) is the source of truth.
 
-Missing from the searched set: <family/model name(s), e.g. "ethyl (2×CH₃+CH₂+CH₂)" and/or a
-DA-mandated model X from [MULT-EVIDENCE-FOR]>.
+Missing from the searched set: <family/model name(s), each with its CH₃/CH₂/CH partition,
+and/or a DA-mandated model X from [MULT-EVIDENCE-FOR]>.
 
 Required action:
-- Search EACH missing family/model in its OWN iteration_NN_<family>/ dir, fully constrained
-  (same HSQC/HMBC/ring-exclusion/BOND/COSY/fragment/inventory constraints; differ ONLY in the
-  MULT block). Read your existing constraint set — do NOT reconstruct from scratch.
-- A family counts as SEARCHED once its LSD run produces an [ITERATION-COMPLETE] — even if you
-  skip solutions.smi conversion for size (SEARCHED-not-RANKED). Do not drop a large family.
+- Search each missing family/model in its own iteration_NN_<family>/ dir, fully constrained
+  (same HSQC/HMBC/ring-exclusion/BOND/COSY/fragment/inventory constraints; differ only in the
+  MULT block). Read your existing constraint set; do not reconstruct it from scratch, because
+  constraints rebuilt from memory get dropped.
+- A family counts as searched once its LSD run produces an [ITERATION-COMPLETE] — even if you
+  skip solutions.smi conversion for size (searched, not ranked). Do not drop a large family.
 - After the missing run(s) complete, the coordinator re-runs the deduped union rank and
   re-enters the coverage gate.
 
-This is a COVERAGE requirement, independent of MAE/plausibility: a low-MAE leading model does
-NOT close a missing family. A Devils-Advocate [MULT-EVIDENCE-FOR] flag is closeable ONLY by an
-actual search of that model — never by argument or convergence narrative.
+This is a coverage requirement, independent of MAE/plausibility: a low-MAE leading model does
+not close a missing family. A devil's advocate [MULT-EVIDENCE-FOR] flag is closed only by an
+actual search of that model, not by argument or a convergence narrative.
 
-Do NOT restart from scratch. Add the missing family(ies) alongside the families already searched.
+Do not restart from scratch. Add the missing family(ies) alongside the families already searched.
 ```
 
-**SendMessage target:** lsd-engineer (the coverage defect is a missing search, not a picking
-defect). Optionally notify devils-advocate to confirm each [MULT-EVIDENCE-FOR] model is now in
-the searched set.
+**SendMessage target:** `lsd-engineer` (the coverage defect is a missing search, not a picking
+defect). Optionally notify the devil's advocate (`devils-advocate`) to confirm each
+[MULT-EVIDENCE-FOR] model is now in the searched set.
 **After delivering advisory:** Return to monitor_progress. On the missing family/model's
 [ITERATION-COMPLETE], update searched_families in the ledger, re-run the union rank, and
-re-enter the coverage_gate. Do not proceed to identity_gate until coverage_gate PASSES.
+re-enter the coverage_gate. Do not proceed to identity_gate until coverage_gate passes.
 
 </step>
 
 <anti_patterns>
 
-## What NOT to Do
+## What Not to Do
 
-**Never duplicate agent knowledge in Task instructions:**
+**Do not duplicate agent knowledge in Task instructions:**
 - The specialist agents each have their own domain knowledge
-- Task(team_name) prompts should provide ONLY task-specific details (compound path, formula)
+- Task(team_name) prompts should provide only task-specific details (compound path, formula)
 - Agent definitions contain the domain expertise
 
-**Never use directive interventions:**
-- Advisory says WHAT to fix (e.g., "sp2 count is odd")
-- Directive prescribes HOW to fix it (e.g., "Change line 15 from X to Y")
+**Do not use directive interventions:**
+- Advisory says what to fix (e.g., "sp2 count is odd")
+- Directive prescribes how to fix it (e.g., "Change line 15 from X to Y")
 - Agent retains autonomy to decide implementation
 
-**Never use a global intervention counter:**
+**Do not use a global intervention counter:**
 - Track per-pattern counters separately: {ELIM_THRASHING: 2, ZERO_SOLUTION_LOOP: 0, ...}
 - Different patterns have different root causes
 - Global counter masks which specific failure mode is recurring
 
-**Never attempt dereplication in this orchestrator:**
+**Do not attempt dereplication in the coordinator:**
 - CASE is de novo structure elucidation (starts from scratch)
 - Dereplication is a completely separate workflow (/ailsa:dereplicate)
-- Absolute separation maintained
+- The two workflows stay completely separate
 
-**Never re-spawn the team to deliver an advisory:**
-- A previous pattern killed and re-spawned the agent with advisory text -- this is INVALID with teams
+**Do not re-spawn the team to deliver an advisory:**
+- Killing and re-spawning the agent with advisory text does not work with teams
 - Use SendMessage to deliver advisory to the running team
 - Team retains context, constraint inventory, and coordination state
 - Re-spawning creates isolated agents outside the team
 
-**Never call TeamDelete before shutdown_request:**
+**Do not call TeamDelete before shutdown_request:**
 - TeamDelete fails if teammates are still active
-- Always send shutdown_request to all 4 teammates first
+- Send shutdown_request to all 4 teammates first, every time
 - Wait for shutdown confirmations before cleanup
 
-**Never delegate to specialist on first loop detection:**
+**Do not delegate to the diagnostic specialist on the first loop detection:**
 - First detection (counter = 0) -> basic diagnosis only
 - First recurrence (counter = 1) -> basic diagnosis again
 - Second recurrence (counter = 2) -> delegate to specialist
