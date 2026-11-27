@@ -220,6 +220,10 @@ def download(output: Path, force: bool) -> None:
     (COCONUT + NMRShiftDB) with 13C NMR shifts and 7.9M HOSE statistics
     for 13C shift prediction.
 
+    The COCONUT 13C shifts are predicted, not measured; the NMRShiftDB
+    shifts are experimental. COCONUT 13C shifts: from J.-M. Nuzillard,
+    Zenodo, doi:10.5281/zenodo.6561449, CC BY 4.0.
+
     DOI: 10.6084/m9.figshare.31073554
 
     With no --output, the default path is data/reference/ailsa-derep.db;
