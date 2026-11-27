@@ -248,3 +248,22 @@ def test_paper_launchers_retired(rel):
                            text=True, timeout=20)
         assert r.returncode == 2
         assert "retired" in r.stderr
+
+
+def test_preflight_checks_the_skill_install(monkeypatch):
+    mod = _load_watchdog()
+    sent = []
+
+    def fake(cmd, timeout=60):
+        sent.append(cmd)
+        return reply
+
+    monkeypatch.setattr(mod, "ssh_run", fake)
+    reply = "NO_SKILL\n"
+    with pytest.raises(mod.Halt) as exc:
+        mod.preflight()
+    assert "/ailsa:case is not installed" in str(exc.value)
+    assert "commands/ailsa/case.md" in sent[-1]
+    assert "ailsa/references" in sent[-1]
+    reply = "Hello! How can I help?\n"
+    mod.preflight()

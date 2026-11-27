@@ -598,17 +598,25 @@ def describe_blocked(blocked: set[str]) -> str:
     return "; ".join(parts)
 
 
+# The command and the reference files every run needs; both resolve through the link-mode
+# install into the checkout.
+SKILL_PROBE = ('test -r "$HOME/.claude/commands/ailsa/case.md" '
+               '&& test -d "$HOME/.claude/ailsa/references"')
+
+
 def preflight() -> None:
     """Refuse to launch unless Sheldon can actually run a case.
 
     An unauthenticated `claude` fails in ~1.5 s per attempt, so a chunk
     "completes" in seconds having produced nothing but empty result
     directories. Left unchecked the watchdog would march through all 155
-    remaining cases in minutes and retire every one of them.
+    remaining cases in minutes and retire every one of them. A missing
+    /ailsa:case install fails the same way, so it is checked here too.
     """
     binary = REMOTE_ENV["CLAUDE_BIN"]
     q = shlex.quote(binary)
     inner = (f"test -x {q} || echo NO_BINARY; "
+             f"{SKILL_PROBE} || echo NO_SKILL; "
              f"timeout 25 {q} -p hi </dev/null 2>&1 | head -3")
     out = ssh_run(f"bash -lc {shlex.quote(inner)}", timeout=60)
     if "NO_BINARY" in out:
@@ -618,6 +626,13 @@ def preflight() -> None:
             f"    mkdir -p {posixpath.dirname(binary)} && cp {PINNED_CLI_SOURCE} {binary}\n"
             f"  If {PINNED_CLI_SOURCE} is gone as well, pin a version that exists and "
             "record it in docs/BENCHMARK.md."
+        )
+    if "NO_SKILL" in out:
+        raise Halt(
+            "/ailsa:case is not installed on Sheldon (~/.claude/commands/ailsa/case.md or "
+            "~/.claude/ailsa/references is missing), so every run would send an unknown "
+            "command.\n  Install the skill from the checkout:\n"
+            f"    cd {REMOTE_REPO} && .venv/bin/ailsa skill install ailsa --link"
         )
     if "Not logged in" in out or "/login" in out:
         raise Halt(
