@@ -22,7 +22,7 @@ from typing import Any
 
 from ailsa.record.events import AGENT_DIR, ARGV_ITEM_CAP, HOOKS_SETTINGS
 from ailsa.record.fsutil import atomic_write_json, scrub_home
-from ailsa.record.log import append_event
+from ailsa.record.log import RecordWriteRefused, append_event
 
 SKILL_NAME = "ailsa-lite"
 FRONTIER_SKILL = "ailsa"
@@ -93,6 +93,43 @@ def build_argv(
     return [*argv, *extra]
 
 
+RESUME_NUDGE = (
+    "Continue the CASE workflow where it stopped. The run has not declared its result yet. "
+    "Check `ailsa run status`, finish the remaining steps inline without waiting to be woken, "
+    "and end with `ailsa run finalize` (or `ailsa run close` when no result can be declared)."
+)
+
+
+def build_resume_argv(
+    *,
+    model: str,
+    nudge: str,
+    session_id: str,
+    run_dir: str | os.PathLike[str],
+    dataset: str | os.PathLike[str],
+    confidential: bool = False,
+    extra: Sequence[str] = (),
+) -> list[str]:
+    """Argv that resumes the launched Claude Code session headless with a nudge."""
+    argv = [
+        "claude",
+        "--resume",
+        session_id,
+        "-p",
+        nudge,
+        "--model",
+        model,
+        "--settings",
+        str(Path(run_dir) / HOOKS_SETTINGS),
+        "--add-dir",
+        str(dataset),
+        "--dangerously-skip-permissions",
+    ]
+    if confidential:
+        argv += ["--disallowedTools", "WebFetch", "WebSearch"]
+    return [*argv, *extra]
+
+
 def _context_entries(files: Sequence[str | os.PathLike[str]]) -> list[dict[str, str]]:
     entries: list[dict[str, str]] = []
     for item in files:
@@ -147,6 +184,8 @@ def prepare_run(
     transcript: bool = True,
     extra_args: Sequence[str] = (),
     skill: str = SKILL_NAME,
+    resume_attempts: int = 1,
+    deadline_s: int | None = None,
 ) -> dict[str, Any]:
     from ailsa.record.hooksettings import build_settings
     from ailsa.record.resolve import REQUIRE_ENV, RUN_DIR_ENV, SESSION_ENV
@@ -154,6 +193,12 @@ def prepare_run(
 
     if harness not in HARNESSES:
         raise LauncherError(f"unknown harness {harness!r}; choose claude or opencode")
+    if resume_attempts < 1:
+        raise LauncherError("--resume-attempts must be at least 1")
+    if resume_attempts > 1 and not (headless and harness == "claude"):
+        raise LauncherError("--resume-attempts above 1 needs a headless Claude Code run")
+    if deadline_s is not None and deadline_s < 1:
+        raise LauncherError("--deadline must be at least 1 second")
     if skill not in SKILLS:
         raise LauncherError(f"unknown skill {skill!r}; choose one of {', '.join(SKILLS)}")
     frontier = skill == FRONTIER_SKILL
@@ -259,6 +304,11 @@ def prepare_run(
         "model": model,
         "headless": headless,
         "time_limit_s": time_limit_s,
+        "resume_attempts": resume_attempts,
+        "deadline_s": deadline_s,
+        "dataset": shown,
+        "confidential": confidential,
+        "extra_args": list(extra_args),
         "session_id": session_id,
         "transcript": transcript,
         "warnings": result["warnings"],
@@ -485,20 +535,40 @@ def launch(prepared: dict[str, Any], *, extra_args: Sequence[str] = ()) -> dict[
         return _launch(prepared, extra_args, gate)
 
 
+def _run_is_settled(run_dir: Path) -> bool:
+    """The agent closed the run, or the log holds a valid, current declaration (no write)."""
+    from ailsa.record.fold import fold
+    from ailsa.record.log import read_events
+
+    try:
+        log = read_events(run_dir)
+        events = log["events"]
+        if any(e.get("type") == "run.finished" for e in events):
+            return True
+        final = fold(events, log["integrity"]).get("final") or {}
+    except Exception:  # noqa: BLE001 - an unreadable log means: keep the plain outcome
+        return False
+    return bool(final.get("valid")) and not final.get("stale")
+
+
 def _launch(
     prepared: dict[str, Any], extra_args: Sequence[str], gate: _SignalGate
 ) -> dict[str, Any]:
     from ailsa.record.render import render_run
 
     run_dir = Path(prepared["run_dir"])
-    argv = list(prepared["argv"]) + list(extra_args)
+    first_argv = list(prepared["argv"]) + list(extra_args)
     headless = bool(prepared["headless"])
-    limit = prepared.get("time_limit_s")
-    started = time.monotonic()
+    time_limit = prepared.get("time_limit_s")
+    max_attempts = int(prepared.get("resume_attempts") or 1)
+    deadline_s = prepared.get("deadline_s")
+    deadline_at = time.monotonic() + deadline_s if deadline_s else None
     exit_code: int | None = None
     reason = "exited"
     out_path = run_dir / "transcript" / "harness-output.log"
     closed: dict[str, Any] = {}
+    attempts = 0
+    deadline_hit = False
     try:
         if prepared.get("session_id"):
             # The launched session is bound to this run; hooks of other sessions never record.
@@ -514,18 +584,6 @@ def _launch(
             )
         append_event(
             run_dir,
-            "run.attempt.started",
-            {
-                "attempt": 1,
-                "harness": prepared["harness"],
-                "time_limit_s": limit,
-                "argv": [scrub_home(a)[:ARGV_ITEM_CAP] for a in argv],
-            },
-            actor=_ACTOR,
-            fsync=True,
-        )
-        append_event(
-            run_dir,
             "agent.model_reported",
             {
                 "agent": "main",
@@ -535,45 +593,92 @@ def _launch(
             },
             actor=_ACTOR,
         )
-        if gate.signum is not None:
-            reason = _STOP_REASONS.get(gate.signum, "interrupted") + " before start"
-        else:
-            try:
-                out_path.parent.mkdir(mode=0o700, exist_ok=True)
-                if headless:
-                    with open(out_path, "ab") as out:
-                        proc = subprocess.Popen(
-                            argv,
-                            cwd=prepared["agent_dir"],
-                            env=prepared["env"],
-                            stdin=subprocess.DEVNULL,
-                            stdout=out,
-                            stderr=subprocess.STDOUT,
-                            start_new_session=True,
-                        )
-                else:
-                    # Interactive: the TUI needs the terminal's foreground process group, so it
-                    # gets no session of its own; _terminate signals its process tree instead.
-                    proc = subprocess.Popen(argv, cwd=prepared["agent_dir"], env=prepared["env"])
-            except OSError as exc:
-                reason = f"spawn_failed: {type(exc).__name__}: {exc}"[:200]
+        for attempt in range(1, max_attempts + 1):
+            attempts = attempt
+            limit = time_limit
+            if deadline_at is not None:
+                remaining = max(1, int(deadline_at - time.monotonic() + 0.999))
+                limit = remaining if limit is None else min(limit, remaining)
+            if attempt == 1:
+                argv = first_argv
             else:
-                stopped = _wait_with_limit(proc, limit, headless, gate)
-                exit_code = proc.returncode
-                if stopped is not None:
-                    reason = stopped
-        append_event(
-            run_dir,
-            "run.attempt.ended",
-            {
-                "attempt": 1,
-                "exit_code": exit_code,
-                "reason": reason,
-                "elapsed_s": round(time.monotonic() - started, 3),
-            },
-            actor=_ACTOR,
-            fsync=True,
-        )
+                argv = build_resume_argv(
+                    model=prepared["model"],
+                    nudge=RESUME_NUDGE,
+                    session_id=prepared["session_id"],
+                    run_dir=run_dir,
+                    dataset=prepared["dataset"],
+                    confidential=bool(prepared.get("confidential")),
+                    extra=[*prepared.get("extra_args", ()), *extra_args],
+                )
+            started = time.monotonic()
+            exit_code = None
+            reason = "exited"
+            append_event(
+                run_dir,
+                "run.attempt.started",
+                {
+                    "attempt": attempt,
+                    "harness": prepared["harness"],
+                    "time_limit_s": limit,
+                    "argv": [scrub_home(a)[:ARGV_ITEM_CAP] for a in argv],
+                },
+                actor=_ACTOR,
+                fsync=True,
+            )
+            spawned = False
+            if gate.signum is not None:
+                reason = _STOP_REASONS.get(gate.signum, "interrupted") + " before start"
+            else:
+                try:
+                    out_path.parent.mkdir(mode=0o700, exist_ok=True)
+                    if headless:
+                        with open(out_path, "ab") as out:
+                            proc = subprocess.Popen(
+                                argv,
+                                cwd=prepared["agent_dir"],
+                                env=prepared["env"],
+                                stdin=subprocess.DEVNULL,
+                                stdout=out,
+                                stderr=subprocess.STDOUT,
+                                start_new_session=True,
+                            )
+                    else:
+                        # Interactive: the TUI needs the terminal's foreground process group,
+                        # so it gets no session of its own; _terminate signals its tree.
+                        proc = subprocess.Popen(
+                            argv, cwd=prepared["agent_dir"], env=prepared["env"]
+                        )
+                except OSError as exc:
+                    reason = f"spawn_failed: {type(exc).__name__}: {exc}"[:200]
+                else:
+                    spawned = True
+                    stopped = _wait_with_limit(proc, limit, headless, gate)
+                    exit_code = proc.returncode
+                    if stopped is not None:
+                        reason = stopped
+            try:
+                append_event(
+                    run_dir,
+                    "run.attempt.ended",
+                    {
+                        "attempt": attempt,
+                        "exit_code": exit_code,
+                        "reason": reason,
+                        "elapsed_s": round(time.monotonic() - started, 3),
+                    },
+                    actor=_ACTOR,
+                    fsync=True,
+                )
+            except RecordWriteRefused:
+                pass  # the agent closed the run itself: a finished record takes no more events
+            if not spawned or gate.signum is not None or attempt == max_attempts:
+                break
+            if _run_is_settled(run_dir):
+                break
+            if deadline_at is not None and time.monotonic() >= deadline_at:
+                deadline_hit = True
+                break
         if prepared.get("transcript") and prepared.get("session_id"):
             try:
                 _copy_transcripts(run_dir, prepared["session_id"])
@@ -590,7 +695,9 @@ def _launch(
     finally:
         # Always ends the run, whatever happened above (REC-23).
         _settle_views(prepared.get("views_pid"), VIEWS_WAIT_S)
-        if reason == "time_limit":
+        if deadline_hit:
+            close_reason = "deadline"
+        elif reason == "time_limit":
             close_reason = "time limit"
         elif reason.startswith(("interrupted", "terminated")):
             close_reason = f"{reason} (signal {gate.signum})"
@@ -608,4 +715,5 @@ def _launch(
         "reason": reason,
         "state": closed.get("state"),
         "signal": gate.signum,
+        "attempts": attempts,
     }

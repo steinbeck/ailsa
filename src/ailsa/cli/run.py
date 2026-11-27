@@ -531,6 +531,15 @@ def finalize_cmd(
     help="Skill to run: the lean skill or the frontier skill (/ailsa:case; needs the global "
     "install).",
 )
+@click.option(
+    "--resume-attempts",
+    type=int,
+    default=1,
+    show_default=True,
+    help="Resume a headless Claude Code run up to this many attempts in total until it "
+    "declares a result.",
+)
+@click.option("--deadline", type=int, default=None, help="Total time for all attempts, seconds.")
 @_format_option
 @click.argument("extra", nargs=-1, type=click.UNPROCESSED)
 def start_cmd(
@@ -551,6 +560,8 @@ def start_cmd(
     no_transcript: bool,
     no_views: bool,
     skill: str,
+    resume_attempts: int,
+    deadline: int | None,
     fmt: str,
     extra: tuple[str, ...],
 ) -> None:
@@ -582,6 +593,8 @@ def start_cmd(
             transcript=not no_transcript,
             extra_args=list(extra),
             skill=skill,
+            resume_attempts=resume_attempts,
+            deadline_s=deadline,
         )
     except LauncherError as exc:
         click.echo(f"ailsa: {exc}", err=True)
@@ -597,6 +610,7 @@ def start_cmd(
             f"WORK: {result['run_dir']}",
             f"exit code: {result['exit_code']}",
             f"state: {result['state']}",
+            f"attempts: {result['attempts']}",
         ],
     )
     if result.get("signal"):

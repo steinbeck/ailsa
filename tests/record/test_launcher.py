@@ -37,6 +37,8 @@ info = {{
 }}
 with open(os.environ["FAKE_CLAUDE_OUT"], "w") as fh:
     json.dump(info, fh)
+with open(os.environ["FAKE_CLAUDE_OUT"] + ".calls", "a") as fh:
+    fh.write(json.dumps(info) + "\\n")
 modes = os.environ.get("FAKE_CLAUDE_MODE", "").split(",")
 sid = argv[argv.index("--session-id") + 1] if "--session-id" in argv else None
 if "transcript" in modes and sid:
@@ -52,6 +54,15 @@ if "hook" in modes and sid:
         input=json.dumps(payload).encode(),
         env=os.environ,
     )
+
+def _cli(*args):
+    subprocess.run([sys.executable, "-m", "ailsa.cli", "run", *args], env=os.environ)
+
+
+if "declare_on_resume" in modes and "--resume" in argv:
+    _cli("finalize", "--outcome", "insufficient_data", "--termination-reason", "test")
+if "close_first" in modes and "--resume" not in argv:
+    _cli("close", "--reason", "test")
 if "grandchild" in modes:
     child = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(60)"])
     with open(os.environ["FAKE_CLAUDE_OUT"] + ".child", "w") as fh:
@@ -556,3 +567,164 @@ def test_frontier_opencode_refused(
     res = _start(dataset, "--harness", "opencode", "--model", "m", "--skill", "ailsa")
     assert res.exit_code == 2
     assert _run_folders(tmp_path) == []
+
+
+# ------------------------------------------------------------------ resume attempts
+
+
+def _calls(tmp_path: Path) -> list[dict[str, Any]]:
+    text = (tmp_path / "shim.json.calls").read_text()
+    return [json.loads(line) for line in text.splitlines() if line]
+
+
+def _attempts(run_dir: str | Path, kind: str) -> list[int]:
+    return [e["payload"]["attempt"] for e in _of(_events(run_dir), kind)]
+
+
+def test_build_resume_argv(tmp_path: Path) -> None:
+    argv = launcher.build_resume_argv(
+        model="m",
+        nudge="N",
+        session_id="sid",
+        run_dir=tmp_path / "r",
+        dataset=tmp_path / "d",
+        extra=["--x", "y"],
+    )
+    assert argv == [
+        "claude",
+        "--resume",
+        "sid",
+        "-p",
+        "N",
+        "--model",
+        "m",
+        "--settings",
+        str(tmp_path / "r" / "hooks.json"),
+        "--add-dir",
+        str(tmp_path / "d"),
+        "--dangerously-skip-permissions",
+        "--x",
+        "y",
+    ]
+    conf = launcher.build_resume_argv(
+        model="m",
+        nudge="N",
+        session_id="sid",
+        run_dir=tmp_path / "r",
+        dataset=tmp_path / "d",
+        confidential=True,
+    )
+    assert conf[-3:] == ["--disallowedTools", "WebFetch", "WebSearch"]
+
+
+def test_resume_until_declared(
+    claude: Path, dataset: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("FAKE_CLAUDE_MODE", "declare_on_resume")
+    res = _result(
+        _start(dataset, "--model", "m", "--resume-attempts", "3", "--", "--fence", "blind")
+    )
+    assert res["attempts"] == 2
+    assert res["state"] == "result_declared"
+    calls = _calls(tmp_path)
+    assert len(calls) == 2
+    first, second = calls[0]["argv"], calls[1]["argv"]
+    sid = first[first.index("--session-id") + 1]
+    run_dir = Path(res["run_dir"])
+    assert second == [
+        "--resume",
+        sid,
+        "-p",
+        launcher.RESUME_NUDGE,
+        "--model",
+        "m",
+        "--settings",
+        str(run_dir / "hooks.json"),
+        "--add-dir",
+        str(dataset.resolve()),
+        "--dangerously-skip-permissions",
+        "--fence",
+        "blind",
+    ]
+    assert first[-2:] == ["--fence", "blind"]
+    assert _attempts(run_dir, "run.attempt.started") == [1, 2]
+    assert _attempts(run_dir, "run.attempt.ended") == [1, 2]
+    reports = _of(_events(run_dir), "agent.model_reported")
+    reported = [e for e in reports if e["payload"]["source"] == "launcher"]
+    assert len(reported) == 1
+
+
+def test_resume_limit(claude: Path, dataset: Path, tmp_path: Path) -> None:
+    res = _result(_start(dataset, "--model", "m", "--resume-attempts", "3"))
+    assert res["attempts"] == 3
+    assert res["state"] == "stopped_before_result"
+    assert len(_of(_events(res["run_dir"]), "run.finished")) == 1
+    assert len(_calls(tmp_path)) == 3
+
+
+def test_agent_closed_run_stops_loop(
+    claude: Path, dataset: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("FAKE_CLAUDE_MODE", "close_first")
+    res = _result(_start(dataset, "--model", "m", "--resume-attempts", "3"))
+    assert res["attempts"] == 1
+    assert len(_calls(tmp_path)) == 1
+
+
+def test_deadline_bounds_attempts(
+    claude: Path, dataset: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("FAKE_CLAUDE_MODE", "sleep")
+    started = time.monotonic()
+    res = _result(
+        _start(
+            dataset,
+            "--model",
+            "m",
+            "--time-limit",
+            "1",
+            "--deadline",
+            "3",
+            "--resume-attempts",
+            "5",
+        )
+    )
+    assert time.monotonic() - started < 25
+    assert 1 <= res["attempts"] <= 3
+    ev = _events(res["run_dir"])
+    for e in _of(ev, "run.attempt.started"):
+        assert e["payload"]["time_limit_s"] <= 3
+    reason = _of(ev, "run.finished")[0]["payload"]["reason"]
+    assert reason in ("deadline", "time limit")
+
+
+def test_signal_ends_resume_loop(
+    claude: Path, dataset: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import signal
+    import threading
+
+    monkeypatch.setenv("FAKE_CLAUDE_MODE", "sleep")
+    threading.Timer(2.0, lambda: os.kill(os.getpid(), signal.SIGTERM)).start()
+    res = _start(dataset, "--model", "m", "--resume-attempts", "3", "--time-limit", "30")
+    assert res.exit_code == 128 + int(signal.SIGTERM), res.output
+    assert len(_calls(tmp_path)) == 1
+
+
+def test_resume_refused_interactive_or_opencode(
+    claude: Path, dataset: Path, tmp_path: Path
+) -> None:
+    res = _start(dataset, "--model", "m", "--interactive", "--resume-attempts", "2")
+    assert res.exit_code == 2
+    res = _start(dataset, "--harness", "opencode", "--model", "m", "--resume-attempts", "2")
+    assert res.exit_code == 2
+    res = _start(dataset, "--model", "m", "--resume-attempts", "0")
+    assert res.exit_code == 2
+    assert _run_folders(tmp_path) == []
+
+
+def test_default_run_has_one_attempt(claude: Path, dataset: Path, tmp_path: Path) -> None:
+    res = _result(_start(dataset, "--model", "m"))
+    assert res["attempts"] == 1
+    assert _attempts(res["run_dir"], "run.attempt.started") == [1]
+    assert len(_calls(tmp_path)) == 1
