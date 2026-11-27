@@ -1,6 +1,6 @@
 # CASE blind-UAT harness
 
-Runs `/lucy-ng:case` **blind** on sanitised NMR datasets at scale, in isolated
+Runs `/ailsa:case` **blind** on sanitised NMR datasets at scale, in isolated
 **headless** `claude` processes, and grades each run's structure against a
 ground-truth table with RDKit — so a run's correctness is verified automatically,
 not by eye.
@@ -30,7 +30,7 @@ NMR + molecular formula alone. Any leak of the answer invalidates the result, so
 
 | Script | Role |
 |--------|------|
-| `blind_case_run.sh <CASE_DIR> <RESULTS_DIR> [full\|smoke]` | One blind run. Fresh headless `claude -p "/lucy-ng:case …"`, resume-on-stall backstop, relocates `analysis/` into the results dir, writes `meta.json`. `smoke` = 1-iteration pipeline check. |
+| `blind_case_run.sh <CASE_DIR> <RESULTS_DIR> [full\|smoke]` | One blind run. Fresh headless `claude -p "/ailsa:case …"`, resume-on-stall backstop, relocates `analysis/` into the results dir, writes `meta.json`. `smoke` = 1-iteration pipeline check. |
 | `blind_case_batch.py [--all \| CASE… ] -k N --mode full` | Drives many datasets with concurrency `N`, resumable (skips done), optional answer-key lockout, writes `summary.tsv`. |
 | `grade_blind.py [--results DIR]` | Extracts each run's top structure, computes InChIKey (RDKit), compares to ground truth → `SOLVED_TOP1` / `CORRECT_RANK_n` / `WRONG` / `NO_RESULT`. Writes `scorecard.tsv`. |
 
@@ -38,7 +38,7 @@ NMR + molecular formula alone. Any leak of the answer invalidates the result, so
 
 - `claude` CLI (headless `-p`, agent-teams). The batch sets
   `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`.
-- `lucy` on `PATH` (or a `.venv/bin` in the repo root — auto-added).
+- `ailsa` on `PATH` (or a `.venv/bin` in the repo root — auto-added).
 - `grade_blind.py` needs **RDKit**: `pip install rdkit`.
 
 ## Configuration (env vars)
@@ -47,13 +47,15 @@ NMR + molecular formula alone. Any leak of the answer invalidates the result, so
 |-----|---------|---------|
 | `CASE_DATA_DIR` | batch | **required** — dir holding the `CASE<name>/` dataset folders |
 | `CASE_RESULTS_DIR` | all | results root (default: `./results`, gitignored) |
-| `CLAUDE_BIN` | run | claude binary (default: `claude` on PATH). Pin it for comparability — the 102 baseline runs used 2.1.204/205. |
-| `CASE_PROJECT_DIR` | run | lucy-ng repo root for `.venv/bin` (default: this repo) |
-| `CLAUDE_MODEL` | run | **required** — model id, e.g. `claude-opus-5`. No default: an unattributable benchmark is worthless, and the old `claude-opus-4-8` default silently outlived its session default. |
+| `CLAUDE_BIN` | run | claude binary (default: `claude` on PATH); an installed Claude Code >= 2.1.280 (Opus 5.5). Pin it for comparability within a series. |
+| `CASE_PROJECT_DIR` | run | ailsa repo root for `.venv/bin` (default: this repo) |
+| `CLAUDE_MODEL` | run | **required** — model id, e.g. `claude-opus-5-5` (verified on the compute host). No default: an unattributable benchmark is worthless, and the old `claude-opus-4-8` default silently outlived its session default. |
 | `CASE_GROUNDTRUTH` | grade | **required for grading** — TSV path (see below); never committed |
 | `CASE_ANSWERKEY_PATHS` | batch | optional `:`-separated files/dirs to hard-lock during the batch |
 | `CASE_STASH_DIR` | batch | where locked-out paths are stashed (default `~/.case-uat-stash`) |
 | `CASE_RUN_MAX_ATTEMPTS` / `CASE_RUN_CALL_TIMEOUT` / `CASE_RUN_DEADLINE_S` | run | resume-loop bounds (defaults 8 / 3600 / 9000) |
+
+The answer key is not on the compute host, so `CASE_ANSWERKEY_PATHS` stashes nothing there today; blindness rests on the key being absent.
 
 ### Ground-truth TSV (`CASE_GROUNDTRUTH`)
 

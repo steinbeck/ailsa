@@ -14,7 +14,8 @@ WHERE THE NUMBERS COME FROM
     `display.externalUsageWritePath`; this watchdog reads that file.
 
     Consequence, and it is deliberate: the snapshot only refreshes while a
-    Claude Code session renders its statusline on this Mac. If the snapshot
+    Claude Code session renders its statusline on the watchdog's machine (vitus;
+    the watchdog runs in a herdr pane, see scripts/README.md). If the snapshot
     goes stale the watchdog launches nothing. No data means no burn -- the
     benchmark therefore progresses only while you are actually at the machine,
     which is also exactly when you need the headroom it is protecting.
@@ -49,13 +50,12 @@ REMOTE_HARNESS = "tests/case-benchmark/blind_case_batch.py"
 # The harness takes its paths from the environment, not from flags -- omitting
 # CASE_DATA_DIR makes it resolve datasets against '.' and silently report
 # skip(no-dataset) for every case, which looks like a completed chunk.
-# Every file that maps a CASE number to its answer. The lockout below physically
-# moves all of them for the duration of a batch. It listed only
-# downloaded_datasets.tsv until 2026-09-09, while three further files in the same
-# directory carried the same answers -- case-index-fuer-lehre.tsv and
-# case-smiles.txt (both written during the 2026-09 analysis) and STATUS.md. Runs
-# use --dangerously-skip-permissions, so the prompt fence is not a barrier; only
-# the physical move is. When a new answer-bearing file appears, add it HERE.
+# Files that once mapped a CASE number to its answer. The answer files were
+# moved off Sheldon, so the lockout below is a no-op today: it moves nothing,
+# and blindness rests on the key being absent from the host. The list stays so
+# the lockout works again if an answer-bearing file is ever put back; add it
+# HERE. Runs use --dangerously-skip-permissions, so the prompt fence is not a
+# barrier; only absence (or the physical move) is.
 _ASSEMBLY = "/mnt/raid_drive/chris/nmr-dataset-assembly"
 REMOTE_TRUTH_PATHS = [
     f"{_ASSEMBLY}/downloaded_datasets.tsv",
@@ -67,18 +67,17 @@ REMOTE_TRUTH = REMOTE_TRUTH_PATHS[0]  # ordering source; see heavy() in the laun
 REMOTE_ENV = {
     "CASE_DATA_DIR": REMOTE_DATA,
     "CASE_RESULTS_DIR": REMOTE_RESULTS,
-    # blind_case_run.sh defaults to claude-opus-4-8, which is what the first
-    # 102 runs used. Pinning Opus 5 from here on is deliberate -- note that it
-    # makes the two halves of the benchmark not strictly comparable.
-    "CLAUDE_MODEL": "claude-opus-5",
-    # Pin the CLI for comparability, not because anything is broken: the 102
-    # baseline runs used 2.1.204/205, so holding it fixed keeps a later
-    # difference attributable to the model. ("Execution error" in a run log
-    # is `claude -p` being killed by the 3600 s call timeout, not a fault --
-    # see blind_case_run.sh.)
-    "CLAUDE_BIN": "/home/chris/.local/share/claude/versions/2.1.205",
-    # Hard blindness lockout: the harness physically moves this file to
-    # CASE_STASH_DIR for the batch and restores it in a finally. That is why
+    # Opus 5.5 is the model of the current series; the paper benchmark ran an
+    # earlier model, so the two are not strictly comparable.
+    "CLAUDE_MODEL": "claude-opus-5-5",
+    # Pin the CLI for comparability within a series. The paper benchmark ran
+    # on Claude Code 2.1.205 (recorded in docs/BENCHMARK.md); Opus 5.5 needs
+    # 2.1.280 or later. ("Execution error" in a run log is `claude -p` being
+    # killed by the 3600 s call timeout, not a fault -- see blind_case_run.sh.)
+    "CLAUDE_BIN": "/home/chris/.local/share/claude/versions/2.1.332",
+    # Lockout (a no-op today, the key is no longer on Sheldon): the harness
+    # would physically move these files to
+    # CASE_STASH_DIR for the batch and restore them in a finally. That is why
     # this watchdog never kills a chunk -- a SIGKILL skips the finally and
     # leaves the ground truth stashed.
     "CASE_ANSWERKEY_PATHS": ":".join(REMOTE_TRUTH_PATHS),
@@ -187,8 +186,8 @@ DEFAULT_POLL_SECONDS = 300
 DEFAULT_MAX_SNAPSHOT_AGE = 900  # 15 min
 
 
-# Datasets deliberately out of the benchmark. CASE217 is ethane -- degenerate
-# and mislabelled; `CASE-UAT-LOG.md` records "remove CASE217" as a follow-up.
+# Datasets deliberately out of the benchmark. CASE217 is degenerate and
+# mislabelled; `CASE-UAT-LOG.md` records "remove CASE217" as a follow-up.
 # It never produces a final_results.md, so without this it would be retried
 # on every pass.
 RETIRED = {"CASE217"}
@@ -402,7 +401,7 @@ pkill -KILL -f '[b]lind_case_batch.py' 2>/dev/null || true
 pkill -TERM -f '[t]imeout 3600' 2>/dev/null || true
 sleep 3
 pkill -KILL -f '[t]imeout 3600' 2>/dev/null || true
-pkill -KILL -f '[c]laude -p /lucy-ng:case' 2>/dev/null || true
+pkill -KILL -f '[c]laude -p /ailsa:case' 2>/dev/null || true
 pkill -KILL -f '[c]laude --resume' 2>/dev/null || true
 
 # Whatever the finally did or did not manage, reconcile against the manifest.

@@ -1,6 +1,6 @@
 """Blind CASE UAT batch driver.
 
-Runs lucy-ng:case blind on many sanitised datasets via isolated headless
+Runs ailsa:case blind on many sanitised datasets via isolated headless
 `claude` processes (blind_case_run.sh), sequentially bounded by a concurrency
 limit. Resumable (skips runs that already have meta.json).
 

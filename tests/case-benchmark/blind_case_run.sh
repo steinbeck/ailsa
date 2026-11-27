@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# blind_case_run.sh — run ONE blind lucy-ng:case elucidation on a sanitised
+# blind_case_run.sh — run ONE blind ailsa:case elucidation on a sanitised
 # dataset in a fresh, isolated, headless `claude` process, with a resume-on-stall
 # backstop.
 #
@@ -20,7 +20,7 @@
 # Usage: blind_case_run.sh <CASE_DIR> <RESULTS_DIR> [full|smoke]
 #
 # Env (see README.md):
-#   CASE_PROJECT_DIR   lucy-ng repo root (for .venv/bin). Default: repo of this script.
+#   CASE_PROJECT_DIR   ailsa repo root (for .venv/bin). Default: repo of this script.
 #   CLAUDE_MODEL       model id. REQUIRED, no default.
 #   CLAUDE_BIN         claude binary to use. Default: `claude` on PATH.
 #   CASE_ANSWERKEY_DIR optional dir the fence explicitly forbids reading.
@@ -34,18 +34,13 @@ CASE_DIR="$1"; RESULTS_DIR="$2"; MODE="${3:-full}"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 CASE_PROJECT_DIR="${CASE_PROJECT_DIR:-$(cd "$SCRIPT_DIR/../.." && pwd)}"
 # Which `claude` binary runs the benchmark. The reason to pin is
-# comparability: the 102 baseline runs used 2.1.204/205, so holding the CLI
-# fixed keeps a later difference attributable to the model rather than to
-# the toolchain.
+# comparability: holding the CLI fixed within a series keeps a later
+# difference attributable to the model rather than to the toolchain. The
+# paper benchmark ran on Claude Code 2.1.205 (recorded in docs/BENCHMARK.md);
+# Opus 5.5 needs 2.1.280 or later.
 #
-# It is NOT because 2.1.224 is broken. An earlier note here claimed that,
-# on the strength of "Execution error" appearing in a run log. That line is
-# what `claude -p` emits when `timeout` kills it -- CASE_RUN_CALL_TIMEOUT is
-# 3600 s, and any case needing longer hits it once per attempt and is
-# resumed, which is exactly what the resume-backstop exists for. CASE104 hit
-# it three times and solved anyway (kaempferol, 4 iterations, ~2.5 h). The
-# baseline runs show none of it only because they finished inside the hour
-# (typical runtimes 1700-2100 s).
+# "Execution error" in a run log is the call timeout (CASE_RUN_CALL_TIMEOUT,
+# 3600 s) killing `claude -p`, not a fault; the resume backstop continues it.
 CLAUDE_BIN="${CLAUDE_BIN:-claude}"
 
 # No silent default. A benchmark whose model is implicit is unreadable six
@@ -54,7 +49,7 @@ CLAUDE_BIN="${CLAUDE_BIN:-claude}"
 # Name the model or the run does not start.
 if [ -z "${CLAUDE_MODEL:-}" ]; then
   echo "CLAUDE_MODEL is unset. Benchmark runs must name their model explicitly" >&2
-  echo "  so results stay attributable, e.g. CLAUDE_MODEL=claude-opus-5" >&2
+  echo "  so results stay attributable, e.g. CLAUDE_MODEL=claude-opus-5-5" >&2
   exit 2
 fi
 CASE_ANSWERKEY_DIR="${CASE_ANSWERKEY_DIR:-}"
@@ -74,7 +69,7 @@ if [ -z "$MF_FILE" ]; then
 fi
 MF="$(tr -d '[:space:]' < "$MF_FILE")"
 
-# put lucy on PATH if a repo venv exists
+# put ailsa on PATH if a repo venv exists
 [ -d "$CASE_PROJECT_DIR/.venv/bin" ] && export PATH="$CASE_PROJECT_DIR/.venv/bin:$PATH"
 
 # No dashboard for benchmark runs. case.md launches one per run and
@@ -99,7 +94,7 @@ NUDGE="Continue the in-progress CASE workflow for ${CASE_DIR} (formula ${MF}). T
 run_claude () { # $1 new|resume
   if [ "$1" = new ]; then
     CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1 timeout "$CALL_TIMEOUT" \
-      "$CLAUDE_BIN" -p "/lucy-ng:case $CASE_DIR $MF$SMOKE" --session-id "$SID" \
+      "$CLAUDE_BIN" -p "/ailsa:case $CASE_DIR $MF$SMOKE" --session-id "$SID" \
       --model "$CLAUDE_MODEL" --dangerously-skip-permissions \
       --append-system-prompt "$FENCE" --add-dir "$CASE_DIR" \
       >> "$RESULTS_DIR/run.log" 2>&1
