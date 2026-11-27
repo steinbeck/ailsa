@@ -22,12 +22,16 @@ are two skills, and how they are kept apart: [SKILLS.md](SKILLS.md).
 
 | Step | The model | Commands it uses | Reference file |
 |---|---|---|---|
-| 1 | picks peaks, decides multiplicities, hybridisation and heteroatoms, writes `analysis/setup.md` | `ailsa pick`, `ailsa detect`, `ailsa analyze` | `nmr-analysis.md` |
-| 2 | writes each LSD file, checks it, runs LSD, adds HMBC correlations in batches, diagnoses failures | `ailsa lsd run`, `ailsa lsd validate-inventory` | `lsd-input.md`, `checks-and-diagnosis.md` |
-| 3 | ranks the candidates, checks identities, writes `analysis/final_results.md` | `ailsa lsd rank`, `ailsa predict c13`, `ailsa identify` | `ranking.md` |
+| 0 | checks the tools and creates the run record | `ailsa run init` | — |
+| 1 | picks peaks, decides multiplicities, hybridisation and heteroatoms, writes `setup.md` | `ailsa pick`, `ailsa detect`, `ailsa analyze`, `ailsa run note` | `nmr-analysis.md` |
+| 2 | writes each LSD file, checks it, runs LSD, adds HMBC correlations in batches, diagnoses failures | `ailsa lsd run`, `ailsa lsd validate-inventory`, `ailsa run note` | `lsd-input.md`, `checks-and-diagnosis.md` |
+| 3 | ranks the candidates, checks identities, declares the result | `ailsa lsd rank`, `ailsa predict c13`, `ailsa identify`, `ailsa run finalize` | `ranking.md` |
 
-The run's state is in files the model writes: `analysis/setup.md`, `analysis/iterations.md` and
-one `analysis/iteration_NN/compound.lsd` per solver run.
+`ailsa run init DATASET` creates the run record ([RUN-RECORD.md](RUN-RECORD.md)) in the workspace
+and prints the run's work folder; the model works there and never writes into the dataset. The
+run's state is in files the model writes in that folder: `setup.md`, `iterations.md` and one
+`iteration_NN/compound.lsd` per solver run. The model does not write the report: it declares the
+result with `ailsa run finalize`, and the report is generated from the record.
 
 ## Install
 
@@ -104,21 +108,32 @@ For a benchmark the model must see nothing but the spectra and the formula:
 - `OPENCODE_DISABLE_CLAUDE_CODE=1` stops OpenCode from reading Claude Code files
   (`~/.claude/CLAUDE.md`, `.claude/skills`), which may carry notes from earlier work.
 - Keep `webfetch` and `websearch` denied (see the configuration above).
-- Grade from `analysis/ranking_results.json` (the ranked candidates as SMILES, written by
-  `ailsa lsd rank --format json`) or the table in `analysis/final_results.md`.
+- Keep earlier runs on the same data out of the run workspace (`AILSA_WORKSPACE`, see
+  [RUN-RECORD.md](RUN-RECORD.md)): the agent can read it. `ailsa run init --blind` refuses to
+  start when it finds such runs, but this guards against accident only.
+- Grade from the run folder, not from the dataset: the rendered `renderings/final_results.md`
+  (the declared candidate with its SMILES and the top-10 table) or the ranking files in
+  `rankings/` (one `rkNN.json` per ranking; the declaration names the one it used).
 
 ## Results
 
-| File in `DATASET/analysis/` | Content |
+Everything lands in the run folder in the workspace ([RUN-RECORD.md](RUN-RECORD.md)); the dataset
+is left unchanged.
+
+| File in the run folder | Content |
 |---|---|
-| `final_results.md` | proposed structure, assessment, top candidates, confidence |
-| `ranking_results.json` | the ranked candidates (SMILES, errors) from `ailsa lsd rank` |
-| `setup.md` | peaks, atoms with the evidence for each, correlations, open questions |
-| `iterations.md` | one entry per solver run: constraints added and removed, solution count |
-| `iteration_NN/` | the LSD file the model wrote, the solver output and the SMILES of each run |
+| `renderings/final_results.md` | generated from the declaration: proposed structure, confidence, caveats, top candidates |
+| `renderings/CASE-PROGRESS.md` | generated progress log: every tool step, note and the declaration in time order |
+| `rankings/rkNN.json` | each ranking `ailsa lsd rank` made (SMILES, errors), with its id |
+| `agent/setup.md` | peaks, atoms with the evidence for each, correlations, open questions |
+| `agent/iterations.md` | one entry per solver run: constraints added and removed, solution count |
+| `agent/iteration_NN/` | the LSD file the model wrote, the solver output and the SMILES of each run |
+
+Regenerate the two reports with `ailsa run render`; never edit them by hand.
 
 ## Status
 
+Version 0.3 writes the run record instead of files in the dataset; otherwise it is version 0.2.
 Version 0.2: the same tools and rules as the full AILSA skill, the model does the work itself.
 Version 0.1 had moved that work into scripts; on 40 blind benchmark datasets the model then could
 add nothing to what the scripts found (see [SKILLS.md](SKILLS.md)). Version 0.2 is being measured

@@ -122,6 +122,11 @@ the skill checks on every commit that touches `src/ailsa/skills/` or the skill t
 - **Commands:** the contract test from Rule 2.
 - **Frontier skill:** `tests/test_skill_frontier.py` (size, contents table, history, datasets,
   model IDs, dead references, terms, emphasis, DB credit).
+- **Record contract:** `tests/test_skill_frontier_record.py`, also run by the pre-commit hook:
+  the frontier skill creates the record first, gives every agent the work folder, notes each
+  message, declares against a named ranking or closes the run, names every record command the lean
+  skill names, and no skill file writes into the dataset, a manifest, a timing log or the old web
+  view.
 - **Answer scan:** `tests/test_skill_answer_scan.py` (local, skipped without the key).
 - **Blindness:** no compound of the evaluation set appears in a skill, by name or by structure.
   This scan runs against the private answer key on the maintainer's machine and before every
@@ -154,14 +159,15 @@ turn; the devil's-advocate checks become a checklist it applies before every sol
 state of a run lives in files the agent writes (`setup.md`, `iterations.md`, one `compound.lsd`
 per iteration), because a small model must not rely on what it remembers.
 
-The lean skill writes the run record ([RUN-RECORD.md](RUN-RECORD.md)): `ailsa run init` is its
-first step, `ailsa run note` records step summaries and `ailsa run finalize` declares the result.
-Until the frontier skill is wired to the record, `run init`, `run note` and `run finalize` are the
-only commands the lean skill names that the frontier skill does not (an explicit allow-list in
-the contract test).
+Both skills write the same run record ([RUN-RECORD.md](RUN-RECORD.md)) with the same record
+commands, out of `run init`, `run note`, `run finalize`, `run close` and `run render`. The lean
+skill's first step is `ailsa run init`, `ailsa run note` records step summaries and
+`ailsa run finalize` declares the result (and renders the reports). The frontier coordinator uses
+the same three and, for its exit paths, `run close` and `run render` (see "Team runs" in
+RUN-RECORD.md). Every record command the lean skill names is therefore named by the frontier
+skill too, and the contract test needs no exception for them.
 
-Left out on purpose: messages between agents, the dashboard, timing stamps,
-model-disclosure gates.
+Left out on purpose: messages between agents, timing stamps, model-disclosure gates.
 
 ## Version 0.1, withdrawn
 

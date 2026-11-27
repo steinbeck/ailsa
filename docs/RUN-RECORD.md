@@ -2,8 +2,8 @@
 
 Every CASE run leaves a record: what the agent was given, what each tool did, which rankings
 existed and which result the agent declared. The record lives in the `ailsa` package, so every
-skill and every harness can use it. The lean skill writes it today ([SKILLS.md](SKILLS.md));
-the frontier skill follows when it is wired to it.
+skill and every harness can use it. Both maintained skills write it, the lean skill `ailsa-lite`
+and the frontier skill `ailsa` ([SKILLS.md](SKILLS.md)).
 
 ## Contents
 
@@ -12,6 +12,7 @@ the frontier skill follows when it is wired to it.
 - [Workspace and configuration](#workspace-and-configuration)
 - [Environment variables](#environment-variables)
 - [Starting a run](#starting-a-run)
+- [Team runs](#team-runs)
 - [Commands](#commands)
 - [Hooks for open sessions](#hooks-for-open-sessions)
 - [Remote solves](#remote-solves)
@@ -36,7 +37,7 @@ One folder per run inside the workspace:
 | Part | Content |
 |---|---|
 | record files | the event log (hash chained), the manifest of registered files, the run summary |
-| `agent/` | the agent's working corner: `setup.md`, `iterations.md`, the LSD files. Not verified by the record unless a tool registers them |
+| `agent/` | the agents' working corner (the `WORK:` folder): the lean skill's `setup.md` and `iterations.md`, the LSD files in `iteration_NN/`, the frontier diagnostic specialist's report. Not verified by the record unless a tool registers them |
 | `iterations/` | solver inputs and outputs written by `ailsa lsd run` |
 | `rankings/` | every ranking `ailsa lsd rank` made, with an id |
 | `peaks/` | picked peak lists |
@@ -86,6 +87,50 @@ Two ways, one record:
 Tools find their run through `AILSA_RUN_DIR`, or else through the run bound to the current work
 folder. With `AILSA_REQUIRE_RUN=1` a tool that finds none stops.
 
+Launcher options for the skill and for long runs:
+
+| Option | Meaning |
+|---|---|
+| `--skill ailsa-lite\|ailsa` | which skill to run; default `ailsa-lite`. The lean skill is copied into the run's work folder. The frontier skill `ailsa` starts as `/ailsa:case DATASET [FORMULA]` and needs Claude Code and the global install (`ailsa skill install ailsa --target claude`); without either the launcher refuses before it creates a run folder. It sets `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` for the frontier skill. |
+| `--resume-attempts N` | headless Claude Code only; default 1. When the harness ends before the run is settled, the launcher resumes the same session (`claude --resume`) with a short nudge to finish and declare, inside the same record. It stops when the run declares a result or is closed, when it is interrupted, when the deadline passes, or after N attempts in total. |
+| `--deadline SECONDS` | total time over all attempts. Each attempt gets the smaller of `--time-limit` and the time left; a run stopped by the deadline is closed with the reason "deadline". |
+
+Whatever happens, the launcher closes the run once at the end (unless the agent already closed
+it), copies the transcripts and renders the reports.
+
+## Team runs
+
+The frontier skill runs a coordinator with specialists (NMR chemist, LSD engineer, solution
+analyst, devil's advocate, a diagnostic specialist on escalation). Its record follows the same
+rule as a lean run, agents decide and tools write, with one declarant:
+
+- **The coordinator creates the record first.** Started by slash command in an open session, its
+  first step after the environment checks is
+  `ailsa run init DATASET --formula F --skill ailsa --mode team`, before any team, task or spawn. Under the launcher the record already exists and `run init`
+  returns the launcher's run. Every specialist gets the absolute `WORK:` folder in its prompt; the
+  dataset stays read-only.
+- **A note per specialist message.** The coordinator records each validated structured message as
+  one `ailsa run note`, with the sending agent as sender, and keeps the fields that its loop
+  detection reads. Every hand-over to a specialist starts a phase: a note with `--phase` precedes
+  the push, so the record times each phase without separate stamps.
+- **Specialists' tool calls record themselves.** Solver rounds, rankings, identity checks and peak
+  lists are written by the tools a specialist calls, as in a lean run.
+- **The coordinator alone declares.** It runs `ailsa run finalize` once, naming the ranking id the
+  solution analyst reported (`--ranking rkNN`), because a team may make more than one ranking: the
+  analyst's cross-check ranking comes after the decisive one, so the newest ranking is the wrong
+  one. Every other exit closes the run with `ailsa run close`; both are followed by
+  `ailsa run render`.
+- **Messages, spawns and models come from the hooks.** Agent messages, spawns and the models the
+  harness saw are recorded by the recording hooks (always under the launcher; in an open session
+  after `ailsa run hooks install`). Without them the rendering says "not recorded by this
+  harness"; the tool events are recorded either way.
+- **Model evidence per agent.** For each agent the record keeps up to three statements of the
+  model it ran on: what the harness saw, what the transcript shows and what the agent said itself
+  (each specialist reports its model in its first message; the coordinator records it with
+  `ailsa run note "model reported" --sender <agent name> --self-reported-model <model>`). The
+  statements are joined by the agent's name; the self-report is marked provisional, because it is
+  what the agent said, not what the harness saw.
+
 ## Commands
 
 ```bash
@@ -96,8 +141,10 @@ ailsa run verify                                 # check the chain and the manif
 ailsa run render                                 # regenerate final_results.md and the progress log
 ailsa run index --rebuild                        # rescan the workspace
 ailsa run finalize --outcome proposal --ranking latest --candidate 1 --confidence medium
+ailsa run finalize --outcome proposal --ranking rk02 --candidate 1 --confidence medium  # a named ranking (team runs)
 ailsa run close --reason "abandoned"             # close without a declared result
-ailsa run start DATASET --model M                # launcher
+ailsa run start DATASET --model M                # launcher, lean skill
+ailsa run start DATASET --model M --skill ailsa --formula F --resume-attempts 4 --deadline 9000
 ailsa run hooks show                             # what `hooks install` would write
 ```
 
