@@ -472,17 +472,22 @@ ls -la ~/.claude/commands/ailsa ~/.claude/ailsa/references ~/.claude/agents/ails
 | A7 | Keeping the host DB at schema 3 for the acceptance run is what the user wants | Benchmark machinery | the user may prefer the schema-7 DB; both are available on Sheldon |
 | A8 | Skill version number for the first packaged frontier skill (suggest 0.1.0) | Packaging | cosmetic |
 
-## Open Questions
+## Open Questions (RESOLVED)
+
+Resolved 2026-11-27 by the orchestrator on the recommendations (the user was away and asked for no questions).
 
 1. **Which environment does the acceptance run use for the database (v3 vs v7)?**
    - What we know: host DB is v3; a v7 copy exists on Sheldon; D-10 says "today's configuration".
    - What's unclear: whether "today's" means the benchmark host as recorded or the current best.
    - Recommendation: v3, unchanged, because FREEZE-01 records v3 and the point is the chain, and say so in the report.
+   - RESOLVED: v3, unchanged; stated in the acceptance report (plans 106-14, 106-15).
 2. **Do `Agent(...)` calls in `case.md` need `model` at all after D-01?**
    - What we know: docs resolution order; today's coordinator passes the alias `opus`.
    - Unclear: whether omission changes which model the specialists get in headless runs (they should inherit the session model).
    - Recommendation: omit; the first message of each specialist reports its runtime model (D-01), so the acceptance run itself shows the result.
+   - RESOLVED: omitted; specialists report their runtime model (plan 106-09).
 3. **How is the pre-restructure baseline tagged?** Recommendation: one new local tag, not pushed by an executor; the user pushes tags with the rest.
+   - RESOLVED: local tag `frontier-skill-pre-106`, never pushed by an executor (plan 106-01).
 
 ## Environment Availability
 

@@ -52,7 +52,10 @@ Last activity: 2026-11-24 -- Phase 106.1 complete and verified
        named compounds in examples; team flow only reordered; skill moves into the package with
        `ailsa skill install ailsa` (link mode on our machines); one blind run plus a rule inventory;
        watchdog on vitus in a herdr pane instead of the LaunchAgent; main Sheldon checkout updated
-       after the restructuring; acceptance run on Opus 5.5). **Next: `/gsd-plan-phase 106`.**
+       after the restructuring; acceptance run on Opus 5.5). **Planned 2026-11-27:** 15 plans in 15
+       waves (strict chain), research + pattern map + validation strategy, checker passed on iteration 2.
+       User away, asked for the whole phase without questions: executing via `/gsd-execute-phase 106`
+       (no push; no rm; acceptance verdict left to the user in `106-HUMAN-UAT.md`).
        Original step: `/gsd-discuss-phase 106` (freeze, rename and restructure the skill), then
        `/gsd-plan-phase 106 --chain`. Prior research (local, uncommitted):
        `.planning/research/skill-rebuild/ailsa-skill-rebuild-plan.md` and

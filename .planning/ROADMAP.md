@@ -346,7 +346,24 @@ heteroatom-hybridisation and multiplicity variants, carbons seen only in 2D spec
   5. An automated skill-lint check enforces criterion 4 on every commit; a local check (answer key never in the repository) finds no benchmark compound by name or structure in any skill file.
   6. One blind CASE run on the compute host through the renamed command completes and grades, and the blind runner, watchdog scripts and LaunchAgent use the new command and paths.
 
-**Plans**: TBD
+**Plans**: 15 plans in 15 waves (planned 2026-11-27; strictly sequential on one checkout)
+
+Plans:
+- [ ] 106-01-PLAN.md — local baseline tag; `ailsa skill install` installs the command skill by copy or link, removes only old symlinks
+- [ ] 106-02-PLAN.md — rule-inventory tool (private output) with positive and negative controls
+- [ ] 106-03-PLAN.md — one mechanical commit moves the skill into `src/ailsa/skills/ailsa/` as `/ailsa:*` and `ailsa-*`, supervisor removed, tests repointed; link install on vitus
+- [ ] 106-04-PLAN.md — frontier skill lint with a PENDING set; local answer scan and teaching-set name check
+- [ ] 106-05-PLAN.md — NMR chemist and solution analyst restructured; shared multiplicity-ambiguity reference
+- [ ] 106-06-PLAN.md — shared LSD reference merged from two copies; LSD engineer restructured; constraint-inventory reference
+- [ ] 106-07-PLAN.md — diagnostic agent split into a core and three references; dead pointers removed
+- [ ] 106-08-PLAN.md — devil's advocate split and rewritten; benchmark example removed; gates kept
+- [ ] 106-09-PLAN.md — coordinator split into a core and five references; model reported, not compared; both workflows kept
+- [ ] 106-10-PLAN.md — remaining commands and references; PENDING empty; lint fully enforced; answer scan clean
+- [ ] 106-11-PLAN.md — rule-inventory meaning review by a fresh executor; D-06 counts
+- [ ] 106-12-PLAN.md — runner and watchdog call `/ailsa:case` with Claude Code 2.1.332 and Opus 5.5; LaunchAgent retired for a herdr pane; bootstrap; SKILL-04 and criterion 6 reworded
+- [ ] 106-13-PLAN.md — FREEZE-01 in BENCHMARK.md and SKILLS.md; docs point at the packaged skill; database help credit; todo closed
+- [ ] 106-14-PLAN.md — full gate and wheel check on Sheldon; main Sheldon checkout fast-forwarded and skill linked; headless `/ailsa:status`
+- [ ] 106-15-PLAN.md — blind acceptance run on Sheldon, graded on vitus; 106-HUMAN-UAT.md with the evidence and open verdicts
 
 #### Phase 106.1: Run record core (INSERTED 2026-11-24)
 
