@@ -76,15 +76,39 @@ def _remove_owned(dst: Path) -> None:
         dst.unlink()
 
 
-def _place(src: Path, dst: Path, link: bool, force: bool) -> str:
-    """Link or copy src to dst; return one output line."""
+def _inside(path: Path, base: Path) -> bool:
+    return path == base or base in path.parents
+
+
+def _destination_problem(dst: Path, root: Path, package: Path) -> str | None:
+    """Return why dst must not be written, or None.
+
+    Symlinks are resolved in every folder above dst, never in dst itself (an old link there
+    is replaced, not followed). A folder that resolves outside root, or a destination that
+    lands in the package's own skill files, would make the install delete or overwrite the
+    files it is about to install.
+    """
+    root_r = root.resolve()
+    parent_r = dst.parent.resolve()
+    if not _inside(parent_r, root_r):
+        return (
+            f"{dst.parent} resolves to {parent_r}, outside {root} (a symlinked folder?). "
+            "Refusing to write through it."
+        )
+    target = parent_r / dst.name
+    package_r = package.resolve()
+    if _inside(target, package_r) or _inside(package_r, target):
+        return (
+            f"{dst} resolves to {target}, inside the package's own skill files "
+            f"({package_r}). Refusing to write there."
+        )
+    return None
+
+
+def _place(src: Path, dst: Path, link: bool) -> str:
+    """Link or copy src to dst; return one output line. Call only after _preflight."""
     dst.parent.mkdir(parents=True, exist_ok=True)
-    if dst.is_symlink():
-        dst.unlink()
-    elif dst.exists():
-        if not force:
-            click.echo(f"Error: {dst} exists. Use --force to replace it.")
-            raise SystemExit(1)
+    if dst.is_symlink() or dst.exists():
         _remove_owned(dst)
     if link:
         dst.symlink_to(src, target_is_directory=src.is_dir())
@@ -109,14 +133,46 @@ def _drop_legacy(root: Path) -> list[str]:
     return lines
 
 
+def _plan(src_dir: Path, root: Path) -> list[tuple[Path, Path]]:
+    """(source, destination) of every file or folder the command skill places under root."""
+    pairs = [(src_dir / "commands", root / "commands" / "ailsa")]
+    pairs += [(a, root / "agents" / a.name) for a in sorted((src_dir / "agents").glob("*.md"))]
+    pairs.append((src_dir / "references", root / "ailsa" / "references"))
+    pairs.append((src_dir / "INDEX.md", root / "ailsa" / "INDEX.md"))
+    return pairs
+
+
+def _preflight(
+    pairs: list[tuple[Path, Path]], root: Path, package: Path, force: bool
+) -> list[str]:
+    """Every reason not to start, collected before anything on disk changes."""
+    problems: list[str] = []
+    legacy = [root / rel for rel in LEGACY_LINKS]
+    legacy = [p for p in legacy if p.is_symlink() or p.exists()]
+    for dst in [d for _, d in pairs] + legacy:
+        why = _destination_problem(dst, root, package)
+        if why:
+            problems.append(why)
+        elif dst not in legacy and not dst.is_symlink() and dst.exists() and not force:
+            problems.append(f"{dst} exists. Use --force to replace it.")
+    return problems
+
+
 def _install_command_skill(src_dir: Path, root: Path, link: bool, force: bool) -> list[str]:
-    """Install commands, agents and references of the command skill under root."""
+    """Install commands, agents and references of the command skill under root.
+
+    Two passes: every destination is checked first, and only a clean check lets the install
+    remove legacy links and place files. A refused install leaves the disk as it was.
+    """
+    pairs = _plan(src_dir, root)
+    problems = _preflight(pairs, root, src_dir.parent, force)
+    if problems:
+        for why in problems:
+            click.echo(f"Error: {why}")
+        click.echo("Nothing was changed.")
+        raise SystemExit(1)
     lines = _drop_legacy(root)
-    lines.append(_place(src_dir / "commands", root / "commands" / "ailsa", link, force))
-    for agent in sorted((src_dir / "agents").glob("*.md")):
-        lines.append(_place(agent, root / "agents" / agent.name, link, force))
-    lines.append(_place(src_dir / "references", root / "ailsa" / "references", link, force))
-    lines.append(_place(src_dir / "INDEX.md", root / "ailsa" / "INDEX.md", link, force))
+    lines += [_place(src, dst, link) for src, dst in pairs]
     return lines
 
 
@@ -200,6 +256,10 @@ def install_cmd(
         raise SystemExit(1)
     folder = Path(dest) if dest else TARGETS[target or "opencode"][1 if project else 0]
     destination = folder / name
+    why = _destination_problem(destination, folder, Path(info["path"]).parent)
+    if why:
+        click.echo(f"Error: {why}")
+        raise SystemExit(1)
     if destination.is_symlink() or destination.exists():
         if not force:
             click.echo(f"Error: {destination} exists. Use --force to replace it.")

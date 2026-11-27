@@ -6,6 +6,7 @@ real home folder.
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import pytest
@@ -171,6 +172,70 @@ def test_nothing_written_outside_root(fake_pkg: Path, root: Path, tmp_path: Path
     before = outside()
     assert _run("install", "ailsa", "--link", "--root", str(root))[0] == 0
     assert outside() == before
+
+
+def _state(tree: Path) -> list[tuple[str, str, str]]:
+    """Every entry under tree: (relative path, kind, content or link target)."""
+    out = []
+    for p in sorted(tree.rglob("*")):
+        rel = p.relative_to(tree).as_posix()
+        if p.is_symlink():
+            out.append((rel, "link", os.readlink(p)))
+        elif p.is_dir():
+            out.append((rel, "dir", ""))
+        else:
+            out.append((rel, "file", p.read_text()))
+    return out
+
+
+@pytest.mark.parametrize("mode", [["--link"], []], ids=["link", "copy"])
+def test_symlinked_folder_into_package_refused(
+    fake_pkg: Path, root: Path, mode: list[str]
+) -> None:
+    # ~/.claude/ailsa linked by hand to the package's skill folder: the obvious manual setup.
+    before = _state(fake_pkg)
+    root.mkdir(parents=True)
+    (root / "ailsa").symlink_to(fake_pkg / "ailsa", target_is_directory=True)
+    code, out = _run("install", "ailsa", *mode, "--force", "--root", str(root))
+    assert code == 1, out
+    assert "symlinked folder" in out
+    assert _state(fake_pkg) == before
+    assert not (root / "commands").exists()
+    assert not (root / "agents").exists()
+
+
+def test_root_resolving_into_package_refused(
+    fake_pkg: Path, root: Path, tmp_path: Path
+) -> None:
+    before = _state(fake_pkg)
+    root.parent.mkdir(parents=True, exist_ok=True)
+    root.symlink_to(fake_pkg / "ailsa", target_is_directory=True)
+    code, out = _run("install", "ailsa", "--link", "--force", "--root", str(root))
+    assert code == 1, out
+    assert "package's own skill files" in out
+    assert _state(fake_pkg) == before
+
+
+def test_refused_install_changes_nothing(fake_pkg: Path, root: Path, tmp_path: Path) -> None:
+    (root / "agents").mkdir(parents=True)
+    (root / "agents" / "ailsa-nmr-chemist.md").write_text("mine\n")
+    old = tmp_path / "lucy-ng" / ".claude" / "commands" / "lucy-ng"
+    old.mkdir(parents=True)
+    (root / "commands").mkdir()
+    (root / "commands" / "lucy-ng").symlink_to(old, target_is_directory=True)
+    before = _state(root)
+    code, out = _run("install", "ailsa", "--root", str(root))
+    assert code == 1
+    assert "--force" in out
+    assert "Nothing was changed" in out
+    assert _state(root) == before
+
+
+def test_lite_dest_inside_package_refused(fake_pkg: Path) -> None:
+    before = _state(fake_pkg)
+    code, out = _run("install", "ailsa-lite", "--dest", str(fake_pkg), "--force")
+    assert code == 1, out
+    assert _state(fake_pkg) == before
 
 
 def test_lite_install_unchanged(fake_pkg: Path, tmp_path: Path) -> None:
