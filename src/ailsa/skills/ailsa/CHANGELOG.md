@@ -33,7 +33,8 @@ Applies to: ailsa (frontier skill) only.
   19 found at another place, 8 merged duplicates, 18 removed examples that named a compound or
   dataset, 10 project-history notes, 2 model IDs, 1 dead reference. Of the 406 rules that used
   capital-letter emphasis, 388 now carry their reason and 18 have no known reason. One blind
-  acceptance run checks the renamed chain (result to follow).
+  acceptance run, on a benchmark dataset that the paper skill had solved at rank 1, completed on
+  its first attempt through `/ailsa:case` and placed the true structure at rank 1.
 - Rules kept without a known reason: 18. They are marked for measurement before the workflow is
   rewritten (planning phase 109). The list is in the maintainer's private inventory folder
   `~/Dropbox/develop/data/skill-rule-inventory-106/` (files `reasons-*.tsv`, column
