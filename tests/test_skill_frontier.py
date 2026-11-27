@@ -43,7 +43,11 @@ PENDING: frozenset[str] = frozenset(
     {f"commands/{c}.md" for c in COMMANDS}
     | {f"agents/{a}.md" for a in AGENTS}
     | {f"references/{r}.md" for r in REFS}
-) - {"agents/ailsa-nmr-chemist.md", "agents/ailsa-solution-analyst.md"}
+) - {
+    "agents/ailsa-nmr-chemist.md",
+    "agents/ailsa-solution-analyst.md",
+    "agents/ailsa-lsd-engineer.md",
+}
 _ACTIVE_PENDING: frozenset[str] = (
     frozenset() if os.environ.get("AILSA_LINT_IGNORE_PENDING") == "1" else PENDING
 )

@@ -31,6 +31,7 @@ A coordinator command runs the workflow and hands the chemistry to four speciali
 ## References
 
 - [advisory-templates](references/advisory-templates.md): message templates between agents
+- [constraint-inventory](references/constraint-inventory.md): the constraint record at the top of every LSD file, how it is built and carried forward
 - [loop-patterns](references/loop-patterns.md): iteration and stopping patterns
 - [lsd-reference](references/lsd-reference.md): LSD commands, filter block, running LSD and the checklist before every run
 - [lsd-search](references/lsd-search.md): what LSD searches: DUPL/MAXS, fragment goodlist, per-family multiplicity search

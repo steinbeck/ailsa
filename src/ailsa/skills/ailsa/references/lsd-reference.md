@@ -17,7 +17,7 @@ Syntax examples use atom numbers and shifts only. Everything after `;` on a line
 - Heteroatom constraints need evidence
 - Equivalent atoms: BOND and COSY instead of SYME
 - Hybridisation: an even number of sp2 atoms
-- ELIM: tolerance for 4J correlations
+- ELIM escalation: tolerance for 4J correlations
 - Filter block: ring exclusion and the single FEXP line
 - Running LSD
 - Solution count
@@ -267,7 +267,7 @@ same multiplicity (both CH, both CH3).
 LSD requires an even number of sp2 atoms: each double bond connects two sp2 atoms. Count all sp2
 atoms, heteroatoms included, before running. If the count is odd, adjust one atom.
 
-## ELIM: tolerance for 4J correlations
+## ELIM escalation: tolerance for 4J correlations
 
 `ELIM P1 P2`: P1 is the maximum number of correlations that may be eliminated, P2 the maximum
 bond distance (0 = no limit). P2 is always 0.
@@ -380,7 +380,7 @@ available.
    heteroatom BOND from a single detect-neighbours value, especially a "typical" (about 0.5-0.9)
    value or when carbon is the dominant neighbour. The DA's G-PROP-EVIDENCE gate blocks it.
 7. No ELIM on the first run. ELIM is added only after all HMBC lines are included and 0 plausible
-   solutions remain (see ELIM).
+   solutions remain (see ELIM escalation).
 8. Ring exclusion DEFF F1 "ring3" and DEFF F2 "ring4" present, and exactly one FEXP line:
    `FEXP "NOT F1 AND NOT F2"`, or `FEXP "F3 AND NOT F1 AND NOT F2"` with a fragment.
 9. The constraint inventory block is present at the top of the file with correct counts.
