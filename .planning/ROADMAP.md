@@ -431,7 +431,21 @@ decisions in `106.1-CONTEXT.md`.
      command for prose, and ends with `ailsa run finalize`; `CASE-PROGRESS.md` and
      `final_results.md` are renderings.
   3. The old web view (`ailsa webview`, its package code and the skill's auto-launch) is removed.
-**Plans**: TBD
+**Plans**: 12 plans in 9 waves (planned 2026-11-27; executed one after another on one checkout)
+
+Plans:
+- [ ] 106.2-01-PLAN.md — package: model reports joined per agent, teammate names recorded, frontier skill version and installed files in the environment record
+- [ ] 106.2-02-PLAN.md — coordinator creates the record first, notes every message, declares or closes every run; run-record reference; web-view launch, timing and dataset manifest removed from the skill
+- [ ] 106.2-03-PLAN.md — launcher starts the frontier skill (`--skill ailsa`) and resumes a headless run inside one record (`--resume-attempts`, `--deadline`)
+- [ ] 106.2-04-PLAN.md — the five agents work in the run's work folder; analyst reports the ranking id instead of writing a report; name gate before the declaration
+- [ ] 106.2-05-PLAN.md — old web view removed (code, command, tests, extra, docs) with a structural test
+- [ ] 106.2-06-PLAN.md — references on notes, phases and the generated progress log; work-folder paths
+- [ ] 106.2-07-PLAN.md — whole-skill contract, both skills share the record commands, docs, independent chemistry-neutrality review
+- [ ] 106.2-08-PLAN.md — benchmark runner on the launcher; graders read the rendered results (separable, OD-6)
+- [ ] 106.2-09-PLAN.md — full gate and wheel on Sheldon; main Sheldon checkout fast-forwarded and skill linked
+- [ ] 106.2-10-PLAN.md — headless proof run on the public example dataset
+- [ ] 106.2-11-PLAN.md — interactive team proof run in tmux; owner checkpoint on the record and on teammate recording
+- [ ] 106.2-12-PLAN.md — document what the proof runs showed; owner acceptance file
 
 #### Phase 107: Evaluation bench and team-mode spike
 
