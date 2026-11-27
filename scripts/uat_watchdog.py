@@ -30,6 +30,7 @@ from __future__ import annotations
 import argparse
 import base64
 import json
+import posixpath
 import shlex
 import subprocess
 import sys
@@ -44,8 +45,18 @@ SSH = ["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=15", "-p", "2222",
 
 REMOTE_REPO = "/mnt/raid_drive/chris/lucy-ng"
 REMOTE_DATA = "/mnt/raid_drive/chris/case-data"
-REMOTE_RESULTS = "/mnt/raid_drive/chris/case-uat-results"
 REMOTE_HARNESS = "tests/case-benchmark/blind_case_batch.py"
+
+# The paper benchmark's result folders. They are frozen: the watchdog has no default results
+# folder and refuses these outright, because a "safe to re-run" launch would otherwise file
+# runs of the current model under an earlier model's arm. Any other folder is refused too once
+# it holds a run whose meta.json names another model, or none (see check_results_dir).
+PAPER_RESULT_DIRS = frozenset({
+    "/mnt/raid_drive/chris/case-uat-results",
+    "/mnt/raid_drive/chris/case-uat-results-opus5-paired",
+    "/mnt/raid_drive/chris/case-uat-results-opus5-rest",
+    "/mnt/raid_drive/chris/case-uat-results-opus5-baseline",
+})
 
 # The harness takes its paths from the environment, not from flags -- omitting
 # CASE_DATA_DIR makes it resolve datasets against '.' and silently report
@@ -66,7 +77,7 @@ REMOTE_TRUTH_PATHS = [
 REMOTE_TRUTH = REMOTE_TRUTH_PATHS[0]  # ordering source; see heavy() in the launcher
 REMOTE_ENV = {
     "CASE_DATA_DIR": REMOTE_DATA,
-    "CASE_RESULTS_DIR": REMOTE_RESULTS,
+    # CASE_RESULTS_DIR is set per launch from the required --results-dir.
     # Opus 5.5 is the model of the current series; the paper benchmark ran an
     # earlier model, so the two are not strictly comparable.
     "CLAUDE_MODEL": "claude-opus-5-5",
@@ -499,7 +510,7 @@ print("\\n".join(sorted(todo - done)))
 """
 
 
-def pending_cases(results_dir: str = REMOTE_RESULTS) -> tuple[list[str], set[str]]:
+def pending_cases(results_dir: str) -> tuple[list[str], set[str]]:
     """Return (runnable cases in natural order, skipped-as-contaminated).
 
     Done means the run produced a `final_results.md`, OR a `meta.json`
@@ -521,6 +532,45 @@ def pending_cases(results_dir: str = REMOTE_RESULTS) -> tuple[list[str], set[str
     tainted = contaminated_cases()
     blocked = {c for c in cases if c in tainted or c in RETIRED}
     return [c for c in cases if c not in blocked], blocked
+
+
+_MODEL_PROBE = """
+import glob, json, sys
+models = set()
+for p in glob.glob(sys.argv[1] + "/CASE*/meta.json"):
+    try:
+        models.add(json.load(open(p)).get("model") or "<not recorded>")
+    except Exception:
+        models.add("<unreadable meta.json>")
+print("\\n".join(sorted(models)))
+"""
+
+
+def results_models(results_dir: str) -> set[str]:
+    """The models named by the meta.json files already in a remote results folder."""
+    probe = base64.b64encode(_MODEL_PROBE.encode()).decode()
+    out = ssh_run(f"echo {probe} | base64 -d | python3 - {shlex.quote(results_dir)}")
+    return {line.strip() for line in out.splitlines() if line.strip()}
+
+
+def check_results_dir(results_dir: str, model: str, models: set[str]) -> str | None:
+    """Return why a series on `model` must not write into results_dir, or None.
+
+    A results folder belongs to one model. Runs from before model recording carry no model
+    and count as foreign, so the paper arms and every older folder are refused even if they
+    are missing from PAPER_RESULT_DIRS.
+    """
+    if not results_dir.startswith("/"):
+        return f"--results-dir must be an absolute path on Sheldon, got {results_dir!r}"
+    norm = posixpath.normpath(results_dir)
+    if norm in PAPER_RESULT_DIRS:
+        return (f"{norm} holds the paper benchmark's results and is frozen; "
+                f"name a new folder for this series")
+    foreign = sorted(models - {model})
+    if foreign:
+        return (f"{norm} already holds runs of {', '.join(foreign)}; a series must not "
+                f"mix models ({model} now) -- name a new folder")
+    return None
 
 
 def describe_blocked(blocked: set[str]) -> str:
@@ -565,7 +615,7 @@ def preflight() -> None:
 
 
 def launch(cases: list[str], concurrency: int, dry_run: bool,
-           results_dir: str = REMOTE_RESULTS, deadline: int = 0) -> None:
+           results_dir: str, deadline: int = 0) -> None:
     joined = " ".join(shlex.quote(c) for c in cases)
     logfile = f"/tmp/uat_chunk_{int(time.time())}.log"
     env_map = dict(REMOTE_ENV, CASE_RESULTS_DIR=results_dir)
@@ -607,14 +657,22 @@ def main() -> int:
                    help="CASE_RUN_DEADLINE_S per dataset (0 = harness default "
                         "9000 s). Raise it for cases that ran out of time "
                         "rather than out of ideas.")
-    p.add_argument("--results-dir", default=REMOTE_RESULTS,
-                   help="remote results root. Point paired re-runs somewhere "
-                        "else so the 4.8 baseline stays untouched")
+    p.add_argument("--results-dir", required=True,
+                   help="remote results root of this series (absolute path on "
+                        "Sheldon). Required: there is no default, the paper "
+                        "folders are refused, and so is any folder holding runs "
+                        "of another model")
     p.add_argument("--dry-run", action="store_true",
                    help="report decisions, never launch anything")
     p.add_argument("--once", action="store_true",
                    help="evaluate once and exit (status check)")
     args = p.parse_args()
+
+    model = REMOTE_ENV["CLAUDE_MODEL"]
+    why = check_results_dir(args.results_dir, model, set())
+    if why:
+        log(f"REFUSED: {why}")
+        return 2
 
     log(f"thresholds: 7d < {args.seven_day_max:.0f} %  ·  5h < {args.five_hour_max:.0f} %  "
         f"·  chunk {args.chunk}  ·  k {args.concurrency}"
@@ -666,6 +724,10 @@ def main() -> int:
                 if not pending:
                     log("no runnable cases left — benchmark complete")
                     return 0
+                why = check_results_dir(args.results_dir, model,
+                                        results_models(args.results_dir))
+                if why:
+                    raise Halt(why)
                 batch = pending[: args.chunk]
                 log(f"clear ({reason}) — {len(pending)} case(s) pending")
                 if not args.dry_run:

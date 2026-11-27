@@ -14,12 +14,12 @@ a measurement series is due and restarted by hand after a vitus reboot. There is
 
 ```bash
 herdr pane split --current --direction down --cwd "$PWD" --no-focus
-herdr pane run <pane> "./scripts/uat_run_baseline_opus5.sh --foreground"
-# or directly:
 herdr pane run <pane> "python3 -u scripts/uat_watchdog.py --cases ... --results-dir <new folder on Sheldon>"
 ```
 
-`--foreground` runs the watchdog in the current terminal, which is what a herdr pane needs.
+The watchdog runs in the pane's own terminal. `--results-dir` is required and has no default.
+The two launchers of the paper benchmark (`uat_run_baseline_opus5.sh`, `uat_run_remaining.sh`)
+are retired: they wrote into its frozen result folders and now only exit with a message.
 
 **What it needs on vitus:** a quota snapshot at `~/.claude/usage-snapshot.json`. claude-hud writes
 it through `display.externalUsageWritePath` in `~/.claude/plugins/claude-hud/config.json`, but only
@@ -27,7 +27,9 @@ while an interactive Claude Code session renders its statusline. vitus has no su
 set it before the first series. Without it the watchdog halts after the snapshot age limit.
 
 A new series uses a new results folder on Sheldon; the historical `case-uat-results*` folders stay
-untouched. The watchdog pins Claude Code 2.1.332 and the model `claude-opus-5-5` on Sheldon. The
+untouched. The watchdog refuses the paper benchmark's folders, and any folder that already holds a
+run whose `meta.json` names another model or none; `blind_case_batch.py` refuses the same on
+Sheldon. Every `meta.json` records `model`, `claude_bin` and `claude_version`. The watchdog pins Claude Code 2.1.332 and the model `claude-opus-5-5` on Sheldon. The
 answer-file lockout it carries is a no-op today because the key is no longer on Sheldon.
 
 ## One blind run without the watchdog

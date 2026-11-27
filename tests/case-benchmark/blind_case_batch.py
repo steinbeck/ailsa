@@ -16,6 +16,8 @@ Usage:
   python blind_case_batch.py --all -k 3 --mode full
 Env:
   CASE_DATA_DIR        (required) dir containing the CASE<name> dataset folders
+  CLAUDE_MODEL         (required) model id; recorded in every meta.json. A results root that
+                       already holds runs of another model (or of none) is refused.
   CASE_RESULTS_DIR     results root (default: ./results next to this script)
   CASE_ANSWERKEY_PATHS optional ':'-separated paths to stash during the batch
   CASE_STASH_DIR       where to stash them (default: a temp dir)
@@ -71,6 +73,24 @@ def restore():
     print("[restore] answer-key path(s) restored", flush=True)
 
 
+def foreign_runs(results_root, model):
+    """Cases in results_root whose meta.json names another model, none, or cannot be read.
+
+    A results folder holds one series on one model. Runs from before meta.json recorded the
+    model (every paper-benchmark folder) count as foreign, so a "safe to re-run" launch can
+    never file new runs next to them.
+    """
+    bad = []
+    for meta in sorted(results_root.glob("CASE*/meta.json")):
+        try:
+            recorded = json.loads(meta.read_text()).get("model")
+        except Exception:
+            recorded = None
+        if recorded != model:
+            bad.append(meta.parent.name)
+    return bad
+
+
 def run_one(case_name, results_root, mode):
     rdir = results_root / case_name
     if (rdir / "meta.json").exists():
@@ -98,7 +118,14 @@ def main():
 
     if not DATA_DIR or not DATA_DIR.is_dir():
         sys.exit("CASE_DATA_DIR is unset or not a directory")
+    model = os.environ.get("CLAUDE_MODEL", "")
+    if not model:
+        sys.exit("CLAUDE_MODEL is unset; a benchmark run must name its model")
     results_root = Path(args.results)
+    bad = foreign_runs(results_root, model)
+    if bad:
+        sys.exit(f"{results_root} already holds {len(bad)} run(s) not recorded as {model} "
+                 f"(e.g. {bad[0]}); a series must not mix models. Name a new results folder.")
     results_root.mkdir(parents=True, exist_ok=True)
     if args.all:
         cases = sorted(d.name for d in DATA_DIR.glob("CASE*")

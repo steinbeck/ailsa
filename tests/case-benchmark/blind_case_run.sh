@@ -52,6 +52,10 @@ if [ -z "${CLAUDE_MODEL:-}" ]; then
   echo "  so results stay attributable, e.g. CLAUDE_MODEL=claude-opus-5-5" >&2
   exit 2
 fi
+# Provenance for meta.json: which model and which CLI produced the run, so a results folder
+# that mixes series can be detected afterwards (blind_case_batch.py refuses to add to one).
+CLAUDE_VERSION="$("$CLAUDE_BIN" --version 2>/dev/null | head -1 | tr -d '"\\')"
+PROV="\"model\":\"${CLAUDE_MODEL//\"/}\",\"claude_bin\":\"${CLAUDE_BIN//\"/}\",\"claude_version\":\"${CLAUDE_VERSION}\""
 CASE_ANSWERKEY_DIR="${CASE_ANSWERKEY_DIR:-}"
 MAX_ATTEMPTS="${CASE_RUN_MAX_ATTEMPTS:-8}"
 CALL_TIMEOUT="${CASE_RUN_CALL_TIMEOUT:-3600}"
@@ -65,7 +69,7 @@ for f in molecular-formula.txt molecularformula.txt; do
 done
 mkdir -p "$RESULTS_DIR"
 if [ -z "$MF_FILE" ]; then
-  echo '{"case":"'"$CASE_NAME"'","status":"error","reason":"no_MF_file"}' > "$RESULTS_DIR/meta.json"; exit 2
+  echo '{"case":"'"$CASE_NAME"'",'"$PROV"',"status":"error","reason":"no_MF_file"}' > "$RESULTS_DIR/meta.json"; exit 2
 fi
 MF="$(tr -d '[:space:]' < "$MF_FILE")"
 
@@ -129,6 +133,6 @@ if [ -f "$FRR" ]; then
   case "$TOPSMI" in *' '*|"") TOPSMI="";; esac
   echo "$TOPSMI" | grep -qE '[=#()1-9]|[cC][cC]' || TOPSMI=""
 fi
-printf '{"case":"%s","mf":"%s","mode":"%s","attempts":%d,"runtime_s":%d,"final_results":%s,"top_smiles":"%s"}\n' \
-  "$CASE_NAME" "$MF" "$MODE" "$ATTEMPT" "$RUNTIME" "$FR_EXISTS" "${TOPSMI//\"/}" > "$RESULTS_DIR/meta.json"
+printf '{"case":"%s",%s,"mf":"%s","mode":"%s","attempts":%d,"runtime_s":%d,"final_results":%s,"top_smiles":"%s"}\n' \
+  "$CASE_NAME" "$PROV" "$MF" "$MODE" "$ATTEMPT" "$RUNTIME" "$FR_EXISTS" "${TOPSMI//\"/}" > "$RESULTS_DIR/meta.json"
 echo "[$CASE_NAME] attempts=$ATTEMPT runtime=${RUNTIME}s final_results=$FR_EXISTS"
