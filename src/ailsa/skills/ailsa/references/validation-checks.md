@@ -32,7 +32,7 @@ run may proceed with a justification, `INFO` is logged. The shell snippets assum
 
 ## Checks for known failure modes
 
-Each of these checks catches a failure that earlier live runs produced. Run all six on every
+Each of these checks catches a failure that earlier live runs produced. Run all of them on every
 validation, in every iteration.
 
 ### Ring exclusion block present (`CRITICAL`)
