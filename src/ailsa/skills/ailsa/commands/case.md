@@ -328,90 +328,11 @@ flow is unaffected.
 </step>
 
 <step name="timing">
-**Wall-clock timing capture — real UTC timestamps at every phase boundary and agent hand-back,
-so a run's total and per-phase duration can be reported reproducibly (e.g. in a publication).**
+Take real UTC timestamps at every phase boundary and agent hand-back, and turn them into
+`analysis/timing.json` and a `## Timing Summary` before the team shuts down. Read the protocol
+before the first stamp, the `run_start` stamp at the kick-off:
 
-<!--
-RELOAD NOTE: case.md is symlinked into ~/.claude. Prompt edit — a FRESH Claude Code session is
-required to reload. Not unit-testable this session; validated by the next full CASE run.
--->
-
-**Two hard rules:**
-1. **NEVER infer a timestamp** from context / `currentDate` (that only knows the calendar day).
-   ALWAYS read the real clock with `date -u`. That is the whole point — the old `<timestamp>`
-   placeholders were being filled from context and had no wall-clock time.
-2. **All timing work happens in the coordinator** (this orchestrator), never in the teammates.
-   It therefore CANNOT delay the lsd-engineer's "[ITERATION-COMPLETE] the instant the solver
-   exits" anti-hang rule. A `date` call is instantaneous; still, always take the `phase_end`
-   stamp for an arriving reply FIRST, then write its CASE-PROGRESS.md section and push the next
-   `[BEGIN]` — never let stamping gate the next directive.
-
-**Mechanism — one atomic append per event.** At each timing point, run exactly one Bash call
-that reads the clock and appends one JSON line to the append-only log (survives restarts):
-
-```bash
-printf '{"utc":"%s","epoch":%s,"event":"%s","phase":"%s","agent":"%s"}\n' \
-  "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$(date -u +%s)" "<event>" "<phase>" "<agent>" \
-  >> <compound_path>/analysis/timing.jsonl
-```
-
-(The very first call — `run_start` — must create the dir first: prefix it with
-`mkdir -p <compound_path>/analysis && `.)
-
-**When to stamp (phase boundaries + agent hand-backs — plenty, but not every message):**
-
-| event | phase value | when |
-|-------|-------------|------|
-| `run_start` | `run` | ONCE, at team spawn, BEFORE the first `[BEGIN]` push |
-| `phase_start` | the task name (`peak-picking`, `lsd-iteration-NN`, `hmbc-selection-NN`, `ranking`, `coverage_gate`, `identity_gate`) | immediately BEFORE you SendMessage each `[BEGIN]` directive |
-| `phase_end` | same phase name | immediately as the matching `[*-COMPLETE]` / `[VALIDATION-*]` / `[G-IDENT-*]` reply arrives (before writing its section) |
-| `run_end` | `run` | ONCE, after the gates pass and results are ready, BEFORE terminate_team |
-
-Rule of thumb: **every `[BEGIN]` you send → one `phase_start`; every completion reply you
-receive → one `phase_end`.** That gives start+end for every phase and a stamp for every agent
-hand-back, without stamping routine chatter. Also mirror the human-readable UTC value into the
-matching CASE-PROGRESS.md field (`**Started (UTC):**`, `**Phase start (UTC):**`,
-`**Reported (UTC):**` — see progress-format.md).
-
-**Finalize (run ONCE, right after the `run_end` stamp, before terminate_team).** This also runs
-on the escalate and smoke-test exits (any path into terminate_team), so a duration is always
-recorded. Convert the log into the machine-readable `timing.json` + a human table
-deterministically (python does the arithmetic — do NOT compute durations by hand):
-
-```bash
-python3 - <<'PY' <compound_path>
-import json, sys, pathlib
-d = pathlib.Path(sys.argv[1]) / "analysis"
-ev = [json.loads(l) for l in (d/"timing.jsonl").read_text().splitlines() if l.strip()]
-def hms(s): return None if s is None else f"{s//3600:02d}:{s%3600//60:02d}:{s%60:02d}"
-starts, phases = {}, []
-for e in ev:
-    if e["event"] == "phase_start":
-        starts[e["phase"]] = e
-    elif e["event"] == "phase_end" and e["phase"] in starts:
-        s = starts.pop(e["phase"])
-        phases.append({"phase": e["phase"], "agent": e.get("agent", ""),
-                       "start_utc": s["utc"], "end_utc": e["utc"],
-                       "duration_s": int(e["epoch"]) - int(s["epoch"])})
-run = {x["event"]: x for x in ev if x["event"] in ("run_start", "run_end")}
-total = (int(run["run_end"]["epoch"]) - int(run["run_start"]["epoch"])) if {"run_start","run_end"} <= run.keys() else None
-out = {"run_start_utc": run.get("run_start", {}).get("utc"),
-       "run_end_utc": run.get("run_end", {}).get("utc"),
-       "total_duration_s": total, "total_duration_hms": hms(total), "phases": phases}
-(d/"timing.json").write_text(json.dumps(out, indent=2))
-rows = "\n".join(f"| {p['phase']} | {p['agent']} | {p['start_utc']} | {p['end_utc']} | {hms(p['duration_s'])} |" for p in phases)
-print("\n## Timing Summary\n\n"
-      f"**Run start (UTC):** {out['run_start_utc']}  \n"
-      f"**Run end (UTC):** {out['run_end_utc']}  \n"
-      f"**Total wall-clock:** {out['total_duration_hms']}\n\n"
-      "| Phase | Agent | Start (UTC) | End (UTC) | Duration |\n"
-      "|-------|-------|-------------|-----------|----------|\n" + rows + "\n")
-PY
-```
-
-Append the printed `## Timing Summary` block to `analysis/CASE-PROGRESS.md`, and also to
-`analysis/final_results.md` **if it exists** (it won't on the escalate/smoke exits).
-`analysis/timing.json` is the machine-readable artefact for aggregating across many runs.
+Read file: ~/.claude/ailsa/references/timing.md
 </step>
 
 <step name="validate_message">
@@ -459,449 +380,72 @@ On receiving any structured message (identified by `[TAG]` prefix):
 </step>
 
 <step name="monitor_progress">
-Monitor team progress via incoming SendMessage notifications (teammate replies arrive as conversation turns and wake you). TaskList is read only as a status ledger — the workflow advances because you PUSH the next `[BEGIN]` directive after each reply, never because a teammate polls.
+Runs from the kick-off until the results are ready: react to every teammate reply, push the next
+`[BEGIN]` directive, decide whether to iterate, rank or stop, and recover a stalled iteration.
+Read both files before processing the first reply:
 
-Before processing any structured message, run validate_message to check for required fields.
-
-**Shift list retention:** When processing [SETUP-COMPLETE] from nmr-chemist, extract and retain the experimental 13C shift list (comma-separated ppm values). This is needed later for creating ranking tasks.
-
-**Push iteration 1 (mandatory after [SETUP-COMPLETE]):** the lsd-iteration-01 task created at spawn will NOT start on its own. Immediately after writing the Setup section, push the lsd-engineer:
-```
-SendMessage(
-  type="message",
-  recipient="lsd-engineer",
-  content="[BEGIN] lsd-iteration-01 — peak assignments are ready (see analysis/CASE-PROGRESS.md ## Setup). Build the initial LSD file in analysis/iteration_01/ (MULT from HSQC, first 3-5 HMBC), request DA validation, run the solver. Send [ITERATION-COMPLETE] with the solution count the INSTANT the solver exits — do NOT block it on SMILES conversion (skip conversion if the count is large); ending your turn after a solver run without [ITERATION-COMPLETE] hangs the whole run.",
-  summary="Kick off LSD iteration 1"
-)
-```
-
-**Monitoring loop:** Receive structured messages from teammates (arrive as conversation turns) + optionally read `TaskList()` for status + read `<compound_path>/analysis/CASE-PROGRESS.md` for loop detection. On each structured message ([SETUP-COMPLETE], [ITERATION-COMPLETE], [VALIDATION-PASSED], [VALIDATION-BLOCKED], [RANKING-COMPLETE]): **take the `phase_end` timing stamp first** (see the timing step), then write the corresponding section to CASE-PROGRESS.md per write_progress, then take a `phase_start` stamp for and **push the next `[BEGIN]` directive** to whichever agent owns the next step, then continue monitoring. (Timing invariant: every `[BEGIN]` you push is preceded by a `phase_start`; every completion reply you receive is preceded by a `phase_end`.)
-
-**Stall recovery (missing [ITERATION-COMPLETE]) — self-rescue when you are awoken:**
-The primary defence is the lsd-engineer sending [ITERATION-COMPLETE] the instant the solver
-exits (reinforced in every lsd-iteration directive). As a backstop: whenever you are awoken
-for ANY reason (another teammate's message, a user nudge) and an lsd-iteration directive is
-still outstanding with no [ITERATION-COMPLETE], do NOT passively wait again — check the
-filesystem directly: if `analysis/iteration_NN/solncounter` (or a `*.sol` file) exists and no
-LSD process is running, the solver already finished and the engineer stalled before signalling.
-Read the solution count from `solncounter` yourself, write the [ITERATION-COMPLETE] section to
-CASE-PROGRESS.md from the filesystem, and resume the workflow (push the next directive). This
-converts an indefinite hang into an immediate recovery.
-
-**Parse from CASE-PROGRESS.md:** solution count per iteration, constraints added/removed, sp2 checks, H budget status, HMBC correlations used (X/Y), last iteration number.
-
-**Smoke test early exit:**
-If SMOKE_TEST is true, track these checkpoints as they arrive:
-- [ ] [SETUP-COMPLETE] received from nmr-chemist (peak picking done)
-- [ ] [ITERATION-COMPLETE] received from lsd-engineer (LSD file built and run)
-- [ ] [VALIDATION-PASSED] or [VALIDATION-BLOCKED] received from devils-advocate
-
-When all 3 checkpoints are complete (or any checkpoint fails with error/timeout after 5 minutes):
-- Do NOT create further iteration tasks
-- Do NOT proceed to ranking
-- Proceed directly to smoke_test_report step
-
-**Completion signals (normal mode only, when SMOKE_TEST is false):** solution_count <= 10 → ranking → **coverage_gate** (when ambiguous) → identity_gate | [RANKING-COMPLETE] received → **coverage_gate** (when ambiguous) → **identity_gate** (post-solution G-IDENT review) → present_results | 10 iterations reached → ranking → coverage_gate (when ambiguous) → identity_gate → present_results with caveats | DA flags issue → detect_loops.
-
-**IMPORTANT — never go straight from [RANKING-COMPLETE] to present_results/terminate_team.** Once `analysis/final_results.md` exists, the run is NOT done until (a) — **when a `[MULTIPLICITY-AMBIGUOUS]` record exists** — the pre-accept **coverage_gate** step has PASSED, and (b) the post-solution identity_gate step has run (the devils-advocate's independent G-IDENT name↔structure cross-check). The coverage_gate runs FIRST (it can REOPEN the run to search a missing family); only once it passes does identity_gate run. Skipping the identity_gate silently drops the D-04 advisory layer (the CASE5 failure); skipping the coverage_gate silently accepts a run where a viable multiplicity family was never searched (the CASE4 failure).
-
-**Iteration management (create next tasks):**
-
-After receiving [ITERATION-COMPLETE] from lsd-engineer AND [VALIDATION-PASSED] or [VALIDATION-BLOCKED] from devils-advocate, AND after writing both sections to CASE-PROGRESS.md:
-
-After writing the Devils-Advocate section to CASE-PROGRESS.md, relay the approval decision to lsd-engineer:
-
-If [VALIDATION-PASSED] was received:
-```
-SendMessage(
-  type="message",
-  recipient="lsd-engineer",
-  content="[DA-APPROVED] Iteration {N} — Validation passed. Proceed with solver run.
-           DA findings: {brief summary from [VALIDATION-PASSED] message}",
-  summary="DA approved iteration {N} — proceed with solver"
-)
-```
-
-If [VALIDATION-BLOCKED] was received:
-```
-SendMessage(
-  type="message",
-  recipient="lsd-engineer",
-  content="[DA-BLOCKED] Iteration {N} — Validation blocked. Critical issues:
-           {issues from [VALIDATION-BLOCKED] message}
-           Fix these before running solver.",
-  summary="DA blocked iteration {N} — fix required"
-)
-```
-
-1. Extract solution_count from the [ITERATION-COMPLETE] message
-2. Run detect_loops (existing step)
-3. **If no loop AND solution_count > 10 AND iterations < 10 (safety cap):**
-
-   Retain the shift list from the [SETUP-COMPLETE] message received earlier (the orchestrator wrote these to ## Setup / ### NMR-Chemist in CASE-PROGRESS.md — read from there if needed).
-
-   Create next iteration task:
-   ```
-   TaskCreate(
-     subject="lsd-iteration-{next_iter:02d}",
-     description="Build LSD file for iteration {next_iter} of {formula} at {compound_path}.
-                  Read previous: analysis/iteration_{current_iter:02d}/compound.lsd
-                  Use constraint inventory to copy ALL constraints forward.
-                  Add next HMBC batch (3-5 correlations, best remaining from CASE-PROGRESS.md Setup).
-                  Send validation request to devils-advocate.
-                  WAIT for approval before running solver.
-                  Run LSD from analysis/iteration_{next_iter:02d}/.
-                  Send [ITERATION-COMPLETE] to coordinator.",
-     activeForm="LSD iteration {next_iter}"
-   )
-   ```
-
-   **Then immediately push it** (the lsd-engineer is idle and will not pick this up on its own):
-   ```
-   SendMessage(
-     type="message",
-     recipient="lsd-engineer",
-     content="[BEGIN] lsd-iteration-{next_iter:02d} — build iteration {next_iter} now: read analysis/iteration_{current_iter:02d}/compound.lsd, carry ALL constraints forward, add the next HMBC batch, request DA validation, then run the solver. Send [ITERATION-COMPLETE] with the solution count the INSTANT the solver exits — do NOT block it on SMILES conversion (skip conversion if the count is large); ending your turn after a solver run without [ITERATION-COMPLETE] hangs the whole run.",
-     summary="Kick off LSD iteration {next_iter}"
-   )
-   ```
-
-   **Parallel task creation (when solution_count is 10-50 and iterations >= 2):**
-   Additionally create an HMBC selection task for nmr-chemist:
-   ```
-   TaskCreate(
-     subject="hmbc-selection-{next_iter:02d}",
-     description="Select next HMBC batch (3-5 correlations) for iteration {next_iter}.
-                  Review CASE-PROGRESS.md for already-used correlations.
-                  Apply selection criteria: isolated carbons, unique protons, strong intensity.
-                  Send selected batch to lsd-engineer via SendMessage.",
-     activeForm="Selecting HMBC batch {next_iter}"
-   )
-   ```
-
-   **Then immediately push it** to nmr-chemist:
-   ```
-   SendMessage(
-     type="message",
-     recipient="nmr-chemist",
-     content="[BEGIN] hmbc-selection-{next_iter:02d} — select the next 3-5 HMBC correlations now (avoid already-used ones in CASE-PROGRESS.md) and send the batch to lsd-engineer.",
-     summary="Kick off HMBC selection {next_iter}"
-   )
-   ```
-
-4. **If solution_count <= 10:**
-
-   Read the shift list from CASE-PROGRESS.md ## Setup / ### NMR-Chemist section (the 13C peak positions written from [SETUP-COMPLETE]).
-
-   Create ranking task with embedded shifts:
-   ```
-   TaskCreate(
-     subject="ranking-iteration-{current_iter:02d}",
-     description="Rank LSD solutions from iteration {current_iter}.
-                  LSD input: analysis/iteration_{current_iter:02d}/compound.lsd
-                  solutions.smi path: analysis/iteration_{current_iter:02d}/solutions.smi
-                  Experimental 13C shifts: {shift_list}
-                  Run (decides): ailsa lsd rank --assigned analysis/iteration_{current_iter:02d}/compound.lsd
-                  Cross-check: ailsa lsd rank analysis/iteration_{current_iter:02d}/solutions.smi --shifts '{shift_list}'
-                  Assess chemical plausibility of top candidates.
-                  Write analysis/final_results.md with full report.
-                  Send [RANKING-COMPLETE] to coordinator.",
-     activeForm="Ranking LSD solutions"
-   )
-   ```
-
-   **Then immediately push it** to solution-analyst (embed the shift list + path in the message so it never needs the TaskList):
-   ```
-   SendMessage(
-     type="message",
-     recipient="solution-analyst",
-     content="[BEGIN] ranking — rank solutions now. LSD input: analysis/iteration_{current_iter:02d}/compound.lsd (rank atom by atom with --assigned; this decides) ; solutions.smi: analysis/iteration_{current_iter:02d}/solutions.smi ; experimental 13C: {shift_list} (nearest-line cross-check). Assess plausibility, write analysis/final_results.md, send [RANKING-COMPLETE].",
-     summary="Kick off ranking"
-   )
-   ```
-
-5. **If iterations >= 10 (safety cap) AND solution_count > 10:**
-
-   Create ranking task (same as above), push the [BEGIN] ranking directive to solution-analyst, AND proceed to present_results with caveat.
-
-After creating a task you MUST have pushed its `[BEGIN]` directive — then return to monitoring. Never end a turn on a bare `TaskCreate`; an un-pushed task is a stall.
+Read file: ~/.claude/ailsa/references/monitoring.md
+Read file: ~/.claude/ailsa/references/loop-patterns.md
 </step>
 
 <step name="detect_loops">
-Read the full loop pattern definitions before analyzing iteration patterns:
+After every iteration, and whenever the devil's advocate flags an issue: compare the iteration
+history with the five loop patterns and decide whether the run continues, stops (converged or
+safety cap) or goes to diagnose. Section "Detect loops" of `monitoring.md`, with the pattern
+definitions in:
 
 Read file: ~/.claude/ailsa/references/loop-patterns.md
-
-Five patterns to detect: ELIM Thrashing, Zero-Solution Loop, Solution Explosion, Constraint Churning, Quality Convergence Failure.
-
-**Quick detection criteria (check against parsed iteration history):**
-
-**Pattern 1: ELIM Escalation (runaway-N detection)** — `elim_budget > 3` in consecutive `[ITERATION-COMPLETE]` messages without a plausible solution (runaway ELIM escalation). At N=3 with 0 plausible solutions, the problem is a constraint conflict, not a 4J issue.
-
-**Pattern 2: Zero-Solution Loop** — 3+ consecutive iterations with solution_count = 0.
-
-**Pattern 3: Solution Explosion** — Last 3 iterations all have solution_count > 100 AND each iteration reduces count by less than 10%.
-
-**Pattern 4: Constraint Churning** — Last 5 iterations show >10 constraints added AND >5 constraints removed AND most recent solution_count > 50.
-
-**Pattern 5: Quality Convergence Failure** — Most recent [RANKING-COMPLETE] message (or
-CASE-PROGRESS.md ## Ranking section for current iteration) shows Chemical plausibility =
-IMPLAUSIBLE or QUESTIONABLE for ALL top-3 candidates.
-OR-trigger: best-MAE > 4.0 ppm AND solution_count ≤ 20.
-Guard: only fire if a [RANKING-COMPLETE] record exists for the current iteration.
-Do NOT fire if solution_count = 0 (Pattern 2 covers that case).
-
-If no loop pattern detected, check convergence:
-- **If solution_count <= 10:** SUCCESS, proceed to present_results
-- **If iterations >= 10 and solution_count > 10:** Safety cap reached, proceed to present_results with caveats
-- **If solution_count > 10 and iterations < 10:** Agent is still progressing, allow to continue
-
-If a loop pattern is detected, proceed to diagnose step.
 </step>
 
 <step name="diagnose">
-For the detected loop pattern, perform basic diagnosis to identify root cause.
+When detect_loops finds a pattern: check that pattern's typical root causes in the latest LSD file
+and the iteration history, and document the findings for the intervention. Section "Diagnose" of:
 
-**For ELIM Escalation (runaway N):**
-1. Read the latest LSD file from the most recent iteration
-2. Confirm elim_budget > 3 by checking `[ITERATION-COMPLETE]` history
-3. Count MULT commands with hybridization = 2 (sp2 atoms) — verify EVEN
-4. Sum all hydrogen counts from MULT commands — verify matches formula
-5. Check latest HMBC correlations against HSQC positions for 1J artifacts:
-   - 1J artifact if HMBC (C, H) within ±1.5 ppm (carbon) and ±0.3 ppm (proton) of any HSQC correlation
-6. If all checks pass at N=3 and still 0 solutions → constraint conflict, not 4J → escalate to diagnostic specialist
-
-**For Zero-Solution Loop:**
-1. Identify which iteration first returned 0 solutions
-2. Identify constraints added in that iteration
-3. Check if any HMBC correlations match HSQC positions (1J artifacts, ±1.5 ppm C, ±0.3 ppm H)
-4. Check if carbons in that batch are within 3 ppm of each other (ambiguous assignment)
-
-**For Solution Explosion:**
-1. Check if ELIM command is present in latest LSD file
-2. Check if heteroatom constraints (BOND, LIST, PROP) are present in LSD file
-3. Review recent HMBC correlations to determine if they connect new fragments or redundant connections
-
-**For Constraint Churning:**
-1. Review last 5 iterations for systematic vs random correlation selection
-2. Check if correlations selected by criteria (isolated carbons, unique protons, strong intensity)
-3. Check if correlations selected randomly without clear strategy
-
-Document diagnostic findings for intervention generation.
+Read file: ~/.claude/ailsa/references/monitoring.md
 </step>
 
 <step name="intervene">
-Based on diagnosis findings, generate an advisory intervention that tells the agent WHAT to fix, not HOW to fix it.
+After diagnose: write an advisory that tells the agent what to fix, not how. The templates per
+pattern are in the section "Intervene" of:
 
-**Advisory templates by pattern:**
-
-**ELIM Escalation (runaway N):**
-```
-Runaway ELIM escalation detected. At N=3 with 0 plausible solutions, this is a constraint conflict — not a 4J issue.
-
-Do NOT escalate ELIM beyond N=3. Instead:
-
-1. Verify sp2 count is even (current count: <N>)
-   - Re-examine DEPT-135 spectrum to verify sp2 assignments
-   - Common sp2 atoms: carbonyl C, carbonyl O, aromatic C
-
-2. Verify hydrogen budget matches formula
-   - Sum of MULT H-counts: <N>
-   - Formula H-count: <N>
-   - If mismatch, review HSQC peak assignments
-
-3. Check HMBC correlations for 1J artifacts
-   - Compare against HSQC positions (±1.5 ppm C, ±0.3 ppm H)
-   - Exclude flagged artifacts
-
-Escalate to diagnostic specialist — do NOT continue ELIM escalation.
-```
-
-**Zero-Solution Loop:**
-```
-Zero-solution loop detected (3 consecutive iterations with 0 solutions).
-
-Diagnose:
-1. Remove last HMBC batch (iteration <N> constraints)
-2. Confirm solutions return
-3. Test each correlation individually to find the conflict
-4. Check if any carbons are within 3 ppm (could be misassigned due to digital resolution)
-5. Check for 1J artifacts (compare HMBC to HSQC per skill/SKILL.md Section 2.3)
-
-Only re-add correlations after resolving the conflict.
-```
-
-**Solution Explosion:**
-```
-Solution explosion stalled (3 iterations, <10% reduction each, still >100 solutions).
-
-Check:
-1. Verify recent HMBC correlations connect NEW fragments (not already-connected atoms)
-2. Add heteroatom constraints:
-   - Use BOND for known positions (e.g., carbonyl O bonded to specific C)
-   - Use LIST/PROP for ambiguous positions (see skill/SKILL.md Section 10.2)
-3. Check quaternary carbons — if 0 HMBC correlations, add shift-based constraints
-   (see skill/SKILL.md Section 10.3)
-4. ELIM is the final zero-solution recovery mechanism. If ELIM N=3 yields 0 plausible solutions, escalate to diagnostic specialist — this is a constraint conflict, not a 4J issue. Do NOT remove ELIM as a first response to solution explosion; large solution sets are expected with ELIM and handled by ranking.
-
-Focus on high-leverage constraints that separate structural classes.
-```
-
-**Constraint Churning:**
-```
-Constraint churning detected (high add/remove activity without convergence).
-
-Reset to last known-good state (iteration <N> with <X> solutions).
-
-Follow incremental HMBC strategy from skill/SKILL.md Section 7:
-1. Select 3-5 HIGH-CONFIDENCE correlations per batch:
-   - Isolated carbon shifts (>3 ppm from nearest neighbor)
-   - Unique proton assignments
-   - Strong peak intensities (top quartile)
-2. Add batch, run LSD, evaluate effectiveness
-3. If reduction >= 30%, continue with next batch
-4. If reduction < 10%, re-evaluate selection criteria
-
-Do NOT add/remove randomly. Be systematic.
-```
-
-Proceed to track_and_decide step with the generated advisory.
+Read file: ~/.claude/ailsa/references/intervention.md
 </step>
 
 <step name="track_and_decide">
-Track intervention count for this specific pattern and decide whether to re-spawn agent, delegate to diagnostic specialist, or escalate.
+After each intervention: count it for its pattern and decide between a basic advisory, delegation
+to the diagnostic specialist, a specialist-informed advisory, honest termination and escalation.
+Section "Track and decide" of:
 
-**Per-pattern intervention counters:**
-Maintain separate counters for each pattern:
-- ELIM_THRASHING: count_elim
-- ZERO_SOLUTION_LOOP: count_zero
-- SOLUTION_EXPLOSION: count_explosion
-- CONSTRAINT_CHURNING: count_churning
-- QUALITY_CONVERGENCE_FAILURE: count_quality
-
-**After intervention generated:**
-Increment the counter for THIS pattern only.
-
-**Decision logic:**
-- **If counter for this pattern == 0 or 1:** Basic intervention (diagnose + intervene steps produce advisory, proceed to deliver_advisory step)
-- **If counter for this pattern == 2:** Delegate to diagnostic specialist (proceed to delegate_specialist step)
-- **If counter for this pattern >= 3 and < 10:** Use specialist-informed advisory if analysis/DIAGNOSTIC-REPORT.md exists in compound directory, else fall back to basic advisory (proceed to deliver_advisory step)
-- **If counter for this pattern >= 10:** Escalate to user (proceed to escalate step)
-
-Threshold = 2: basic diagnosis handles common issues (odd sp2, missing H); specialist escalation prevents wasted cycles on complex root causes. Per-pattern counters avoid masking which failure mode recurs.
-
-**Decision for QUALITY_CONVERGENCE_FAILURE:**
-- count_quality == 0: deliver assumption-reexamination advisory (proceed to deliver_advisory_and_results step using quality_convergence_advisory template from advisory-templates.md)
-- count_quality >= 1: honest termination — do NOT escalate to diagnostic specialist
-  (the diagnostic specialist is LSD-focused; quality convergence failure is a peak-picking issue).
-  Send to coordinator: "Assumption re-examination complete. No correctable peak-picking defect found after
-  1 re-examination cycle. Additional experiments may be needed."
+Read file: ~/.claude/ailsa/references/intervention.md
 </step>
 
 <step name="escalate">
-After 10 failed intervention cycles for the SAME pattern, escalate to user with structured report.
+After 10 failed intervention cycles for the same pattern: present the structured escalation report
+to the user and stop. Section "Escalate" of:
 
-**Escalation report format:**
-
-```markdown
-## CASE Escalation Required
-
-**Compound:** <compound_path> | **Formula:** <formula> | **Pattern:** <pattern_name> | **Attempts:** 10
-
-### What Was Detected
-<Loop pattern description per detect_loops definitions>
-
-### Diagnostics Attempted
-<List diagnostic approaches across the 10 cycles>
-
-### Current State
-- Solution count: <count> | HMBC used: X/Y | Iterations: <N> | LSD: <latest_filename>
-
-### Supervisor Recommendation
-<Pattern-specific recommendation based on diagnostic findings>
-
-### Next Steps
-Manual review required. See CASE-PROGRESS.md for full iteration history.
-```
-
-**After presenting escalation report:** STOP. User must investigate.
+Read file: ~/.claude/ailsa/references/intervention.md
 </step>
 
 <step name="coverage_gate">
-**Pre-accept multiplicity coverage gate (D-04 / MULT-02 — deterministic, MAE-INDEPENDENT).**
+Only when a `[MULTIPLICITY-AMBIGUOUS]` record exists, after the ranking and before identity_gate:
+the run accepts only if every viable multiplicity family and every model the devil's advocate
+mandated has been searched; otherwise it reopens. Section "Coverage gate" of:
 
-<!--
-RELOAD NOTE: case.md is symlinked into ~/.claude. This is a MARKDOWN PROMPT EDIT — a FRESH
-Claude Code session is REQUIRED to reload. NOT unit-testable this session; functional
-validation is the blind CASE4 re-run (UAT-01 / Phase 89).
--->
+Read file: ~/.claude/ailsa/references/coordinator-gates.md
 
-**Guard — when this step runs:** ONLY when a `[MULTIPLICITY-AMBIGUOUS]` record exists for this
-run (i.e. a `## Multiplicity Coverage` ledger is present in CASE-PROGRESS.md). If there is no
-`[MULTIPLICITY-AMBIGUOUS]` record, **SKIP this step entirely** and proceed straight to
-identity_gate — the single-family flow is completely unaffected.
+A FAIL reopens the run with the multiplicity-coverage reopen advisory in `advisory-templates.md`;
+the reopen pattern is the Multiplicity Coverage Gap in `loop-patterns.md`.
 
-**Lifecycle position:** This runs at the SAME pre-accept lifecycle point as identity_gate —
-after the union has been ranked and `analysis/final_results.md` exists, BEFORE accept /
-present_results — and it runs BEFORE identity_gate (it may REOPEN the run, so it must resolve
-first). It is the COVERAGE-triggered analogue of detect_loops Pattern 5 "Quality Convergence
-Failure" (which reopens on MAE); coverage_gate reopens on missing-family COVERAGE, not MAE.
-
-**The gate is deterministic and MAE-INDEPENDENT.** It does NOT look at MAE, plausibility, or
-rank. (The CASE4 wrong-class structure scored MAE 1.75 "PLAUSIBLE" and the MAE>4 quality loop
-stayed silent — that is exactly why this gate must NOT key off MAE.) Read the
-`## Multiplicity Coverage` ledger and evaluate two set-containment conditions:
-
-1. `viable_families ⊆ searched_families` — every family the nmr-chemist enumerated has its own
-   `iteration_NN_<family>/` run + `[ITERATION-COMPLETE]`. Count by **SEARCHED, not RANKED**: a
-   family whose `solutions.smi` conversion was skipped for size still counts as searched (do NOT
-   require a ranked `solutions.smi`).
-2. every **DA-mandated model** (each `[MULT-EVIDENCE-FOR] model=X` from G-MULT) `∈ searched_families`.
-
-**Verdict:**
-
-- **PASS** — both conditions hold. Write `gate verdict: PASS` to the `## Multiplicity Coverage`
-  ledger and proceed to identity_gate.
-- **FAIL** — any viable family OR any DA-mandated model is NOT in searched_families. The run
-  does **NOT accept**. Write `gate verdict: FAIL — missing: <family/model list>` to the ledger,
-  then **REOPEN**: push the lsd-engineer (via the multiplicity-coverage reopen advisory in
-  references/advisory-templates.md — WHAT not HOW: name the missing family/model and that it
-  must be searched in its own `iteration_NN_<family>/` dir) to run the missing family(ies)/
-  model(s). When their `[ITERATION-COMPLETE]`s arrive, re-run the deduped union rank
-  (per the lsd-engineer's union-ranking contract), update searched_families in the ledger, and
-  **re-enter coverage_gate**. Do not advance to identity_gate until the gate PASSES.
-
-This gate triggers on COVERAGE, never on MAE. A converged, plausible-looking, low-MAE run is
-STILL rejected if a viable family or a DA-mandated model was never searched. See
-references/loop-patterns.md "Multiplicity Coverage Gap" for the reopen pattern.
-
-After the gate PASSES, proceed to identity_gate.
+Read file: ~/.claude/ailsa/references/advisory-templates.md
 </step>
 
 <step name="identity_gate">
-**Post-solution G-IDENT review (mandatory before present_results — the D-04 independent advisory layer).**
+Once, after the ranking (and after coverage_gate has passed, where it applies), before the
+results: push the devil's advocate's independent G-IDENT cross-check of name and structure and
+record its verdict. A flag downgrades the name and never blocks the report. Section
+"Identity gate" of:
 
-This step runs ONCE, after `[RANKING-COMPLETE]` (i.e. `analysis/final_results.md` exists) and BEFORE `deliver_advisory_and_results` / `terminate_team`. It is the genuinely independent second opinion on the reported name↔structure mapping. The solution-analyst's own run of the deterministic `ailsa identify` is the BINDING check; this G-IDENT pass is the separate LLM cross-check (it must NOT re-run `ailsa identify`).
-
-The devils-advocate is idle and will not act on its own — you MUST push the trigger:
-
-```
-SendMessage(
-  type="message",
-  recipient="devils-advocate",
-  content="[BEGIN] G-IDENT — post-solution name↔structure review. analysis/final_results.md is written. Run ONLY the G-IDENT gate (Section 5 / post-solution): read the reported trivial name + the top SMILES, reason INDEPENDENTLY about whether the name plausibly matches the drawn structure — do NOT call ailsa identify / derive_identity (that is the analyst's binding layer). Apply the CASE4 (wrong-isomer/literature name) and CASE5 (indigo↔isoindigo↔indirubin) triggers. Reply [G-IDENT-PASSED] or [G-IDENT-FLAGGED] with a one-line rationale.",
-  summary="Post-solution G-IDENT review"
-)
-```
-
-Then wait for the devils-advocate's reply (it arrives as a turn and wakes you). On reply:
-- Write a `### Devils-Advocate (G-IDENT post-solution)` entry into CASE-PROGRESS.md with the verdict + rationale.
-- **[G-IDENT-FLAGGED]** is advisory and NEVER blocks the report. If flagged, ensure the reported trivial name in `final_results.md` is rendered `(tentative, unverified)` and carry the DA's concern into the results presentation. Then proceed.
-- **[G-IDENT-PASSED]**: proceed.
-
-If the devils-advocate errors or does not reply within a reasonable window, note "G-IDENT review unavailable" in CASE-PROGRESS.md and proceed (advisory, non-blocking) — do NOT hang the run waiting on it.
-
-After recording the G-IDENT outcome, proceed to deliver_advisory_and_results.
+Read file: ~/.claude/ailsa/references/coordinator-gates.md
 </step>
 
 <step name="deliver_advisory_and_results">
@@ -913,29 +457,10 @@ This reference covers: advisory message formatting, result presentation (success
 </step>
 
 <step name="smoke_test_report">
-Generate smoke test pass/fail report. Only runs when SMOKE_TEST is true.
+Only in smoke-test mode, after the smoke test early exit: print the pass/fail table of the four
+checkpoints, then go to terminate_team.
 
-**Determine result for each checkpoint:**
-- PASS: message received with all required fields validated
-- FAIL: message not received, or validate_message rejected it, or agent error/timeout (> 5 minutes)
-
-**Print report:**
-```
-========================================
-SMOKE TEST RESULTS
-========================================
-
-| Checkpoint               | Status    | Details                    |
-|--------------------------|-----------|----------------------------|
-| Team spawned             | PASS/FAIL | 4 agents created           |
-| NMR-chemist peak pick    | PASS/FAIL | [SETUP-COMPLETE] received  |
-| LSD-engineer build file  | PASS/FAIL | [ITERATION-COMPLETE] received |
-| Devils-advocate validate | PASS/FAIL | [VALIDATION-PASSED/BLOCKED] |
-
-Overall: PASS / FAIL (N/4 checkpoints passed)
-```
-
-**After report:** Proceed to terminate_team step (normal team cleanup).
+Read file: ~/.claude/ailsa/references/smoke-test.md
 </step>
 
 <step name="terminate_team">

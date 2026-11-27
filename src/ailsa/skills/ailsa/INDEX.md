@@ -32,16 +32,21 @@ A coordinator command runs the workflow and hands the chemistry to four speciali
 
 - [advisory-templates](references/advisory-templates.md): message templates between agents
 - [constraint-inventory](references/constraint-inventory.md): the constraint record at the top of every LSD file, how it is built and carried forward
+- [coordinator-gates](references/coordinator-gates.md): the coordinator's two gates before the results: multiplicity coverage and the G-IDENT name review
 - [diagnose-solution-explosion](references/diagnose-solution-explosion.md): the diagnostic specialist's five checks when LSD returns 1000+ solutions
 - [diagnose-zero-solutions](references/diagnose-zero-solutions.md): the diagnostic specialist's five checks when LSD returns no solution
 - [diagnostic-report](references/diagnostic-report.md): template and file name of `DIAGNOSTIC-REPORT.md`
+- [intervention](references/intervention.md): the coordinator's advisories per loop pattern, intervention counting, delegation and escalation
 - [inventory-validation](references/inventory-validation.md): the devil's advocate's inventory checks: extraction, reconciliation with the file and the previous iteration, ELIM budget, the gates G7 and G-PROP-EVIDENCE
 - [loop-patterns](references/loop-patterns.md): iteration and stopping patterns
 - [lsd-reference](references/lsd-reference.md): LSD commands, filter block, running LSD and the checklist before every run
 - [lsd-search](references/lsd-search.md): what LSD searches: DUPL/MAXS, fragment goodlist, per-family multiplicity search
+- [monitoring](references/monitoring.md): how the coordinator drives a run: reacting to replies, iterating, ranking, stall recovery, loop detection and diagnosis
 - [multiplicity-ambiguity](references/multiplicity-ambiguity.md): searching every aliphatic multiplicity family when the spectra leave it open
 - [nmr-basics](references/nmr-basics.md): NMR facts the agents rely on
 - [progress-format](references/progress-format.md): format of the progress log
+- [smoke-test](references/smoke-test.md): the pass/fail report of the coordinator's smoke-test mode
+- [timing](references/timing.md): the coordinator's wall-clock timing: when to stamp, the log, the timing summary
 - [validation-checks](references/validation-checks.md): the devil's advocate's pre-solver checks on every LSD file, each with its severity
 
 ## Install
