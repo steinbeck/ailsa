@@ -49,7 +49,7 @@ NMR + molecular formula alone. Any leak of the answer invalidates the result, so
 | `CASE_RESULTS_DIR` | all | results root (default: `./results`, gitignored) |
 | `CLAUDE_BIN` | run | claude binary (default: `claude` on PATH); an installed Claude Code >= 2.1.280 (Opus 5.5). Pin it for comparability within a series. |
 | `CASE_PROJECT_DIR` | run | ailsa repo root for `.venv/bin` (default: this repo) |
-| `CLAUDE_MODEL` | run | **required** — model id, e.g. `claude-opus-5-5` (verified on the compute host). No default: an unattributable benchmark is worthless, and the old `claude-opus-4-8` default silently outlived its session default. |
+| `CLAUDE_MODEL` | batch, run | **required** — model id, e.g. `claude-opus-5-5` (verified on the compute host). No default: an unattributable benchmark is worthless, and the old `claude-opus-4-8` default silently outlived its session default. Every `meta.json` records it with `claude_bin` and `claude_version`; the batch refuses a results root that already holds runs of another model, or of none (every folder from before model recording). |
 | `CASE_GROUNDTRUTH` | grade | **required for grading** — TSV path (see below); never committed |
 | `CASE_ANSWERKEY_PATHS` | batch | optional `:`-separated files/dirs to hard-lock during the batch |
 | `CASE_STASH_DIR` | batch | where locked-out paths are stashed (default `~/.case-uat-stash`) |
