@@ -341,7 +341,8 @@ LEGACY_SUBSTRINGS = (
 PROGRESS_WRITE = re.compile(r"(?i)\bwrite[^\n]{0,40}CASE-PROGRESS\.md")
 NEGATION = re.compile(r"(?i)\b(?:never|not)\b|\bno ")
 
-# Every record command the lean skill uses; the frontier skill names the same set.
+# The record commands the frontier skill names: the lean skill's three (init, note, finalize) and
+# the two its coordinator needs on every exit path (close without a result, render the reports).
 RECORD_COMMANDS = (
     "ailsa run init",
     "ailsa run note",
@@ -349,6 +350,8 @@ RECORD_COMMANDS = (
     "ailsa run close",
     "ailsa run render",
 )
+LEAN_DIR = SKILL_DIR.parent / "ailsa-lite"
+RECORD_COMMAND = re.compile(r"\bailsa run [a-z][a-z-]*")
 
 
 def test_whole_skill_has_no_legacy_writes() -> None:
@@ -375,7 +378,7 @@ def test_whole_skill_has_no_legacy_writes() -> None:
 
 
 def test_both_skills_name_record_commands() -> None:
-    """The frontier skill names every record command, so both skills share one command set.
+    """The frontier skill names every record command, including each one the lean skill names.
 
     A new recording command changes both skills in the same commit (docs/SKILLS.md); the lean
     skill's contract test then needs no exception for commands only it would name.
@@ -383,3 +386,9 @@ def test_both_skills_name_record_commands() -> None:
     text = "\n".join(path.read_text() for path in _skill_files())
     missing = [command for command in RECORD_COMMANDS if command not in text]
     assert not missing, f"the frontier skill does not name: {missing}"
+    lean_files = sorted(p for p in LEAN_DIR.rglob("*.md") if p.name != "CHANGELOG.md")
+    assert lean_files, "the lean skill has no markdown files"
+    lean = {m for p in lean_files for m in RECORD_COMMAND.findall(p.read_text())}
+    assert lean, "the lean skill names no record command"
+    only_lean = sorted(lean - set(RECORD_COMMAND.findall(text)))
+    assert not only_lean, f"record commands only the lean skill names: {only_lean}"
