@@ -322,7 +322,9 @@ def test_self_report_joins_by_teammate_name() -> None:
 
 
 def test_self_report_joins_by_type_prefix() -> None:
-    m = _fold_events([_spawn(1, "a1b2c3", "ailsa-lsd-engineer"), _rep(2, "lsd-engineer", "self-report")])
+    m = _fold_events(
+        [_spawn(1, "a1b2c3", "ailsa-lsd-engineer"), _rep(2, "lsd-engineer", "self-report")]
+    )
     assert list(m["agents"]) == ["a1b2c3"]
 
 
