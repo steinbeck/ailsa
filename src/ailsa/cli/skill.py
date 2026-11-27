@@ -13,7 +13,7 @@ from __future__ import annotations
 import os
 import re
 import shutil
-from importlib.resources import as_file, files
+from importlib.resources import files
 from pathlib import Path
 
 import click
@@ -45,8 +45,14 @@ LEGACY_LINKS: tuple[str, ...] = (
 
 
 def _skills_root() -> Path:
-    with as_file(files("ailsa") / "skills") as root:
-        return Path(root)
+    root = files("ailsa") / "skills"
+    if not isinstance(root, Path):
+        # A zip or PEX import: as_file() would hand out a temporary copy that is gone again
+        # before the files are installed, and links into it would dangle.
+        raise click.ClickException(
+            "ailsa is imported from an archive, not a folder; its skills cannot be installed."
+        )
+    return root
 
 
 def available_skills() -> dict[str, dict[str, str]]:
@@ -70,8 +76,10 @@ def available_skills() -> dict[str, dict[str, str]]:
     return result
 
 
-def _is_site_packages(path: Path) -> bool:
-    return any(part in ("site-packages", "dist-packages") for part in path.parts)
+def _is_checkout(skill_dir: Path) -> bool:
+    """True when skill_dir is <checkout>/src/ailsa/skills/<name> of a source checkout."""
+    parents = skill_dir.resolve().parents
+    return len(parents) > 3 and (parents[3] / "pyproject.toml").is_file()
 
 
 def _remove_owned(dst: Path) -> None:
@@ -317,8 +325,11 @@ def install_cmd(
             )
             raise SystemExit(1)
         src_dir = Path(info["path"])
-        if link and _is_site_packages(src_dir):
-            click.echo("Error: --link needs a source checkout; this install is a wheel.")
+        if link and not _is_checkout(src_dir):
+            click.echo(
+                "Error: --link needs a source checkout (src/ailsa/skills next to a "
+                "pyproject.toml); this install is not one."
+            )
             raise SystemExit(1)
         root_dir = Path.home() / ".claude"
         for line in _install_command_skill(src_dir, root_dir, link, force):

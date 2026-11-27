@@ -41,8 +41,11 @@ def _build_tree(skills: Path) -> None:
 
 @pytest.fixture
 def fake_pkg(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    skills = tmp_path / "pkg" / "skills"
+    # A source checkout: <checkout>/pyproject.toml next to <checkout>/src/ailsa/skills.
+    checkout = tmp_path / "pkg"
+    skills = checkout / "src" / "ailsa" / "skills"
     _build_tree(skills)
+    (checkout / "pyproject.toml").write_text("[project]\nname = 'ailsa'\n")
     monkeypatch.setattr("ailsa.cli.skill._skills_root", lambda: skills)
     return skills
 
@@ -200,10 +203,15 @@ def test_legacy_cleanup_only_lucy_links(fake_pkg: Path, root: Path, tmp_path: Pa
     assert (other / "supervisor.md").read_text() == "theirs\n"
 
 
-def test_link_refused_from_site_packages(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, root: Path
+@pytest.mark.parametrize(
+    "where",
+    [("lib", "python3.12", "site-packages", "ailsa", "skills"), ("target", "ailsa", "skills")],
+    ids=["site-packages", "pip-target"],
+)
+def test_link_refused_outside_a_checkout(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, root: Path, where: tuple[str, ...]
 ) -> None:
-    skills = tmp_path / "lib" / "python3.12" / "site-packages" / "ailsa" / "skills"
+    skills = tmp_path.joinpath(*where)
     _build_tree(skills)
     monkeypatch.setattr("ailsa.cli.skill._skills_root", lambda: skills)
     code, _ = _run("install", "ailsa", "--link")
