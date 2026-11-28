@@ -289,6 +289,7 @@ def _resolve_agent(key: str, s: dict[str, Any]) -> str:
         (s["name_to_agent"], key),
         (s["type_to_agent"], key),
         (s["type_to_agent"], "ailsa-" + key),
+        (s["type_to_agent"], key.removeprefix("ailsa-")),
     ):
         if probe in table:
             return str(table[probe])

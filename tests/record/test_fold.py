@@ -360,3 +360,17 @@ def test_self_report_does_not_override_harness_headline() -> None:
     )
     e = m["agents"]["h1"]
     assert (e["actual"], e["source"], e["requested"]) == ("m-actual", "harness", "m-req")
+
+
+def test_self_report_prefixed_joins_unprefixed_teammate_type() -> None:
+    m = _fold_events(
+        [
+            _spawn(1, "anmr-chemist-a13c", "nmr-chemist"),
+            _rep(2, "anmr-chemist-a13c", "harness"),
+            _rep(3, "ailsa-nmr-chemist", "self-report", actual="m-claimed"),
+        ]
+    )
+    assert list(m["agents"]) == ["anmr-chemist-a13c"]
+    entry = m["agents"]["anmr-chemist-a13c"]
+    assert [r["source"] for r in entry["reports"]] == ["harness", "self-report"]
+    assert entry["source"] == "harness" and entry["actual"] == "m-actual"
