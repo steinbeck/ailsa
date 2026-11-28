@@ -444,7 +444,7 @@ Plans:
 - [x] 106.2-08-PLAN.md — benchmark runner on the launcher; graders read the rendered results (separable, OD-6)
 - [x] 106.2-09-PLAN.md — full gate and wheel on Sheldon; main Sheldon checkout fast-forwarded and skill linked
 - [x] 106.2-10-PLAN.md — headless proof run on the public example dataset
-- [ ] 106.2-11-PLAN.md — interactive team proof run in tmux; owner checkpoint on the record and on teammate recording
+- [x] 106.2-11-PLAN.md — interactive team proof run in tmux; owner checkpoint on the record and on teammate recording
 - [ ] 106.2-12-PLAN.md — document what the proof runs showed; owner acceptance file
 
 #### Phase 107: Evaluation bench and team-mode spike
