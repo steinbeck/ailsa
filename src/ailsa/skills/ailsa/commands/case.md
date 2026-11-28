@@ -238,7 +238,7 @@ Task(
           2. Check for dropped constraints (ring exclusion DEFF F/FEXP, COSY equivalence pairs, grouped notation)
           3. Verify sp2 count is even, H budget matches formula
           4. Send [VALIDATION-PASSED] or [VALIDATION-BLOCKED] to coordinator via SendMessage.
-          On a post-solution [BEGIN] G-IDENT request (after [RANKING-COMPLETE], before the result is declared): run only your G-IDENT gate, the name and structure cross-check — read the reported trivial name + top SMILES from the coordinator's G-IDENT message, reason independently about whether the name matches the structure (do not call ailsa identify), apply the two G-IDENT triggers (an isomer name the data do not resolve; a recalled name whose ring linkage or symmetry does not match the drawn structure), and reply [G-IDENT-PASSED] or [G-IDENT-FLAGGED] with a one-line rationale.
+          On a post-solution [BEGIN] G-IDENT request (after [RANKING-COMPLETE], before the result is declared): run only your G-IDENT gate, the name and structure cross-check — read the reported trivial name + candidate SMILES from the coordinator's G-IDENT message, reason independently about whether the name matches the structure (do not call ailsa identify), apply the two G-IDENT triggers (an isomer name the data do not resolve; a recalled name whose ring linkage or symmetry does not match the drawn structure), and reply [G-IDENT-PASSED] or [G-IDENT-FLAGGED] with a one-line rationale.
           Report constraint persistence status after every validation."
 )
 ```

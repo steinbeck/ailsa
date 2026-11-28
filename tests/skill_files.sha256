@@ -1,10 +1,10 @@
 d27ea5a6fd5c5d7cbd6d3f68ab48cda22adddc75b2a15da298911a9289559b4b  ./INDEX.md
-2e5156e86722927055f83ae00024a889dde751091fc3334db9bd453dca1e8630  ./agents/ailsa-devils-advocate.md
+7d1cc6bb03662a0d31ad805d89855d4405c0c5e6ed3bd5ad6174c376195c48c8  ./agents/ailsa-devils-advocate.md
 074d9f7742c9977201d4afd516773c1024dbd355ebd0efc97e36c2bb19cbb802  ./agents/ailsa-diagnostic.md
 92fd2326b2b1fa50b5028f7e6a52ac6901c562e069acb551a6ca56ec05705f7b  ./agents/ailsa-lsd-engineer.md
 92874204dc32ae39005762aec1e030ee3b903651255e6790e098a46c6f5b8095  ./agents/ailsa-nmr-chemist.md
-157e27441ca54f1bbf4c1cd11f0e0d05318fca2ad5917269701bdb1311417b12  ./agents/ailsa-solution-analyst.md
-5d3fcffd8e3d9e2ce1b5dabad2e80dd3ba2939bc57a7513f46f780755f7746de  ./commands/case.md
+931afe5b672d2e544d449e63b9954ec2d0fc47604413452834e08eb6c9c578c6  ./agents/ailsa-solution-analyst.md
+e093c7af08e97b4e8b33433fbeae14ccb61f8790afd60fc1ef2a58b18b40c1f1  ./commands/case.md
 ff4508f4b51be739165456a515d1031c371afcdfca88baa142c97746f3d99099  ./commands/dereplicate.md
 48776c5deb89357d21fe4e021f7563a4fe87731d1f2788821e126ed4dfb7c5b9  ./commands/help.md
 f4842c8132e5daa678c031e40787acf5597b35cee86c12d41f9bfb5c4d1f9e98  ./commands/predict.md
@@ -12,7 +12,7 @@ f4842c8132e5daa678c031e40787acf5597b35cee86c12d41f9bfb5c4d1f9e98  ./commands/pre
 61ae22a902fa83ee6614429acbb8a76035d265035e383f4d4e9c09561cbf0705  ./commands/status.md
 262cc0d497b002ac4f7cf44556eaaa1a45df2fe9ef8b58e9188f00ac30e21e17  ./references/advisory-templates.md
 c4466aafbbd584364b7261093f6cf475034841c52a63e643261099bd211e3189  ./references/constraint-inventory.md
-2a783c4c7d7e7365cc7a84d74edf9d1a5e276f13fd477a4b061e7be88dce4127  ./references/coordinator-gates.md
+42eb56f8bebe40a0d0c31d11eb02b550296a4e30e60fad878e512d50124a68e0  ./references/coordinator-gates.md
 1736f63dc6a2e04bb2ecd8f50d0dda364bee76ce3a5abf37f22926afcfbd5d61  ./references/diagnose-solution-explosion.md
 4fd4e0b7eb2207e9d4c5925b2c90bc4994745c489b15ab0c00005cbef0ab1ff1  ./references/diagnose-zero-solutions.md
 1705d7446895ce787308d9dc1ab4749f58383c8388e54dbd312f56c8f4928110  ./references/diagnostic-report.md

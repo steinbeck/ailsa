@@ -229,14 +229,33 @@ def render_final(
         lines += ["", "Iterations covered: " + ", ".join(covered(i) for i in decl["iterations"])]
     ids = [i for i in manifest.get("identity", []) if isinstance(i, dict)]
     if ids:
+        # Each verdict belongs to one structure, which need not be the chosen candidate: name
+        # it, chosen candidate first, so a verdict is never read as the declared result's.
+        def is_chosen(item: dict[str, Any]) -> bool:
+            if not chosen:
+                return False
+            key, ckey = item.get("inchikey"), chosen.get("inchikey")
+            if key and ckey:
+                return bool(key == ckey)
+            return bool(item.get("smiles")) and item.get("smiles") == chosen.get("smiles")
+
         lines += ["", "### Identity", ""]
-        for item in ids:
+        for item in sorted(ids, key=lambda i: not is_chosen(i)):
             name = (
                 "hidden in blind mode"
                 if manifest.get("blind")
                 else md_escape(item.get("derived_name") or "none")
             )
-            lines.append(f"- Verdict: {md_escape(item.get('verdict'))}; derived name: {name}")
+            smiles = str(item.get("smiles") or "").replace("`", "")
+            if not smiles:
+                which = "structure not recorded"
+            elif is_chosen(item):
+                which = f"structure `{smiles}` (the chosen candidate)"
+            else:
+                which = f"structure `{smiles}` (not the chosen candidate)"
+            lines.append(
+                f"- Verdict: {md_escape(item.get('verdict'))}; derived name: {name}; {which}"
+            )
     if cands:
         lines += ["", "### Top candidates", "", "| Rank | SMILES | MAE | Within tolerance |"]
         lines.append("|---|---|---|---|")

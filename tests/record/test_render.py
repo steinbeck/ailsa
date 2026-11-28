@@ -138,3 +138,30 @@ def test_model_report_diary_line_is_escaped() -> None:
         "payload": {"agent": "a_1", "actual": None, "source": "self*report"},
     }
     assert _describe(ev, None) == "Model for a\\_1: unknown (source: self\\*report)"
+
+
+def test_identity_names_the_structure_it_belongs_to() -> None:
+    """Candidate 2 declared, identity checked on rank 1 and 2: no verdict reads as the wrong one."""
+    m = {
+        "run_id": "r",
+        "dataset": {"label": "example"},
+        "status": {"state": "result_declared"},
+        "final": {"outcome": "proposal", "candidate": 2, "confidence": "medium"},
+        "identity": [
+            {"smiles": "CCO", "inchikey": "KEY-ONE", "verdict": "confirmed", "derived_name": "N1"},
+            {"smiles": "CC(C)O", "inchikey": "KEY-TWO", "verdict": "novel"},
+        ],
+    }
+    ranking = {"candidates": [
+        {"rank": 1, "smiles": "CCO", "inchikey": "KEY-ONE", "mae": 0.8, "within_tolerance": 2},
+        {"rank": 2, "smiles": "OC(C)C", "inchikey": "KEY-TWO", "mae": 1.1, "within_tolerance": 2},
+    ]}
+    text = render_final(m, ranking, None)
+    block = text.split("### Identity")[1].split("###")[0]
+    lines = [ln for ln in block.splitlines() if ln.startswith("- Verdict")]
+    assert lines[0] == (
+        "- Verdict: novel; derived name: none; structure `CC(C)O` (the chosen candidate)"
+    )
+    assert lines[1] == (
+        "- Verdict: confirmed; derived name: N1; structure `CCO` (not the chosen candidate)"
+    )

@@ -88,6 +88,12 @@ Applies to: ailsa (frontier skill) only; the lean skill writes the record since 
   tools, which Claude Code 2.1.332 did not offer). The team run showed one recording defect in the
   package, fixed there (teammates' model self-reports did not join their agent entries); the
   `ailsa` tools' own events carry no agent id, which a later phase takes up.
+- Review fix, control path only (no chemistry rule changed, not measured): the identity check
+  works on the candidate that will be declared, which is not always rank 1. The solution analyst
+  runs `ailsa identify` on the candidate it recommends (and on rank 1 when that is another
+  structure), its `Identity:` line names that candidate's rank, and the coordinator's G-IDENT
+  push carries that candidate's SMILES (the devil's advocate's "candidate SMILES"). The rendered
+  `final_results.md` names the structure behind each identity verdict.
 
 ## 0.1.0
 

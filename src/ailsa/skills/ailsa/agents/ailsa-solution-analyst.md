@@ -215,11 +215,11 @@ COCONUT 13C shifts: from J.-M. Nuzillard, Zenodo, doi:10.5281/zenodo.6561449, CC
 
 **Derive the reported compound identity from a deterministic tool, not from recalled or parametric knowledge.** A trivial name asserted from model memory is a recurring failure: the structure is right and the recalled name belongs to another compound. Do not do it.
 
-After ranking has selected the top solution, and before you write the `Identity:` line or any name into `[RANKING-COMPLETE]`, run the deterministic identity tool on the top solution's SMILES:
+After ranking, and before you write the `Identity:` line or any name into `[RANKING-COMPLETE]`, run the deterministic identity tool on the SMILES of the candidate you recommend (the `candidate` of your `Declaration draft:`, which is not always rank 1), and on the rank-1 SMILES as well when that is another structure:
 
 ```bash
 ailsa identify \
-  --smiles '<top solution canonical SMILES>' \
+  --smiles '<canonical SMILES of the recommended candidate>' \
   --reported-name '<any trivial name you are inclined to report — OR omit this flag entirely>' \
   --format json
 ```
@@ -241,6 +241,8 @@ ailsa identify \
 The `verdict` field (and the `derived` block + any `warning`) is the sole authority for how you render the identity. You may state a trivial name plainly only on `verdict: "confirmed"`. In every other case the InChIKey + canonical SMILES is the primary identity.
 
 ### Identity Rendering Rule (governs the `Identity:` and `Top solution:` lines of `[RANKING-COMPLETE]`)
+
+The `Identity:` line describes the candidate you recommend and names its rank; the `Top solution:` line describes rank 1. They describe the same structure when you recommend rank 1.
 
 Render the identity strictly by the tool `verdict`:
 
@@ -281,7 +283,7 @@ declares the result; the record renders the results.
 [RANKING-COMPLETE] Iteration N
 Solutions: N total converted and ranked
 Top solution: Rank #1: <tool-derived identity — derived name or InChIKey, NEVER a recalled name> — SMILES: <smiles>, MAE: N ppm, Matched: N/N
-Identity: <tool warning first on "tentative"> <verdict from `ailsa identify` (confirmed | confirmed-structure | tentative | novel)> — <derived DB name on "confirmed", else InChIKey> <(tentative, unverified) if any model-suggested name is reported> — InChIKey <inchi_key>, canonical SMILES <canonical_smiles> — Identity confidence: <tool-confirmed | structure-only | unverified/novel>
+Identity: rank <recommended rank> — <tool warning first on "tentative"> <verdict from `ailsa identify` (confirmed | confirmed-structure | tentative | novel)> — <derived DB name on "confirmed", else InChIKey> <(tentative, unverified) if any model-suggested name is reported> — InChIKey <inchi_key>, canonical SMILES <canonical_smiles> — Identity confidence: <tool-confirmed | structure-only | unverified/novel>
 Strained rings: None / found in solutions <list>
 Aromatic warning: None / WARNING: <N> solutions non-aromatic despite <N> shifts in 110-160 ppm — check for potential 4J HMBC couplings (aromatic-to-aliphatic)
 Aromatic verification: <"CONFIRMED — top N candidates show M aromatic carbons (predicted)" / "INCONSISTENT — top N candidates lack aromatic carbons despite M experimental shifts in 110-160 ppm" / "N/A — no aromatic expectation">
@@ -324,7 +326,7 @@ Declaration draft: outcome <proposal | proposal_under_determined | inconclusive>
        Flag structural inconsistency if candidate lacks aromatic carbons that experimental data expects.
 5. Assess chemical plausibility for each top candidate (5 checks)
 6. Compute confidence scores: per-atom 3-factor model, then per-structure derivation
-6a. **Derive identity (required before writing the `Identity:` line; see Identity Derivation):** run `ailsa identify --smiles '<top solution SMILES>' [--reported-name '<name>'] --format json` (an installed `ailsa` subcommand, reachable from the CASE data dir like `ailsa lsd rank`) on the rank-#1 SMILES and parse the JSON `verdict`/`derived`/`warning`. Derive the reported identity from this tool output, not from recalled or parametric knowledge.
+6a. **Derive identity (required before writing the `Identity:` line; see Identity Derivation):** run `ailsa identify --smiles '<recommended candidate SMILES>' [--reported-name '<name>'] --format json` (an installed `ailsa` subcommand, reachable from the CASE data dir like `ailsa lsd rank`) on the SMILES of the candidate you recommend, and on the rank-1 SMILES as well when it differs, and parse the JSON `verdict`/`derived`/`warning`. Derive the reported identity from this tool output, not from recalled or parametric knowledge.
 7. Send [RANKING-COMPLETE] message to coordinator via SendMessage with all labeled fields, the `Ranking id:` of the atom-by-atom ranking and the `Declaration draft:` (see the Message protocol to the coordinator) — render the `Identity:` line per the verdict-keyed Identity Rendering Rule; mark any non-confirmed trivial name `(tentative, unverified)`. Write no report or ranking file: the ranking tool has recorded the rankings itself.
 8. Mark task completed via TaskUpdate
 

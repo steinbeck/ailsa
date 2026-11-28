@@ -144,7 +144,7 @@ before the result is declared; a lifecycle distinct from the pre-run gates):
 
 | Gate | When | Severity | Trigger |
 |------|------|----------|---------|
-| G-IDENT | Post-solution, after `[RANKING-COMPLETE]`, before the result is declared | `WARNING` (advisory, never blocks) | The reported trivial name does not plausibly match the structure read from the top SMILES (independent reasoning; does not call the deterministic tool): a specific isomer name asserted where the data do not resolve the regiochemistry, or a recalled name whose ring linkage or symmetry does not match the drawn structure. Action: downgrade the name to `(tentative, unverified)`. |
+| G-IDENT | Post-solution, after `[RANKING-COMPLETE]`, before the result is declared | `WARNING` (advisory, never blocks) | The reported trivial name does not plausibly match the structure read from the candidate SMILES (independent reasoning; does not call the deterministic tool): a specific isomer name asserted where the data do not resolve the regiochemistry, or a recalled name whose ring linkage or symmetry does not match the drawn structure. Action: downgrade the name to `(tentative, unverified)`. |
 
 Pre-accept gate (fires during the ambiguous-multiplicity branch; blocks accept, not the solver
 run; distinct from both lifecycles above):
@@ -163,7 +163,8 @@ on `compound.lsd`: it has no LSD file to inspect. It inspects the reported name 
 solved structure that the coordinator's `[BEGIN] G-IDENT` message carries.
 
 Fires: once, post-solution, after `[RANKING-COMPLETE]` and before the result is declared, when the
-coordinator sends `[BEGIN] G-IDENT` with the reported name and the top SMILES. The coordinator
+coordinator sends `[BEGIN] G-IDENT` with the reported name and the candidate SMILES (the
+candidate the analyst recommends, not always rank 1). The coordinator
 triggers this review pass; if no explicit trigger arrives, run it before the run is declared
 complete. The coordinator turns a flag into a caveat of the declaration.
 
@@ -172,7 +173,7 @@ structure agree; it confirms that the analyst did not override the tool with a r
 G-IDENT is the second, human-style reasoning cross-check, the independent advisory layer. Do not
 call `ailsa identify` or `derive_identity` for it: that would collapse the two layers into one and
 destroy their independence. Instead, reason independently about whether the reported compound
-name in the `[BEGIN] G-IDENT` message plausibly matches the structure drawn from the top SMILES.
+name in the `[BEGIN] G-IDENT` message plausibly matches the structure drawn from the candidate SMILES.
 
 Severity: `WARNING`, advisory; it never blocks. The structural result (SMILES, rank, MAE) is
 always reported; only an asserted name is downgraded. If you find a mismatch between name and
@@ -180,7 +181,7 @@ structure, flag it and instruct that the reported trivial name be downgraded to
 `(tentative, unverified)`.
 
 Procedure (independent reasoning; do not shell out to the deterministic tool):
-1. Read the reported identity or trivial name and the top SMILES from the coordinator's
+1. Read the reported identity or trivial name and the candidate SMILES from the coordinator's
    `[BEGIN] G-IDENT` message (no file).
 2. From the SMILES alone, reason about the structure's defining features: scaffold and ring
    system, symmetry, substitution pattern, connectivity of the key functional groups.
@@ -387,8 +388,8 @@ different trigger and a different input:
 
 14. After the solution analyst sends `[RANKING-COMPLETE]` (post-solution) and before the result is
     declared, the coordinator sends you a `[BEGIN] G-IDENT` request with the reported name and the
-    top SMILES. Run the G-IDENT gate (see "G-IDENT: name and structure cross-check" above): read
-    the reported name and the top SMILES from that message, and reason independently about
+    candidate SMILES. Run the G-IDENT gate (see "G-IDENT: name and structure cross-check" above): read
+    the reported name and the candidate SMILES from that message, and reason independently about
     whether the name plausibly matches the drawn structure. Do not call the deterministic
     `ailsa identify` tool: that is the analyst's binding layer, and G-IDENT is the independent
     second opinion. Apply the two triggers (an isomer name the data do not resolve; a name whose

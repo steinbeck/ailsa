@@ -72,14 +72,16 @@ own run of the deterministic `ailsa identify` is the binding check; this G-IDENT
 separate LLM cross-check, and it does not re-run `ailsa identify`.
 
 The DA is idle and does not act on its own, so write the phase note
-`--phase identity-check` (`--sender coordinator`) and push the trigger. Fill in the name from the
-`Identity:` line and the SMILES from the `Top solution:` line of the analyst's [RANKING-COMPLETE]:
+`--phase identity-check` (`--sender coordinator`) and push the trigger. Review the candidate that
+will be declared, which is not always rank 1: take its rank from the `candidate` of the analyst's
+`Declaration draft:`, its SMILES from that rank's row in `Top candidates:`, and the name from the
+`Identity:` line, which the analyst derives for that candidate:
 
 ```
 SendMessage(
   type="message",
   recipient="devils-advocate",
-  content="[BEGIN] G-IDENT — post-solution name↔structure review. Reported name: <name from [RANKING-COMPLETE]>; top SMILES: <top SMILES from [RANKING-COMPLETE]>. Run only your G-IDENT gate (name and structure cross-check, post-solution): read the reported trivial name + the top SMILES, reason independently about whether the name plausibly matches the drawn structure — do not call ailsa identify / derive_identity (that is the analyst's binding layer). Apply the two G-IDENT triggers: a specific isomer name asserted where the data do not resolve the regiochemistry, and a recalled trivial name whose ring linkage or symmetry does not match the drawn structure. Reply [G-IDENT-PASSED] or [G-IDENT-FLAGGED] with a one-line rationale.",
+  content="[BEGIN] G-IDENT — post-solution name↔structure review. Reported name: <name from the Identity: line>; candidate SMILES (rank <N>): <SMILES of the recommended candidate>. Run only your G-IDENT gate (name and structure cross-check, post-solution): read the reported trivial name + the candidate SMILES, reason independently about whether the name plausibly matches the drawn structure — do not call ailsa identify / derive_identity (that is the analyst's binding layer). Apply the two G-IDENT triggers: a specific isomer name asserted where the data do not resolve the regiochemistry, and a recalled trivial name whose ring linkage or symmetry does not match the drawn structure. Reply [G-IDENT-PASSED] or [G-IDENT-FLAGGED] with a one-line rationale.",
   summary="Post-solution G-IDENT review"
 )
 ```

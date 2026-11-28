@@ -247,6 +247,21 @@ def test_devils_advocate_gate_reads_message() -> None:
     assert "[RANKING-COMPLETE]" in gate, "the G-IDENT section does not name [RANKING-COMPLETE]"
 
 
+def test_identity_check_targets_the_declared_candidate() -> None:
+    """The declared candidate is not always rank 1, so identity and G-IDENT follow it.
+
+    Otherwise the rendered result could show the verdict of rank 1 next to candidate 2.
+    """
+    analyst = ANALYST_MD.read_text()
+    assert "rank-#1 SMILES" not in analyst, "the analyst still identifies rank 1 only"
+    assert "the SMILES of the candidate you recommend" in analyst
+    assert "Identity: rank <recommended rank>" in analyst
+    gate = _section(GATES_MD.read_text(), "## Identity gate")
+    assert "`Top solution:` line" not in gate, "G-IDENT still reviews the rank-1 SMILES"
+    assert "candidate SMILES (rank <N>)" in gate
+    assert "top SMILES" not in DEVILS_ADVOCATE_MD.read_text()
+
+
 def test_agents_use_work_dir() -> None:
     """No agent writes or reads the dataset's analysis folder, a manifest or a timing file.
 
