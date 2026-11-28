@@ -566,3 +566,17 @@ def test_runner_records_a_signalled_stop(tmp_path):
     assert meta["launcher_reason"].startswith("terminated")
     assert meta["launcher_rc"] == 143
     assert meta["final_results"] is False
+
+
+@pytest.mark.skipif(shutil.which("bash") is None, reason="needs bash")
+def test_fence_allows_close_and_the_runs_own_folder(tmp_path):
+    """The fence lets the run close itself and read its own record, nothing else in results."""
+    argv_file = tmp_path / "argv.txt"
+    fake = _fake_harness(tmp_path, f'printf "%s\\n" "$@" > "{argv_file}"')
+    r, meta, _ = _run_runner(tmp_path, fake)
+    text = argv_file.read_text()
+    assert "--append-system-prompt" in text, r.stdout + r.stderr
+    assert "ailsa run close --reason" in text
+    assert "until the run has declared its result" not in text
+    assert "Your own run folder (the parent of your working folder) is not such a location" in text
+    assert f"Every other folder under {os.path.realpath(tmp_path / 'results')} is one." in text

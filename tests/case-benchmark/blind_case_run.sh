@@ -79,9 +79,12 @@ MF="$(tr -d '[:space:]' < "$MF_FILE")"
 # the launcher starts the harness by the name `claude`: put the pinned one first
 case "$CLAUDE_BIN" in */*) export PATH="$(dirname "$CLAUDE_BIN"):$PATH";; esac
 
-FENCE="BLIND CASE EVALUATION. Solve an unknown structure using ONLY the NMR data at the given dataset path plus the provided molecular formula. Do NOT read, list or grep any ground-truth / answer-key / benchmark-results location${CASE_ANSWERKEY_DIR:+ (in particular ${CASE_ANSWERKEY_DIR})} — using it invalidates the run. Never attempt dereplication; never look the compound up by name.
+# The run's own record lies under the results root (per-case workspace), so the fence exempts
+# exactly that run folder and keeps every other results folder off limits.
+RESULTS_ROOT="$(cd "$RESULTS_DIR/.." && pwd)"
+FENCE="BLIND CASE EVALUATION. Solve an unknown structure using ONLY the NMR data at the given dataset path plus the provided molecular formula. Do NOT read, list or grep any ground-truth / answer-key / benchmark-results location${CASE_ANSWERKEY_DIR:+ (in particular ${CASE_ANSWERKEY_DIR})} — using it invalidates the run. Your own run folder (the parent of your working folder) is not such a location: read its record and renderings as the workflow asks. Every other folder under ${RESULTS_ROOT} is one. Never attempt dereplication; never look the compound up by name.
 
-HEADLESS EXECUTION: there is no event loop to wake you after you stop. Never background a teammate/solver and then end your turn to 'wait' — drive every stage to completion INLINE, and do not stop until the run has declared its result with \`ailsa run finalize\`."
+HEADLESS EXECUTION: there is no event loop to wake you after you stop. Never background a teammate/solver and then end your turn to 'wait' — drive every stage to completion INLINE, and do not stop until the run is settled: \`ailsa run finalize\` with an outcome the evidence justifies, or \`ailsa run close --reason ...\` when no result can be declared (a smoke test, a failed prerequisite). Never declare an outcome only to end the run."
 
 if [ "$MODE" = smoke ]; then
   PROMPT_ARGS=(--prompt "/ailsa:case $CASE_DIR $MF --smoke-test")
