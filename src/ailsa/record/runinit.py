@@ -138,11 +138,13 @@ def _skill_location(
     """
     if not name:
         return None, None, None, None
+    from ailsa.record.env import claude_config_dir
+
     cwd = Path.cwd()
     home = Path.home()
     candidates = (
         ("project-claude", cwd / ".claude" / "skills" / name),
-        ("global-claude", home / ".claude" / "skills" / name),
+        ("global-claude", claude_config_dir() / "skills" / name),
         ("project-opencode", cwd / ".opencode" / "skills" / name),
         ("global-opencode", home / ".config" / "opencode" / "skills" / name),
     )
@@ -488,7 +490,16 @@ def init_run(
             harness=harness_name,
         )
         if installed is not None and isinstance(payload.get("skill"), dict):
-            payload["skill"]["files"] = installed  # what actually ran
+            # What actually ran: the installed files, name and version; the packaged
+            # version is kept beside it so a stale install shows.
+            from ailsa.record.env import command_skill_meta
+
+            name, version = command_skill_meta()
+            packaged_version = payload["skill"].get("version")
+            payload["skill"]["files"] = installed
+            payload["skill"]["name"] = name or payload["skill"].get("name")
+            payload["skill"]["version"] = version
+            payload["skill"]["packaged_version"] = packaged_version
         payload["skill_location"] = where
         payload["skill_matches_packaged"] = same
         append_event(run_dir, "env.captured", payload, actor=_TOOL, fsync=True)

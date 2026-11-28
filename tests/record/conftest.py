@@ -11,6 +11,12 @@ import pytest
 from ailsa.record.workspace import create_run_dir
 
 
+@pytest.fixture(autouse=True)
+def _no_claude_config_dir(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Tests isolate the Claude folder through HOME; an inherited CLAUDE_CONFIG_DIR would win."""
+    monkeypatch.delenv("CLAUDE_CONFIG_DIR", raising=False)
+
+
 @pytest.fixture
 def workspace(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     ws = tmp_path / "ws"

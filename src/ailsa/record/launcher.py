@@ -221,7 +221,9 @@ def prepare_run(
         # Checked before init_run so a refusal leaves no run folder behind.
         if harness != "claude":
             raise LauncherError("the frontier skill runs only in Claude Code (--harness claude)")
-        if not (Path.home() / ".claude" / "commands" / "ailsa" / "case.md").is_file():
+        from ailsa.record.env import command_skill_installed
+
+        if not command_skill_installed():
             raise LauncherError(
                 "the frontier skill is not installed; "
                 "run: ailsa skill install ailsa --target claude"
@@ -282,8 +284,8 @@ def prepare_run(
             settings = build_settings(sys.executable, auto_memory=False)
             atomic_write_json(run_dir / HOOKS_SETTINGS, settings)
         if not frontier:
-            # The frontier command skill must be the global install: its commands read
-            # ~/.claude/ailsa/references.
+            # The frontier command skill must be the global install (the Claude folder, see
+            # env.claude_config_dir): its commands read ~/.claude/ailsa/references.
             parts = _SKILL_DIRS[harness]
             shutil.copytree(skill_src, agent_dir.joinpath(*parts, skill), symlinks=False)
         if context_files:

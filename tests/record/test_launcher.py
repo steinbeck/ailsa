@@ -561,6 +561,20 @@ def test_frontier_missing_install_refused(
     assert _run_folders(tmp_path) == []
 
 
+def test_frontier_install_check_honours_claude_config_dir(
+    claude: Path, frontier_home: Path, dataset: Path, tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from .test_env import install_command_skill
+
+    monkeypatch.setenv("CLAUDE_CONFIG_DIR", str(tmp_path / "cfg"))
+    res = _start(dataset, "--model", "m", "--skill", "ailsa")
+    assert res.exit_code == 2  # installed in ~/.claude, but Claude Code reads cfg/
+    assert _run_folders(tmp_path) == []
+    install_command_skill(tmp_path / "cfg", link=True)
+    _result(_start(dataset, "--model", "m", "--skill", "ailsa"))
+
+
 def test_frontier_opencode_refused(
     shim_path: Path, frontier_home: Path, dataset: Path, tmp_path: Path
 ) -> None:

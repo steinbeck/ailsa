@@ -189,13 +189,46 @@ def skill_file_hashes(skill_dir: Path) -> dict[str, str]:
     return out
 
 
+CLAUDE_CONFIG_ENV = "CLAUDE_CONFIG_DIR"
+
+
+def claude_config_dir() -> Path:
+    """The Claude Code folder: ``$CLAUDE_CONFIG_DIR`` when set (Claude Code honours it), else
+    ``~/.claude``. Every lookup of the installed command skill goes through here."""
+    env = os.environ.get(CLAUDE_CONFIG_ENV)
+    return Path(env).expanduser() if env else Path.home() / ".claude"
+
+
+def command_skill_installed(root: Path | None = None) -> bool:
+    base = claude_config_dir() if root is None else Path(root)
+    return (base / "commands" / "ailsa" / "case.md").is_file()
+
+
+def _skill_meta(md: Path) -> tuple[str | None, str | None]:
+    """``name`` and ``metadata.version`` from a SKILL.md or INDEX.md front matter."""
+    text = md.read_text(encoding="utf-8", errors="replace")
+    m = re.search(r"^name:\s*(\S+)", text, re.MULTILINE)
+    v = re.search(r'^\s+version:\s*"?([^"\n]+)"?', text, re.MULTILINE)
+    return (m.group(1) if m else None), (v.group(1).strip() if v else None)
+
+
+def command_skill_meta(root: Path | None = None) -> tuple[str | None, str | None]:
+    """Name and version of the installed command skill (its own INDEX.md), or (None, None)."""
+    base = claude_config_dir() if root is None else Path(root)
+    index = base / "ailsa" / "INDEX.md"
+    if not index.is_file():
+        return None, None
+    return _skill_meta(index.resolve())
+
+
 def command_skill_files(root: Path | None = None) -> dict[str, str] | None:
     """Hashes of an installed frontier command skill, keyed by the packaged relative path.
 
-    ``root`` is the Claude folder (default ``~/.claude``). Link installs are followed so the
-    hashes are those of the files that actually ran. None if no command skill is installed.
+    ``root`` is the Claude folder (default: :func:`claude_config_dir`). Link installs are
+    followed so the hashes are those of the files that actually ran. None if no command skill
+    is installed.
     """
-    base = Path.home() / ".claude" if root is None else Path(root)
+    base = claude_config_dir() if root is None else Path(root)
     if not (base / "commands" / "ailsa" / "case.md").is_file():
         return None
     out: dict[str, str] = {}
@@ -227,11 +260,7 @@ def skill_info(skill_dir: Path | None) -> dict[str, Any]:
     if not skill_md.is_file():
         skill_md = root / "INDEX.md"  # the frontier command skill has no SKILL.md
     if skill_md.is_file():
-        text = skill_md.read_text(encoding="utf-8", errors="replace")
-        m = re.search(r"^name:\s*(\S+)", text, re.MULTILINE)
-        v = re.search(r'^\s+version:\s*"?([^"\n]+)"?', text, re.MULTILINE)
-        name = m.group(1) if m else None
-        version = v.group(1).strip() if v else None
+        name, version = _skill_meta(skill_md)
     return {"name": name or root.name, "version": version, "files": skill_file_hashes(root)}
 
 

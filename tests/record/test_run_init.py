@@ -372,3 +372,39 @@ def test_env_captured_for_frontier_skill(
     assert payload["skill_location"] == "global-claude-commands"
     assert payload["skill_matches_packaged"] is True
     assert "CHANGELOG.md" not in payload["skill"]["files"]
+
+
+def test_env_captured_reports_the_installed_version(
+    workspace: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A copy install of another version: the record names the version that ran."""
+    from .test_env import _index_version, _packaged_frontier
+
+    monkeypatch.setenv("HOME", str(tmp_path / "home"))
+    _install_frontier(tmp_path / "home", link=False)
+    index = tmp_path / "home" / ".claude" / "ailsa" / "INDEX.md"
+    packaged = _index_version(_packaged_frontier())
+    index.write_text(index.read_text().replace(f'version: "{packaged}"', 'version: "0.0.1"'))
+    res = _init(_dataset(tmp_path), skill="ailsa")
+    payload = read_events(res["run_dir"])["events"][1]["payload"]
+    assert payload["skill"]["version"] == "0.0.1"
+    assert payload["skill"]["packaged_version"] == packaged
+    assert payload["skill_matches_packaged"] is False
+
+
+def test_skill_location_honours_claude_config_dir(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from ailsa.record.runinit import _skill_location
+
+    monkeypatch.setenv("HOME", str(tmp_path / "home"))
+    monkeypatch.chdir(tmp_path)
+    _install_frontier(tmp_path / "home", link=True)
+    monkeypatch.setenv("CLAUDE_CONFIG_DIR", str(tmp_path / "cfg"))
+    assert _skill_location("ailsa")[1] == "packaged"  # ~/.claude is not where Claude Code looks
+    from .test_env import install_command_skill
+
+    install_command_skill(tmp_path / "cfg", link=True)
+    _, label, same, installed = _skill_location("ailsa")
+    assert (label, same) == ("global-claude-commands", True)
+    assert installed
