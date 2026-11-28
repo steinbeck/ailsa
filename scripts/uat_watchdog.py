@@ -406,8 +406,109 @@ def ssh_run(remote_cmd: str, timeout: int = 60) -> str:
     return proc.stdout
 
 
+# Stops the runner's own launchers and harnesses under one results root, nothing else.
+# The host is shared and the owner works there interactively (lean-skill runs, interactive
+# frontier runs, resumed Claude Code sessions), so no command-line pattern alone decides:
+#   - a launcher is signalled only through the pid that blind_case_run.sh wrote to
+#     <root>/CASE*/launcher.pid, and only while that pid still carries the runner's exact
+#     launcher arguments and the case has no meta.json yet (the runner writes it after the
+#     launcher exited, so an older pid may belong to another process by now);
+#   - a harness is killed only when its --settings file lies in a run record under this
+#     results root, and then with its own process group (a headless harness leads one).
+# Run as `python3 - <root>`; the tests load the two predicates without running main().
+_STOP_RUNS = r'''
+import glob, os, re, signal, subprocess, sys, time
+
+# The launcher's kill grace (10 s) plus the transcript copy and the rendering.
+WAIT_S = 30
+# blind_case_run.sh's launcher: the frontier skill, headless and blind, in this order.
+# The bracket keeps this source text from matching itself.
+LAUNCHER = re.compile(r"(^|[ /])ailsa run start .* --skill ailsa --headless --blin[d]( |$)")
+
+
+def is_runner_launcher(args):
+    return bool(LAUNCHER.search(args or ""))
+
+
+def is_runner_harness(args, root):
+    pattern = (r"(^| )--settings " + re.escape(root.rstrip("/"))
+               + r"/[^/ ]+/ailsa-runs/[^ ]+/hooks\.json( |$)")
+    return bool(re.search(pattern, args or ""))
+
+
+def ps_table():
+    try:
+        out = subprocess.run(["ps", "-ww", "-A", "-o", "pid=", "-o", "args="],
+                             capture_output=True, text=True, timeout=10).stdout
+    except (OSError, subprocess.SubprocessError):
+        return {}
+    rows = {}
+    for line in out.splitlines():
+        pid, _, args = line.strip().partition(" ")
+        if pid.isdigit():
+            rows[int(pid)] = args.strip()
+    return rows
+
+
+def recorded_launchers(root, table):
+    pids = []
+    for path in sorted(glob.glob(os.path.join(root, "CASE*", "launcher.pid"))):
+        if os.path.exists(os.path.join(os.path.dirname(path), "meta.json")):
+            continue
+        try:
+            pid = int(open(path).read().strip())
+        except (OSError, ValueError):
+            continue
+        if is_runner_launcher(table.get(pid)):
+            pids.append(pid)
+    return pids
+
+
+def _signal(pid, sig, group=False):
+    try:
+        if group and os.getpgid(pid) == pid:
+            os.killpg(pid, sig)
+        else:
+            os.kill(pid, sig)
+    except (ProcessLookupError, PermissionError):
+        pass
+
+
+def main(root):
+    root = os.path.realpath(root)
+    launchers = recorded_launchers(root, ps_table())
+    for pid in launchers:
+        _signal(pid, signal.SIGTERM)
+    end = time.monotonic() + WAIT_S
+    while launchers and time.monotonic() < end:
+        table = ps_table()
+        if not any(is_runner_launcher(table.get(pid)) for pid in launchers):
+            break
+        time.sleep(1)
+    table = ps_table()
+    for pid in launchers:
+        if is_runner_launcher(table.get(pid)):
+            _signal(pid, signal.SIGKILL)
+    me = os.getpid()
+    for pid, args in table.items():
+        if pid != me and is_runner_harness(args, root):
+            _signal(pid, signal.SIGKILL, group=True)
+    time.sleep(1)
+    table = ps_table()
+    left = sum(1 for pid, args in table.items()
+               if pid != me and (is_runner_harness(args, root)
+                                 or (pid in launchers and is_runner_launcher(args))))
+    print(f"launchers_signalled={len(launchers)}")
+    print(f"agents_left={left}")
+
+
+if __name__ == "__main__":
+    main(sys.argv[1])
+'''
+
 _ABORT_SCRIPT = """
 set -u
+ROOT="${1:?results root}"
 # SIGTERM first: blind_case_batch stashes the ground-truth table and only puts
 # it back in a finally. SIGKILL skips that and leaves the answer key hidden,
 # which silently breaks the next grading run.
@@ -417,20 +518,11 @@ for _ in 1 2 3 4 5 6 7 8 9 10; do
   sleep 1
 done
 pkill -KILL -f '[b]lind_case_batch.py' 2>/dev/null || true
-# The launcher kills its harness tree and closes the record on SIGTERM, so stop it
-# before the harness patterns below.
-pkill -TERM -f '[a]ilsa run start .*--skill ailsa' 2>/dev/null || true
-for _ in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15; do
-  pgrep -f '[a]ilsa run start .*--skill ailsa' >/dev/null || break
-  sleep 1
-done
-pkill -TERM -f '[t]imeout 3600' 2>/dev/null || true
-sleep 3
-pkill -KILL -f '[t]imeout 3600' 2>/dev/null || true
-# Match the arguments, not argv[0]: the runner starts the pinned binary by its full path,
-# which need not end in "claude". The bracket keeps pkill from matching its own command line.
-pkill -KILL -f -- '-p /ailsa:cas[e] ' 2>/dev/null || true
-pkill -KILL -f -- '--resum[e] .* --dangerously-skip-permissions' 2>/dev/null || true
+# The launcher kills its harness tree and closes the record on SIGTERM, so it is stopped
+# first; only harnesses of this results root that outlive it are killed (see _STOP_RUNS).
+python3 - "$ROOT" <<'PYEOF'
+""" + _STOP_RUNS + """
+PYEOF
 
 # Whatever the finally did or did not manage, reconcile against the manifest.
 python3 - <<'PYEOF'
@@ -451,18 +543,19 @@ else:
     os.remove(man)
 PYEOF
 echo "batches_left=$(pgrep -f '[b]lind_case_batch.py' | wc -l)"
-echo "agents_left=$(pgrep -f '[t]imeout 3600' | wc -l)"
 """
 
 
-def abort_chunk() -> str:
+def abort_chunk(results_dir: str) -> str:
     """Stop a running chunk and make sure the answer key is back in place.
 
-    Used when the quota ceiling is crossed mid-chunk. Returns the remote
-    output so the caller can log what happened.
+    Used when the quota ceiling is crossed mid-chunk. Only the runs of this
+    series (``results_dir``) are stopped. Returns the remote output so the
+    caller can log what happened.
     """
     probe = base64.b64encode(_ABORT_SCRIPT.encode()).decode()
-    return ssh_run(f"echo {probe} | base64 -d | bash", timeout=90)
+    return ssh_run(f"echo {probe} | base64 -d | bash -s -- {shlex.quote(results_dir)}",
+                   timeout=90)
 
 
 def chunk_running() -> bool:
@@ -733,7 +826,7 @@ def main() -> int:
                     log(f"ABORTING running chunk — 7d at {seven:.0f} % is "
                         f"{ABORT_MARGIN_PCT:.0f} pt past the {args.seven_day_max:.0f} % "
                         f"ceiling")
-                    for line in abort_chunk().splitlines():
+                    for line in abort_chunk(args.results_dir).splitlines():
                         if line.strip():
                             log(f"  abort: {line.strip()}")
                 else:

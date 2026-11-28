@@ -91,12 +91,18 @@ else
 fi
 
 START=$(date +%s)
+# The launcher runs in the background only so that its pid can be recorded: the watchdog's
+# abort stops exactly this launcher (launcher.pid), never another `ailsa run start` of the
+# same user on the shared host. Keep the argument order: the abort checks it.
 AILSA_WORKSPACE="$RESULTS_DIR/ailsa-runs" "$AILSA_BIN" run start "$CASE_DIR" --skill ailsa --headless --blind \
   --model "$CLAUDE_MODEL" --formula "$MF" --time-limit "$CALL_TIMEOUT" \
   --resume-attempts "$ATTEMPTS_ARG" --deadline "$DEADLINE_S" --no-views --format json \
   ${PROMPT_ARGS[@]+"${PROMPT_ARGS[@]}"} \
   -- --append-system-prompt "$FENCE" \
-  > "$RESULTS_DIR/launch.json" 2> "$RESULTS_DIR/launch.err"
+  > "$RESULTS_DIR/launch.json" 2> "$RESULTS_DIR/launch.err" &
+LPID=$!
+echo "$LPID" > "$RESULTS_DIR/launcher.pid"
+wait "$LPID"
 RC=$?
 END=$(date +%s); RUNTIME=$((END - START))
 

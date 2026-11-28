@@ -7,6 +7,7 @@ import re
 import shutil
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 import pytest
@@ -86,32 +87,118 @@ def test_preflight_halts_with_copy_command_when_pin_missing(monkeypatch):
     assert f"cp {mod.PINNED_CLI_SOURCE} {mod.PINNED_CLI}" in str(exc.value)
 
 
-def test_watchdog_abort_pattern():
-    """The abort's pkill patterns must match the argv the launcher really builds."""
+def _stop_runs():
+    """The abort's process selection, loaded without running its main()."""
+    ns: dict = {"__name__": "stop_runs"}
+    exec(_load_watchdog()._STOP_RUNS, ns)
+    return ns
+
+
+ROOT_SERIES = "/mnt/raid_drive/chris/series-new"
+
+# Command lines of the owner's own work on the shared host: none may be signalled.
+INNOCENT = (
+    "/home/chris/.venv/bin/python /home/chris/.venv/bin/ailsa run start /data/X "
+    "--skill ailsa-lite --harness opencode --headless --blind --model m",
+    "/home/chris/.venv/bin/python /home/chris/.venv/bin/ailsa run start /data/X "
+    "--skill ailsa --interactive --model m",
+    "/home/chris/.venv/bin/python /home/chris/.venv/bin/ailsa run start /data/X "
+    "--skill ailsa --headless --model m --resume-attempts 3",
+    "claude -p hi",
+    "claude --resume 1234-abcd --dangerously-skip-permissions",
+    "claude --resume 1234-abcd -p Continue the CASE workflow where it stopped. "
+    "--dangerously-skip-permissions",
+    "/home/chris/.local/bin/claude",
+    "claude",
+    f"python3 scripts/uat_watchdog.py --results-dir {ROOT_SERIES}",
+)
+
+
+def test_watchdog_abort_selects_only_the_runners_runs():
+    """The abort stops this series' launchers and harnesses, never the owner's other work."""
     from ailsa.record.launcher import build_argv, build_resume_argv
 
     mod = _load_watchdog()
-    patterns = re.findall(r"pkill -KILL -f -- '([^']+)'", mod._ABORT_SCRIPT)
-    assert len(patterns) == 2
-    term = re.findall(r"pkill -TERM -f '(\[a\]ilsa run start[^']*)'", mod._ABORT_SCRIPT)
-    assert len(term) == 1
+    stop = _stop_runs()
+    # No command-line pattern over every process of the user is left in the abort.
+    assert "ailsa run start" not in mod._ABORT_SCRIPT.replace(mod._STOP_RUNS, "")
+    assert "--resum" not in mod._ABORT_SCRIPT
+    assert "timeout 3600" not in mod._ABORT_SCRIPT
+    launcher = ("/home/chris/.venv/bin/python /home/chris/.venv/bin/ailsa run start "
+                "/data/CASE1 --skill ailsa --headless --blind --model claude-opus-5-5 "
+                "--formula C6H6 --time-limit 3600 -- --append-system-prompt BLIND")
+    assert stop["is_runner_launcher"](launcher)
+    run_dir = f"{ROOT_SERIES}/CASE1/ailsa-runs/2026-11-28T1200Z_CASE1_ab12"
     extra = ["--append-system-prompt", "BLIND CASE EVALUATION."]
     new_run = " ".join(build_argv(
         harness="claude", model="claude-opus-5-5",
-        prompt="/ailsa:case /data/CASE1 C6H6", headless=True, run_dir="/tmp/run",
+        prompt="/ailsa:case /data/CASE1 C6H6", headless=True, run_dir=run_dir,
         dataset="/data/CASE1", session_id="1234-abcd", extra=extra))
     resume = " ".join(build_resume_argv(
         model="claude-opus-5-5", nudge="Continue", session_id="1234-abcd",
-        run_dir="/tmp/run", dataset="/data/CASE1", extra=extra))
-    assert any(re.search(p, new_run) for p in patterns)
-    assert any(re.search(p, resume) for p in patterns)
-    launcher = ("/home/chris/.venv/bin/ailsa run start /data/CASE1 --skill ailsa "
-                "--headless --blind --model claude-opus-5-5")
-    assert re.search(term[0], launcher)
-    # Never the abort script itself, nor an interactive session on the host.
-    for innocent in (mod._ABORT_SCRIPT, "/home/chris/.local/bin/claude",
-                     "claude --resume 1234-abcd", "claude -p hi", "claude"):
-        assert not any(re.search(p, innocent) for p in patterns + term), innocent
+        run_dir=run_dir, dataset="/data/CASE1", extra=extra))
+    assert stop["is_runner_harness"](new_run, ROOT_SERIES)
+    assert stop["is_runner_harness"](resume, ROOT_SERIES + "/")
+    # The same harness of a run recorded elsewhere (an interactive run of the owner).
+    elsewhere = new_run.replace(f"{ROOT_SERIES}/CASE1/ailsa-runs", "/home/chris/ailsa-runs")
+    other_series = new_run.replace(ROOT_SERIES, ROOT_SERIES + "-old")
+    for innocent in (*INNOCENT, elsewhere, other_series, mod._ABORT_SCRIPT, mod._STOP_RUNS):
+        assert not stop["is_runner_launcher"](innocent), innocent
+        assert not stop["is_runner_harness"](innocent, ROOT_SERIES), innocent
+
+
+def test_runner_records_the_launcher_pid():
+    text = _read("tests/case-benchmark/blind_case_run.sh")
+    assert 'echo "$LPID" > "$RESULTS_DIR/launcher.pid"' in text
+    assert 'wait "$LPID"' in text
+    # The abort keys on this argument order.
+    assert 'run start "$CASE_DIR" --skill ailsa --headless --blind ' in text
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX signals")
+def test_watchdog_abort_signals_recorded_launchers_only(tmp_path):
+    """Run the abort's stop step on live fake processes under a temporary results root."""
+    import subprocess as sp
+
+    root = Path(os.path.realpath(tmp_path)) / "series"
+    sleeper = [sys.executable, "-c", "import time; time.sleep(60)"]
+    shape = ["ailsa", "run", "start", "/data/X", "--skill", "ailsa", "--headless", "--blind",
+             "--model", "m"]
+    procs: dict[str, sp.Popen] = {}
+
+    def spawn(name, args, case=None, new_session=False):
+        procs[name] = sp.Popen(sleeper + args, start_new_session=new_session)
+        if case:
+            (root / case).mkdir(parents=True, exist_ok=True)
+            (root / case / "launcher.pid").write_text(f"{procs[name].pid}\n")
+
+    try:
+        spawn("launcher", shape, case="CASE1")
+        # A pid file pointing at a process that is not the runner's launcher (pid reused).
+        spawn("lean", [*shape[:5], "ailsa-lite", *shape[6:]], case="CASE2")
+        # A finished case: meta.json exists, so its old pid is never trusted.
+        spawn("finished", shape, case="CASE3")
+        (root / "CASE3" / "meta.json").write_text("{}")
+        spawn("interactive", [*shape[:6], "--interactive"])
+        spawn("harness", ["-p", "/ailsa:case", "--settings",
+                          f"{root}/CASE1/ailsa-runs/r1/hooks.json"], new_session=True)
+        spawn("other_harness", ["-p", "/ailsa:case", "--settings",
+                                f"{tmp_path}/elsewhere/ailsa-runs/r1/hooks.json"],
+              new_session=True)
+        time.sleep(0.5)
+        out = sp.run([sys.executable, "-", str(root)], input=_load_watchdog()._STOP_RUNS,
+                     capture_output=True, text=True, timeout=50)
+        assert out.returncode == 0, out.stderr
+        assert "launchers_signalled=1" in out.stdout
+        assert procs["launcher"].wait(timeout=10) == -15
+        assert procs["harness"].wait(timeout=10) == -9
+        for name in ("lean", "finished", "interactive", "other_harness"):
+            assert procs[name].poll() is None, name
+    finally:
+        for proc in procs.values():
+            if proc.poll() is None:
+                proc.kill()
+                proc.wait()
 
 
 def test_host_scripts_have_no_old_name():
