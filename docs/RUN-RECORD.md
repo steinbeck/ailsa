@@ -128,8 +128,32 @@ rule as a lean run, agents decide and tools write, with one declarant:
   model it ran on: what the harness saw, what the transcript shows and what the agent said itself
   (each specialist reports its model in its first message; the coordinator records it with
   `ailsa run note "model reported" --sender <agent name> --self-reported-model <model>`). The
-  statements are joined by the agent's name; the self-report is marked provisional, because it is
-  what the agent said, not what the harness saw.
+  statements are joined by the agent's name, with or without the `ailsa-` prefix: a teammate the
+  coordinator spawned as `nmr-chemist` and its self-report as `ailsa-nmr-chemist` are one agent.
+  The self-report is marked provisional, because it is what the agent said, not what the harness
+  saw.
+
+**What the proof runs showed (November 2026).** Two runs of the frontier skill on the public
+example dataset, with a Sonnet-class model under Claude Code 2.1.332 and both started by the
+launcher, each left a valid record (`ailsa run verify`: chain clean, manifest and artefacts
+matching, no unregistered file), a declared result and a byte-identical dataset.
+
+- *Interactive team run* (`--interactive`, agent-teams variable set, in-process teammates). Four
+  named teammates formed: they went idle and busy on their own and wrote to each other directly
+  (46 agent messages, 9 of them between specialists). For each teammate the hooks recorded its
+  spawns, turns, stops and messages and the model the harness and the transcript showed; its own
+  model report joined the same entry. The teammates' shell commands landed in the record under
+  their agent ids, and the steps of the `ailsa` tools were recorded too (four solver rounds, two
+  rankings, one identity check, eight peak lists), but without an agent id (see
+  [Limits](#limits)). The team-creation tools named in the coordinator's procedure were not offered
+  by that Claude Code version, so the coordinator spawned the teammates directly by name.
+- *Headless run* (`claude -p`). The session offered no team tools; the coordinator noted this and
+  ran the specialists one after another, each reply returning as the result of its call. The
+  record has the same parts: spawns, messages, model evidence from three sources per agent, every
+  solver round and the declaration.
+
+Neither run was started by typing the slash command in an open session, where the skill's own
+`ailsa run init` creates the record; in both, that first step found the launcher's run.
 
 ## Commands
 
@@ -196,6 +220,11 @@ break. The chain is tamper-evident, not tamper-proof: someone who rewrites the w
 recomputes every hash cannot be detected from the record alone. The same message appears for an
 incomplete record, for example after a crash; the record does not say which of the two it was.
 
+`ailsa run verify` also compares the stored `manifest.json` with a fresh fold of the event log by
+the installed package. After a package update that changes the fold, an older record shows
+`manifest_matches: false` until `ailsa run render` or `ailsa run status` rewrites the derived
+manifest from the untouched event log; the hash chain (`clean`) is what proves integrity.
+
 ## Transcripts
 
 Harness transcripts are copied into the run folder and stay there. They leave the machine only on
@@ -208,4 +237,18 @@ require them yet: their burden on a small model is measured first.
 
 ## Limits
 
-Windows is not supported; the record relies on POSIX file locks. Use WSL2.
+- Windows is not supported; the record relies on POSIX file locks. Use WSL2.
+- **Tool steps name the tool, not the agent.** The events the `ailsa` tools write themselves
+  (solver rounds, rankings, identity checks, peak lists, tool calls) carry no agent id. In a team
+  run, which specialist ran a step can be read only from the hook's shell event recorded next to
+  it, so the attribution needs the recording hooks. The steps themselves are recorded either way.
+- **Team tools depend on the Claude Code version.** Claude Code 2.1.332 did not offer the
+  team-creation tools even with the agent-teams variable set; the coordinator spawned named
+  teammates directly, no team folder was created, and the shutdown went by message. The record is
+  complete either way. How the team runs unattended is decided in a later phase.
+- **Teammates in a run typed as a slash command are not yet measured.** Under the launcher the
+  run is named in the environment (`AILSA_RUN_DIR`), and the teammates' tool steps reached the
+  record. In an open session the tools rely on the session pointer or on the run marker above
+  their working folder; whether every teammate's tool steps reach the record there has not been
+  observed. A tool that finds no run stays silent unless a run was expected (for example
+  `AILSA_REQUIRE_RUN=1`), so a missed step need not show up as a warning.

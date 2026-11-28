@@ -80,8 +80,14 @@ Applies to: ailsa (frontier skill) only; the lean skill writes the record since 
   checks (a documented aromatic-cosy call, an announced PROP constraint, evidence for a
   heteroatom constraint, the ELIM history) and the diagnostic specialist read these fields; a
   second reader of the skill diff found that the first note formats had dropped them.
-- Measurement: recording only; validated by one headless and one team run on the public example
-  dataset (see the phase's acceptance file).
+- Measurement: recording only. Two runs on the public example dataset with a Sonnet-class model,
+  both started by the launcher, each left a valid record (hash chain clean, manifest and
+  artefacts verified), a declared result (a proposal, candidate 1) and an unchanged dataset: one
+  headless run, in which the specialists worked one after another, and one interactive team run,
+  in which four named teammates messaged each other directly (spawned without the team-creation
+  tools, which Claude Code 2.1.332 did not offer). The team run showed one recording defect in the
+  package, fixed there (teammates' model self-reports did not join their agent entries); the
+  `ailsa` tools' own events carry no agent id, which a later phase takes up.
 
 ## 0.1.0
 
