@@ -614,7 +614,9 @@ for p in glob.glob(res + "/CASE*/meta.json"):
         m = json.load(open(p))
     except Exception:
         continue
-    if m.get("final_results") or (m.get("runtime_s") or 0) >= floor:
+    # A declared outcome is the run's own conclusion, a proposal or not.
+    declared = m.get("run_state") == "result_declared"
+    if m.get("final_results") or declared or (m.get("runtime_s") or 0) >= floor:
         done.add(p.split("/")[-2])
 print("\\n".join(sorted(todo - done)))
 """
@@ -624,8 +626,9 @@ def pending_cases(results_dir: str) -> tuple[list[str], set[str]]:
     """Return (runnable cases in natural order, skipped-as-contaminated).
 
     Done means the run produced a `final_results.md`, OR a `meta.json`
-    recording an attempt that ran at least EXHAUSTED_MIN_RUNTIME_S before
-    giving up. The second clause retires genuine failures so they stop
+    recording a declared outcome (a declined one leaves no final_results.md),
+    OR one recording an attempt that ran at least EXHAUSTED_MIN_RUNTIME_S
+    before giving up. The second clause retires genuine failures so they stop
     consuming a chunk slot on every pass; the runtime floor keeps
     instant-death runs (which also write meta.json) pending, since those
     deserve a retry.

@@ -423,9 +423,98 @@ def test_grader_reads_rendered_final_results(tmp_path):
     assert table.rank_for(grader, case, second) == 2
 
 
-def test_runner_copies_only_declared_results():
+def test_runner_copies_only_proposals():
     text = _read("tests/case-benchmark/blind_case_run.sh")
-    assert 'if [ "$RUN_STATE" = result_declared ]' in text
+    assert 'case "$OUTCOME" in proposal|proposal_under_determined) PROPOSED=true;;' in text
+    assert 'if [ "$PROPOSED" = true ]' in text
     assert text.count("renderings/final_results.md") == 2  # the gate and the copy
     # A stopped run renders without any SMILES, so there is nothing to grade either way.
     assert "`" not in _rendered("stopped_before_result").split("## Result")[1]
+
+
+# --- the runner end to end, with the real launcher and a fake harness ----------------------
+
+
+def _fake_harness(tmp_path: Path, body: str) -> Path:
+    fake = tmp_path / "bin" / "claude"
+    fake.parent.mkdir(exist_ok=True)
+    fake.write_text('#!/bin/sh\n[ "$1" = --version ] && { echo "9.9.9 (Claude Code)"; exit 0; }\n'
+                    f"{body}\nexit 0\n")
+    fake.chmod(0o755)
+    return fake
+
+
+def _run_runner(tmp_path: Path, fake: Path, results: Path | None = None,
+                **extra: str) -> tuple[subprocess.CompletedProcess, dict, Path]:
+    from tests.record.test_env import install_command_skill
+
+    home = tmp_path / "home"
+    if not (home / ".claude").exists():
+        install_command_skill(home / ".claude", link=True)
+    data = tmp_path / "data" / "CASE1"
+    data.mkdir(parents=True, exist_ok=True)
+    (data / "molecular-formula.txt").write_text("C6H6\n")
+    db = tmp_path / "fake.db"
+    db.touch()
+    results = results or tmp_path / "results" / "CASE1"
+    env = dict(
+        os.environ,
+        HOME=str(home),
+        XDG_CACHE_HOME=str(tmp_path / "cache"),
+        LUCY_DATABASE=str(db),
+        AILSA_CLAUDE_PROJECTS=str(tmp_path / "projects"),
+        CLAUDE_MODEL="claude-opus-5-5",
+        CLAUDE_BIN=str(fake),
+        CASE_RUN_MAX_ATTEMPTS="1",
+        CASE_RUN_CALL_TIMEOUT="30",
+        CASE_RUN_DEADLINE_S="30",
+        AILSA_BIN=str(Path(sys.executable).parent / "ailsa"),
+        **extra,
+    )
+    for key in ("AILSA_RUN_DIR", "AILSA_WORKSPACE", "CLAUDE_CODE_SESSION_ID", "CLAUDECODE"):
+        env.pop(key, None)
+    r = subprocess.run(["bash", str(ROOT / "tests/case-benchmark/blind_case_run.sh"),
+                        str(data), str(results)], env=env, capture_output=True, text=True,
+                       timeout=55)
+    meta = json.loads((results / "meta.json").read_text())
+    return r, meta, results
+
+
+def _declares(outcome: str) -> str:
+    return (f'"{sys.executable}" -m ailsa.cli run finalize --outcome {outcome} '
+            "--termination-reason test >/dev/null 2>&1")
+
+
+@pytest.mark.skipif(shutil.which("bash") is None, reason="needs bash")
+def test_runner_does_not_grade_a_declined_outcome(tmp_path):
+    """A declared outcome without a proposed candidate leaves no final_results.md to grade."""
+    r, meta, results = _run_runner(tmp_path, _fake_harness(tmp_path, _declares(
+        "insufficient_data")))
+    assert meta["run_state"] == "result_declared", r.stdout + r.stderr
+    assert meta["outcome"] == "insufficient_data"
+    assert meta["final_results"] is False
+    assert not (results / "analysis" / "final_results.md").exists()
+    assert (results / "launcher.pid").read_text().strip().isdigit()
+
+
+def test_watchdog_counts_declared_outcomes_as_done(tmp_path):
+    """Pending: no meta.json, or an instant death. Done: a result, a declaration, exhaustion."""
+    mod = _load_watchdog()
+    data, res = tmp_path / "data", tmp_path / "res"
+    metas = {
+        "CASE1": {"final_results": True, "runtime_s": 2000},
+        "CASE2": {"final_results": False, "run_state": "result_declared",
+                  "outcome": "insufficient_data", "runtime_s": 40},
+        "CASE3": {"final_results": False, "run_state": "stopped_before_result", "runtime_s": 5},
+        "CASE4": {"final_results": False, "run_state": "stopped_before_result",
+                  "runtime_s": 900},
+    }
+    for case in ("CASE1", "CASE2", "CASE3", "CASE4", "CASE5"):
+        (data / case).mkdir(parents=True)
+        if case in metas:
+            (res / case).mkdir(parents=True)
+            (res / case / "meta.json").write_text(json.dumps(metas[case]))
+    out = subprocess.run([sys.executable, "-", str(data), str(res), "600"],
+                         input=mod._PENDING_PROBE, capture_output=True, text=True, timeout=20)
+    assert out.returncode == 0, out.stderr
+    assert out.stdout.split() == ["CASE3", "CASE5"]

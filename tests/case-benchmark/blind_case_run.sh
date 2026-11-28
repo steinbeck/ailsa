@@ -6,9 +6,10 @@
 # $RESULTS_DIR/ailsa-runs), resumes the same session until the run declares its
 # result, and always closes the record. Nothing is written into the dataset.
 # Grading (correctness vs truth) happens SEPARATELY, later, in grade_blind.py —
-# never inside the solving process. After a declared result this script copies
-# the rendered final_results.md (and CASE-PROGRESS.md) to
-# $RESULTS_DIR/analysis/ so graders and the watchdog read what they always read.
+# never inside the solving process. When the run declared a proposed candidate
+# (outcome proposal or proposal_under_determined) this script copies the rendered
+# final_results.md (and CASE-PROGRESS.md) to $RESULTS_DIR/analysis/ so graders and
+# the watchdog read what they always read; meta.json records every declared outcome.
 #
 # Blindness: the fresh process gets ONLY the dataset path + the molecular formula
 # (read from the dataset's own molecular-formula.txt / molecularformula.txt);
@@ -121,9 +122,25 @@ ATTEMPTS="$(jfield attempts)"; [ -n "$ATTEMPTS" ] || ATTEMPTS=0
 [ -n "$RUN_DIR" ] && [ -f "$RUN_DIR/transcript/harness-output.log" ] \
   && cat "$RUN_DIR/transcript/harness-output.log" >> "$RESULTS_DIR/run.log"
 
-# compatibility copy for graders and watchdog: only for a declared result
+# The declared outcome (empty without a valid declaration), recorded in meta.json.
+OUTCOME=""
+if [ "$RUN_STATE" = result_declared ] && [ -n "$RUN_DIR" ]; then
+  OUTCOME="$(AILSA_WORKSPACE="$RESULTS_DIR/ailsa-runs" "$AILSA_BIN" run status --run "$RUN_DIR" \
+    --format json 2>/dev/null | python3 -c 'import json,sys
+try:
+    v = (json.load(sys.stdin).get("final") or {}).get("outcome") or ""
+except Exception:
+    v = ""
+print(v)' 2>/dev/null)"
+fi
+
+# Compatibility copy for graders and watchdog: only when the run proposed a candidate. The
+# other declared outcomes (inconclusive, handed_to_human, no_structure_fits,
+# insufficient_data) propose no structure, so they leave nothing to grade; their rendering
+# still lists the top candidates, which a grader would otherwise count as an answer.
 FRR="$RESULTS_DIR/analysis/final_results.md"; FR_EXISTS=false; TOPSMI=""
-if [ "$RUN_STATE" = result_declared ] && [ -f "$RUN_DIR/renderings/final_results.md" ]; then
+case "$OUTCOME" in proposal|proposal_under_determined) PROPOSED=true;; *) PROPOSED=false;; esac
+if [ "$PROPOSED" = true ] && [ -f "$RUN_DIR/renderings/final_results.md" ]; then
   mkdir -p "$RESULTS_DIR/analysis"
   cp -n "$RUN_DIR/renderings/final_results.md" "$RESULTS_DIR/analysis/final_results.md"
   [ -f "$RUN_DIR/renderings/CASE-PROGRESS.md" ] \
@@ -138,7 +155,8 @@ STATUS=""
 if [ "$RC" -eq 2 ] || [ -z "$RUN_ID" ]; then
   STATUS=',"status":"error","reason":"launcher exit '"$RC"'"'
 fi
-printf '{"case":"%s",%s,"mf":"%s","mode":"%s","attempts":%d,"runtime_s":%d,"final_results":%s,"top_smiles":"%s","run_id":"%s","run_state":"%s","run_dir":"%s"%s}\n' \
+printf '{"case":"%s",%s,"mf":"%s","mode":"%s","attempts":%d,"runtime_s":%d,"final_results":%s,"top_smiles":"%s","run_id":"%s","run_state":"%s","run_dir":"%s","outcome":"%s"%s}\n' \
   "$CASE_NAME" "$PROV" "$MF" "$MODE" "$ATTEMPTS" "$RUNTIME" "$FR_EXISTS" "${TOPSMI//\"/}" \
-  "${RUN_ID//\"/}" "${RUN_STATE//\"/}" "${RUN_DIR//\"/}" "$STATUS" > "$RESULTS_DIR/meta.json"
+  "${RUN_ID//\"/}" "${RUN_STATE//\"/}" "${RUN_DIR//\"/}" "${OUTCOME//\"/}" "$STATUS" \
+  > "$RESULTS_DIR/meta.json"
 echo "[$CASE_NAME] attempts=$ATTEMPTS runtime=${RUNTIME}s final_results=$FR_EXISTS"
