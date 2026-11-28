@@ -30,6 +30,7 @@ if argv == ["--version"]:
     sys.exit(0)
 keep = ("AILSA", "CLAUDE", "PATH")
 info = {{
+    "argv0": sys.argv[0],
     "argv": sys.argv[1:],
     "cwd": os.getcwd(),
     "pid": os.getpid(),
@@ -696,6 +697,41 @@ def test_relative_workspace_reaches_the_harness_absolute(
     res = _result(_start(dataset, "--model", "m"))
     assert Path(res["run_dir"]).parent == tmp_path / "ws"
     assert _shim(tmp_path)["env"]["AILSA_WORKSPACE"] == str(tmp_path / "ws")
+
+
+def test_harness_bin_runs_exactly_that_file(
+    claude: Path, dataset: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A pinned binary of any name runs, also on resume; the attempt records it and its version."""
+    pinned = make_shim(tmp_path / "pinned", "cli-9.9.9", SHIM)
+    monkeypatch.setenv("FAKE_CLAUDE_MODE", "declare_on_resume")
+    res = _result(
+        _start(dataset, "--model", "m", "--harness-bin", str(pinned), "--resume-attempts", "2")
+    )
+    calls = _calls(tmp_path)
+    assert [c["argv0"] for c in calls] == [str(pinned), str(pinned)]
+    started = _of(_events(res["run_dir"]), "run.attempt.started")
+    assert [e["payload"]["harness_bin"] for e in started] == [str(pinned)] * 2
+    assert started[0]["payload"]["harness_version"] == "9.9.9 (fake)"
+    assert started[0]["payload"]["argv"][0] == str(pinned)
+
+
+def test_default_harness_bin_is_resolved_and_recorded(
+    claude: Path, dataset: Path, tmp_path: Path
+) -> None:
+    res = _result(_start(dataset, "--model", "m"))
+    started = _of(_events(res["run_dir"]), "run.attempt.started")[0]["payload"]
+    assert started["harness_bin"] == str(claude)
+    assert started["harness_version"] == "9.9.9 (fake)"
+
+
+def test_missing_harness_bin_refused_before_the_run(
+    claude: Path, dataset: Path, tmp_path: Path
+) -> None:
+    res = _start(dataset, "--model", "m", "--harness-bin", str(tmp_path / "nope"))
+    assert res.exit_code == 2
+    assert "not an executable file" in res.output
+    assert _run_folders(tmp_path) == []
 
 
 def test_deadline_bounds_attempts(

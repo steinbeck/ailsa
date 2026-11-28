@@ -540,6 +540,13 @@ def finalize_cmd(
     "declares a result.",
 )
 @click.option("--deadline", type=int, default=None, help="Total time for all attempts, seconds.")
+@click.option(
+    "--harness-bin",
+    type=click.Path(path_type=Path),
+    default=None,
+    help="Harness executable to run (default: the harness name on PATH). The binary that ran "
+    "and its --version are recorded with every attempt.",
+)
 @_format_option
 @click.argument("extra", nargs=-1, type=click.UNPROCESSED)
 def start_cmd(
@@ -562,6 +569,7 @@ def start_cmd(
     skill: str,
     resume_attempts: int,
     deadline: int | None,
+    harness_bin: Path | None,
     fmt: str,
     extra: tuple[str, ...],
 ) -> None:
@@ -595,6 +603,7 @@ def start_cmd(
             skill=skill,
             resume_attempts=resume_attempts,
             deadline_s=deadline,
+            harness_bin=harness_bin,
         )
     except LauncherError as exc:
         click.echo(f"ailsa: {exc}", err=True)

@@ -21,9 +21,9 @@
 # Env (see README.md):
 #   CASE_PROJECT_DIR   ailsa repo root (for .venv/bin). Default: repo of this script.
 #   CLAUDE_MODEL       model id. REQUIRED, no default.
-#   CLAUDE_BIN         claude binary to use. Default: `claude` on PATH. The launcher
-#                      starts the harness by the name `claude`, so the folder of a
-#                      pinned binary is put first on PATH.
+#   CLAUDE_BIN         claude binary to use. Default: `claude` on PATH. Resolved once to
+#                      an absolute path; the launcher runs exactly that file
+#                      (--harness-bin), and meta.json names it with its --version.
 #   AILSA_BIN          ailsa CLI. Default: `ailsa` on PATH.
 #   CASE_ANSWERKEY_DIR optional dir the fence explicitly forbids reading.
 #   CASE_RUN_MAX_ATTEMPTS (default 8), CASE_RUN_CALL_TIMEOUT s (3600),
@@ -42,6 +42,10 @@ CASE_PROJECT_DIR="${CASE_PROJECT_DIR:-$(cd "$SCRIPT_DIR/../.." && pwd)}"
 # "Execution error" in a run log is the per-attempt time limit ending
 # `claude -p`, not a fault; the launcher resumes the same session.
 CLAUDE_BIN="${CLAUDE_BIN:-claude}"
+# The file that will run: meta.json and the launcher must name the same binary.
+CLAUDE_BIN_GIVEN="$CLAUDE_BIN"
+CLAUDE_BIN="$(command -v "$CLAUDE_BIN" 2>/dev/null || true)"
+case "$CLAUDE_BIN" in /*) ;; *) CLAUDE_BIN="";; esac
 AILSA_BIN="${AILSA_BIN:-ailsa}"
 
 # No silent default. A benchmark whose model is implicit is unreadable six
@@ -56,7 +60,7 @@ fi
 # Provenance for meta.json: which model and which CLI produced the run, so a results folder
 # that mixes series can be detected afterwards (blind_case_batch.py refuses to add to one).
 CLAUDE_VERSION="$("$CLAUDE_BIN" --version 2>/dev/null | head -1 | tr -d '"\\')"
-PROV="\"model\":\"${CLAUDE_MODEL//\"/}\",\"claude_bin\":\"${CLAUDE_BIN//\"/}\",\"claude_version\":\"${CLAUDE_VERSION}\""
+PROV="\"model\":\"${CLAUDE_MODEL//\"/}\",\"claude_bin\":\"${CLAUDE_BIN:-${CLAUDE_BIN_GIVEN//\"/}}\",\"claude_version\":\"${CLAUDE_VERSION}\""
 CASE_ANSWERKEY_DIR="${CASE_ANSWERKEY_DIR:-}"
 MAX_ATTEMPTS="${CASE_RUN_MAX_ATTEMPTS:-8}"
 CALL_TIMEOUT="${CASE_RUN_CALL_TIMEOUT:-3600}"
@@ -79,6 +83,10 @@ if [ "$(git -C "$RESULTS_DIR" rev-parse --is-inside-work-tree 2>/dev/null)" = tr
     "its CLAUDE.md. Use a results folder outside any repository." >&2
   echo '{"case":"'"$CASE_NAME"'",'"$PROV"',"status":"error","reason":"results_inside_git_worktree"}' > "$RESULTS_DIR/meta.json"; exit 2
 fi
+if [ -z "$CLAUDE_BIN" ]; then
+  echo "CLAUDE_BIN $CLAUDE_BIN_GIVEN is not an executable on PATH" >&2
+  echo '{"case":"'"$CASE_NAME"'",'"$PROV"',"status":"error","reason":"claude_bin_not_found"}' > "$RESULTS_DIR/meta.json"; exit 2
+fi
 if [ -z "$MF_FILE" ]; then
   echo '{"case":"'"$CASE_NAME"'",'"$PROV"',"status":"error","reason":"no_MF_file"}' > "$RESULTS_DIR/meta.json"; exit 2
 fi
@@ -86,8 +94,6 @@ MF="$(tr -d '[:space:]' < "$MF_FILE")"
 
 # put ailsa on PATH if a repo venv exists
 [ -d "$CASE_PROJECT_DIR/.venv/bin" ] && export PATH="$CASE_PROJECT_DIR/.venv/bin:$PATH"
-# the launcher starts the harness by the name `claude`: put the pinned one first
-case "$CLAUDE_BIN" in */*) export PATH="$(dirname "$CLAUDE_BIN"):$PATH";; esac
 
 # The run's own record lies under the results root (per-case workspace), so the fence exempts
 # exactly that run folder and keeps every other results folder off limits.
@@ -111,6 +117,7 @@ START=$(date +%s)
 AILSA_WORKSPACE="$RESULTS_DIR/ailsa-runs" "$AILSA_BIN" run start "$CASE_DIR" --skill ailsa --headless --blind \
   --model "$CLAUDE_MODEL" --formula "$MF" --time-limit "$CALL_TIMEOUT" \
   --resume-attempts "$ATTEMPTS_ARG" --deadline "$DEADLINE_S" --no-views --format json \
+  --harness-bin "$CLAUDE_BIN" \
   ${PROMPT_ARGS[@]+"${PROMPT_ARGS[@]}"} \
   -- --append-system-prompt "$FENCE" \
   > "$RESULTS_DIR/launch.json" 2> "$RESULTS_DIR/launch.err" &

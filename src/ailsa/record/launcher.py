@@ -70,12 +70,13 @@ def build_argv(
     session_id: str | None = None,
     confidential: bool = False,
     extra: Sequence[str] = (),
+    harness_bin: str | os.PathLike[str] | None = None,
 ) -> list[str]:
     if harness == "opencode":
-        return ["opencode", "run", "--model", model, prompt, *extra]
+        return [str(harness_bin or "opencode"), "run", "--model", model, prompt, *extra]
     if harness != "claude":
         raise LauncherError(f"unknown harness {harness!r}")
-    argv = ["claude"]
+    argv = [str(harness_bin or "claude")]
     # The prompt comes first in an interactive start: --add-dir is variadic.
     argv += ["-p", prompt] if headless else [prompt]
     argv += ["--model", model]
@@ -109,10 +110,11 @@ def build_resume_argv(
     dataset: str | os.PathLike[str],
     confidential: bool = False,
     extra: Sequence[str] = (),
+    harness_bin: str | os.PathLike[str] | None = None,
 ) -> list[str]:
     """Argv that resumes the launched Claude Code session headless with a nudge."""
     argv = [
-        "claude",
+        str(harness_bin or "claude"),
         "--resume",
         session_id,
         "-p",
@@ -191,6 +193,7 @@ def prepare_run(
     skill: str = SKILL_NAME,
     resume_attempts: int = 1,
     deadline_s: int | None = None,
+    harness_bin: str | os.PathLike[str] | None = None,
 ) -> dict[str, Any]:
     from ailsa.record.hooksettings import build_settings
     from ailsa.record.resolve import REQUIRE_ENV, RUN_DIR_ENV, SESSION_ENV
@@ -206,6 +209,13 @@ def prepare_run(
         raise LauncherError("--deadline must be at least 1 second")
     if skill not in SKILLS:
         raise LauncherError(f"unknown skill {skill!r}; choose one of {', '.join(SKILLS)}")
+    binary: str | None = None
+    if harness_bin is not None:
+        # Checked before init_run: a wrong binary leaves no run folder behind.
+        path = Path(harness_bin).expanduser()
+        if not path.is_file() or not os.access(path, os.X_OK):
+            raise LauncherError(f"harness binary is not an executable file: {path}")
+        binary = str(path.absolute())
     frontier = skill == FRONTIER_SKILL
     if frontier:
         # Checked before init_run so a refusal leaves no run folder behind.
@@ -291,6 +301,7 @@ def prepare_run(
             session_id=session_id,
             confidential=confidential,
             extra=extra_args,
+            harness_bin=binary,
         )
     except Exception as exc:
         # The run exists already: end it instead of leaving it open without an attempt.
@@ -315,6 +326,7 @@ def prepare_run(
         "confidential": confidential,
         "extra_args": list(extra_args),
         "session_id": session_id,
+        "harness_bin": binary,
         "transcript": transcript,
         "warnings": result["warnings"],
         "views_pid": result.get("views_pid"),
@@ -540,6 +552,32 @@ def launch(prepared: dict[str, Any], *, extra_args: Sequence[str] = ()) -> dict[
         return _launch(prepared, extra_args, gate)
 
 
+def _resolve_binary(name: str, env: Mapping[str, str]) -> str | None:
+    """Absolute path of the harness executable the child will run (its PATH), or None."""
+    if os.sep in name:
+        return name if os.path.isfile(name) else None
+    return shutil.which(name, path=env.get("PATH"))
+
+
+def _binary_version(binary: str | None) -> str | None:
+    """First line of ``binary --version`` (5 s), or None; never fails the launch."""
+    if not binary:
+        return None
+    try:
+        proc = subprocess.run(
+            [binary, "--version"],
+            stdin=subprocess.DEVNULL,
+            capture_output=True,
+            text=True,
+            errors="replace",
+            timeout=5,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    lines = (proc.stdout or proc.stderr or "").strip().splitlines()
+    return lines[0][:200] if lines else None
+
+
 def _run_is_settled(run_dir: Path) -> bool:
     """The agent closed the run, or the log holds a valid, current declaration (no write)."""
     from ailsa.record.fold import fold
@@ -566,6 +604,12 @@ def _launch(
     headless = bool(prepared["headless"])
     time_limit = prepared.get("time_limit_s")
     max_attempts = int(prepared.get("resume_attempts") or 1)
+    # The binary the harness runs as, resolved once (before the deadline starts).
+    binary = _resolve_binary(first_argv[0], prepared.get("env") or {})
+    binary_info = {
+        "harness_bin": scrub_home(binary) if binary else None,
+        "harness_version": _binary_version(binary),
+    }
     deadline_s = prepared.get("deadline_s")
     deadline_at = time.monotonic() + deadline_s if deadline_s else None
     exit_code: int | None = None
@@ -615,6 +659,7 @@ def _launch(
                     dataset=prepared["dataset"],
                     confidential=bool(prepared.get("confidential")),
                     extra=[*prepared.get("extra_args", ()), *extra_args],
+                    harness_bin=prepared.get("harness_bin"),
                 )
             started = time.monotonic()
             exit_code = None
@@ -627,6 +672,7 @@ def _launch(
                     "harness": prepared["harness"],
                     "time_limit_s": limit,
                     "argv": [scrub_home(a)[:ARGV_ITEM_CAP] for a in argv],
+                    **binary_info,
                 },
                 actor=_ACTOR,
                 fsync=True,

@@ -435,8 +435,8 @@ def test_runner_copies_only_proposals():
 # --- the runner end to end, with the real launcher and a fake harness ----------------------
 
 
-def _fake_harness(tmp_path: Path, body: str) -> Path:
-    fake = tmp_path / "bin" / "claude"
+def _fake_harness(tmp_path: Path, body: str, name: str = "claude") -> Path:
+    fake = tmp_path / "bin" / name
     fake.parent.mkdir(exist_ok=True)
     fake.write_text('#!/bin/sh\n[ "$1" = --version ] && { echo "9.9.9 (Claude Code)"; exit 0; }\n'
                     f"{body}\nexit 0\n")
@@ -617,3 +617,25 @@ def test_relative_results_path_gives_an_absolute_workspace(tmp_path):
     r, meta, results = _run_runner(tmp_path, fake, Path("rel") / "CASE1", cwd=tmp_path)
     assert env_file.read_text() == str(tmp_path / "rel" / "CASE1" / "ailsa-runs"), r.stderr
     assert meta["run_dir"].startswith(str(tmp_path / "rel" / "CASE1" / "ailsa-runs") + "/")
+
+
+@pytest.mark.skipif(shutil.which("bash") is None, reason="needs bash")
+def test_runner_runs_the_pinned_binary_not_the_first_claude_on_path(tmp_path):
+    """A pinned CLI of any name runs, not a `claude` earlier on PATH; meta.json names it."""
+    ran = tmp_path / "ran.txt"
+    pinned = _fake_harness(tmp_path, f'echo pinned > "{ran}"', name="claude-2.1.999")
+    decoy = tmp_path / "decoy" / "claude"
+    decoy.parent.mkdir()
+    decoy.write_text(f'#!/bin/sh\necho decoy > "{ran}"\nexit 0\n')
+    decoy.chmod(0o755)
+    r, meta, _ = _run_runner(tmp_path, pinned,
+                             PATH=f"{decoy.parent}{os.pathsep}{os.environ['PATH']}")
+    assert ran.read_text().strip() == "pinned", r.stdout + r.stderr
+    assert meta["claude_bin"] == str(pinned)
+    assert meta["claude_version"] == "9.9.9 (Claude Code)"
+
+
+def test_runner_refuses_an_unknown_claude_bin(tmp_path):
+    r, meta, _ = _run_runner(tmp_path, tmp_path / "missing" / "claude")
+    assert r.returncode == 2
+    assert meta["reason"] == "claude_bin_not_found"

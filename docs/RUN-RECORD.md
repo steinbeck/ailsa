@@ -94,6 +94,7 @@ Launcher options for the skill and for long runs:
 | `--skill ailsa-lite\|ailsa` | which skill to run; default `ailsa-lite`. The lean skill is copied into the run's work folder. The frontier skill `ailsa` starts as `/ailsa:case DATASET [FORMULA]` and needs Claude Code and the global install (`ailsa skill install ailsa --target claude`); without either the launcher refuses before it creates a run folder. It sets `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` for the frontier skill. |
 | `--resume-attempts N` | headless Claude Code only; default 1. When the harness ends before the run is settled, the launcher resumes the same session (`claude --resume`) with a short nudge to finish and declare, inside the same record. It stops when the run declares a result or is closed, when it is interrupted, when the deadline passes, or after N attempts in total. |
 | `--deadline SECONDS` | total time over all attempts. Each attempt gets the smaller of `--time-limit` and the time left; a run stopped by the deadline is closed with the reason "deadline". |
+| `--harness-bin PATH` | the harness executable to run, for every attempt (default: the harness name on the child's PATH). A pinned binary may have any name. Each `run.attempt.started` event records the binary that ran (`harness_bin`) and the first line of its `--version` (`harness_version`); a missing or non-executable file is refused before a run folder exists. |
 
 Whatever happens, the launcher closes the run once at the end (unless the agent already closed
 it), copies the transcripts and renders the reports.
