@@ -4,7 +4,7 @@ d27ea5a6fd5c5d7cbd6d3f68ab48cda22adddc75b2a15da298911a9289559b4b  ./INDEX.md
 92fd2326b2b1fa50b5028f7e6a52ac6901c562e069acb551a6ca56ec05705f7b  ./agents/ailsa-lsd-engineer.md
 92874204dc32ae39005762aec1e030ee3b903651255e6790e098a46c6f5b8095  ./agents/ailsa-nmr-chemist.md
 931afe5b672d2e544d449e63b9954ec2d0fc47604413452834e08eb6c9c578c6  ./agents/ailsa-solution-analyst.md
-e093c7af08e97b4e8b33433fbeae14ccb61f8790afd60fc1ef2a58b18b40c1f1  ./commands/case.md
+5bef0ac68acf2900664b44aeeb0111fc937f3c8ec74c98e5fc3f524f20e8caaf  ./commands/case.md
 ff4508f4b51be739165456a515d1031c371afcdfca88baa142c97746f3d99099  ./commands/dereplicate.md
 48776c5deb89357d21fe4e021f7563a4fe87731d1f2788821e126ed4dfb7c5b9  ./commands/help.md
 f4842c8132e5daa678c031e40787acf5597b35cee86c12d41f9bfb5c4d1f9e98  ./commands/predict.md
@@ -24,6 +24,6 @@ fd738b294220da46e1995557008532784d81a86f38e3fd0be95b567b94be6fc0  ./references/l
 728ce3d8847a8148d5781d9180377acf3fd10488c4740287334f4096433e3529  ./references/monitoring.md
 7f1b6d3372e12f7aa9c55e62a175c42693d3a650e9115cb69575d520d154ca3f  ./references/multiplicity-ambiguity.md
 432f482fbfc1340ef066d9d5981ae14896abf4b437000362271f5675a6883472  ./references/nmr-basics.md
-af7052506adc4b3e92eade9339f1f02a5dd104d40766a0a007e9d0644d935d1b  ./references/run-record.md
+bc485d5652dc22679de6476e12b4df8438472a344d5ddfb2678801f6ae4cbaf2  ./references/run-record.md
 fb731b8e4263a43a4c6388a279f1e720cf828a2b4f7fad92d194498b93542feb  ./references/smoke-test.md
 d579c7ac773e553d80ac3ddd8859fa2d7448b14e109c3ad10ad6ded96e71f93f  ./references/validation-checks.md

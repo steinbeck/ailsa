@@ -99,6 +99,12 @@ Applies to: ailsa (frontier skill) only; the lean skill writes the record since 
   `[BEGIN] ranking` over every searched family's `compound.lsd`, waits for the new
   `[RANKING-COMPLETE]`, and runs the coverage gate, the identity gate and the declaration on that
   message, never on the ranking from before the reopen.
+- Review fix, control path only (not measured): the coordinator closes the record right after a
+  successful `ailsa run finalize` (`ailsa run close --reason "result declared"`), then renders. A
+  run started with `/ailsa:case` has no launcher to close it; left open, it stayed bound to the
+  session, a second `/ailsa:case` on the same data wrote into it, and a tool step during the
+  shutdown could mark the declaration stale. The state stays "result declared"; the launcher
+  accepts a run its agent has closed.
 
 ## 0.1.0
 

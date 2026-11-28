@@ -172,6 +172,21 @@ def test_terminate_declares_or_closes() -> None:
         assert command in block, f"terminate_team does not name {command!r}"
 
 
+def test_terminate_closes_after_finalize() -> None:
+    """A slash-started run has no launcher to close it: the coordinator closes after finalize.
+
+    An open declared run stays bound to the session, and a second /ailsa:case would write into it.
+    """
+    step = _step(_case_text(), "terminate_team")
+    close = 'ailsa run close --reason "result declared"'
+    assert close in step, "terminate_team does not close the record after finalize"
+    assert step.index("ailsa run finalize") < step.index(close) < step.index("ailsa run render")
+    record = RUN_RECORD_MD.read_text()
+    declaring = _section(record, "## Declaring the result")
+    assert close in declaring
+    assert "Close the record right after a successful `finalize`" in declaring
+
+
 def test_explicit_ranking_id() -> None:
     """The declaration names its ranking, because 'latest' is the analyst's cross-check ranking."""
     for path in (CASE_MD, RUN_RECORD_MD):

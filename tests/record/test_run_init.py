@@ -408,3 +408,23 @@ def test_skill_location_honours_claude_config_dir(
     _, label, same, installed = _skill_location("ailsa")
     assert (label, same) == ("global-claude-commands", True)
     assert installed
+
+
+def test_close_after_finalize_keeps_the_result_and_frees_the_session(
+    workspace: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """What the frontier skill relies on when it closes the record right after finalize."""
+    from ailsa.record.closing import close_run
+    from ailsa.record.finalize import finalize_run
+    from ailsa.record.fold import rebuild_manifest
+    from ailsa.record.render import render_run
+
+    monkeypatch.setenv("CLAUDE_CODE_SESSION_ID", "session-abcdef123456")
+    ds = _dataset(tmp_path)
+    first = _init(ds)
+    finalize_run(first["run_dir"], outcome="insufficient_data", termination_reason="test")
+    assert close_run(first["run_dir"], "result declared")["state"] == "result_declared"
+    render_run(first["run_dir"])  # the rendering after the close still works
+    assert rebuild_manifest(Path(first["run_dir"]))["status"]["state"] == "result_declared"
+    again = _init(ds)
+    assert again["created"] is True and again["run_id"] != first["run_id"]

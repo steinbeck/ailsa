@@ -1,8 +1,8 @@
 # Run record
 
 The coordinator keeps every run on record with the `ailsa run` commands: it creates the record
-first, notes every validated message, reads the generated progress log, and declares or closes the
-run at the end. Agents decide; tools write.
+first, notes every validated message, reads the generated progress log, and declares the result and
+closes the run at the end. Agents decide; tools write.
 
 ## Contents
 
@@ -168,7 +168,8 @@ and the `Why:` of each iteration.
 
 The coordinator declares the result once, after the coverage gate (where it applies) and the
 identity gate, and before the shutdown. Every exit after `ailsa run init` ends in one of these
-commands, followed by `ailsa run render`:
+commands; a `finalize` is followed by `ailsa run close --reason "result declared"`, and every exit
+by `ailsa run render`:
 
 | Exit path | Command |
 |---|---|
@@ -196,8 +197,13 @@ Rules:
   gate reopened the run.
 - `finalize` also refuses a ranking the tool did not record; a ranking typed into a message or a
   file is not one.
-- After the declaration, `ailsa run render` prints the path of `final_results.md`; present that
-  file. Never edit a rendering.
+- Close the record right after a successful `finalize`. The state stays "result declared"; the
+  close releases the session (a later `/ailsa:case` in it starts a new run instead of writing into
+  this one) and keeps tool steps during the shutdown out of the record, where they would mark the
+  declaration stale. A run started by the launcher is closed the same way; the launcher accepts a
+  run the agent has closed.
+- After the close, `ailsa run render` prints the path of `final_results.md`; present that file.
+  Never edit a rendering.
 
 ## Hooks
 

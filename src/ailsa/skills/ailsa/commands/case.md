@@ -134,8 +134,8 @@ so a later blind run of the same data finds no earlier results there.
 - After a context compaction, run the same command again to read the run and the work folder back;
   it creates nothing new.
 - From here on every exit, a failure and the smoke test included, ends in terminate_team with
-  `ailsa run finalize` or `ailsa run close`, so no record is left open. A check that failed before
-  this step needs no close.
+  `ailsa run close`, after `ailsa run finalize` when a result is declared, so no record is left
+  open. A check that failed before this step needs no close.
 </step>
 
 <step name="spawn_case_team">
@@ -460,9 +460,13 @@ ailsa run finalize --outcome proposal --ranking rkNN --candidate N --confidence 
   `ailsa run close --reason "<failure>"`.
 - If `finalize` refuses because a solver ran after the ranking, ask the solution analyst to rank
   again and declare against the new id.
+- After a successful `finalize`, close the record: `ailsa run close --reason "result declared"`.
+  The declared result stays; the close releases the session, so a later `/ailsa:case` starts a new
+  run, and no tool step during the shutdown can make the declaration stale.
 
 Then run `ailsa run render` and present the `final_results.md` whose path it prints. Do this on
-every exit path, so that every record ends declared or closed and rendered.
+every exit path, so that every record ends closed and rendered, with its result declared where
+there is one.
 
 **Step 1: Send shutdown requests to all four teammates:**
 ```

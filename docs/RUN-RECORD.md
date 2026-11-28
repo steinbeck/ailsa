@@ -119,8 +119,11 @@ rule as a lean run, agents decide and tools write, with one declarant:
 - **The coordinator alone declares.** It runs `ailsa run finalize` once, naming the ranking id the
   solution analyst reported (`--ranking rkNN`), because a team may make more than one ranking: the
   analyst's cross-check ranking comes after the decisive one, so the newest ranking is the wrong
-  one. Every other exit closes the run with `ailsa run close`; both are followed by
-  `ailsa run render`.
+  one. It then closes the record (`ailsa run close --reason "result declared"`): the result stays
+  declared, the session is released, so a second `/ailsa:case` in the same session starts a new
+  run, and no tool step during the team's shutdown can make the declaration stale. Every other exit
+  closes the run with `ailsa run close` alone; all are followed by `ailsa run render`. The launcher
+  accepts a run its agent has closed.
 - **Messages, spawns and models come from the hooks.** Agent messages, spawns and the models the
   harness saw are recorded by the recording hooks (always under the launcher; in an open session
   after `ailsa run hooks install`). Without them the rendering says "not recorded by this
