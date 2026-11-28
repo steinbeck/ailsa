@@ -86,5 +86,11 @@ Each case's run record lives in `results/<CASE>/ailsa-runs/<run>/` (manifest, ev
 renderings, transcripts). `results/<CASE>/analysis/final_results.md` is a copy of the rendered
 result, made only when the run declared a result; a run that stopped without one leaves no copy.
 
+`meta.json` also records why the launcher stopped (`launcher_reason`, `signal`, `exit_code`,
+`launcher_rc`). A case stopped by a signal (a watchdog quota abort, for example) is neither done
+nor exhausted: the watchdog skips it and names it as aborted. It cannot simply be run again in the
+same results folder: its record in `results/<CASE>/ailsa-runs/` makes the launcher's blind check
+refuse a second run of the same data there. Re-run aborted cases in a fresh results folder.
+
 `results/` is gitignored — run outputs, the record folders, `CASE-PROGRESS.md`,
 `scorecard.tsv` (blind-sensitive) stay local and are never committed.

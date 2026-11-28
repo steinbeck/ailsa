@@ -497,8 +497,9 @@ def test_runner_does_not_grade_a_declined_outcome(tmp_path):
     assert (results / "launcher.pid").read_text().strip().isdigit()
 
 
-def test_watchdog_counts_declared_outcomes_as_done(tmp_path):
-    """Pending: no meta.json, or an instant death. Done: a result, a declaration, exhaustion."""
+def test_watchdog_pending_rules(tmp_path):
+    """Pending: no meta.json or an instant death. Done: a result, a declaration, exhaustion.
+    Aborted (stopped by a signal): reported separately."""
     mod = _load_watchdog()
     data, res = tmp_path / "data", tmp_path / "res"
     metas = {
@@ -508,8 +509,11 @@ def test_watchdog_counts_declared_outcomes_as_done(tmp_path):
         "CASE3": {"final_results": False, "run_state": "stopped_before_result", "runtime_s": 5},
         "CASE4": {"final_results": False, "run_state": "stopped_before_result",
                   "runtime_s": 900},
+        # Stopped by a signal after ten minutes: aborted, not exhausted.
+        "CASE6": {"final_results": False, "run_state": "stopped_before_result",
+                  "runtime_s": 900, "signal": 15, "launcher_reason": "terminated"},
     }
-    for case in ("CASE1", "CASE2", "CASE3", "CASE4", "CASE5"):
+    for case in ("CASE1", "CASE2", "CASE3", "CASE4", "CASE5", "CASE6"):
         (data / case).mkdir(parents=True)
         if case in metas:
             (res / case).mkdir(parents=True)
@@ -517,4 +521,48 @@ def test_watchdog_counts_declared_outcomes_as_done(tmp_path):
     out = subprocess.run([sys.executable, "-", str(data), str(res), "600"],
                          input=mod._PENDING_PROBE, capture_output=True, text=True, timeout=20)
     assert out.returncode == 0, out.stderr
-    assert out.stdout.split() == ["CASE3", "CASE5"]
+    assert [ln for ln in out.stdout.splitlines() if ln] == ["CASE3", "CASE5", "ABORTED CASE6"]
+
+
+def test_watchdog_names_aborted_cases(monkeypatch):
+    mod = _load_watchdog()
+
+    def fake(cmd, timeout=60):
+        return "CASE3\nCASE217\nABORTED CASE6\n" if "python3 -" in cmd else ""
+
+    monkeypatch.setattr(mod, "ssh_run", fake)
+    runnable, blocked = mod.pending_cases("/mnt/raid_drive/chris/series-new")
+    assert runnable == ["CASE3"]
+    assert blocked == {"CASE217": "retired", "CASE6": "aborted"}
+    text = mod.describe_blocked(blocked)
+    assert "CASE6 (stopped by a signal" in text and "fresh results folder" in text
+
+
+@pytest.mark.skipif(shutil.which("bash") is None, reason="needs bash")
+def test_runner_records_a_signalled_stop(tmp_path):
+    """SIGTERM to the recorded launcher pid: meta.json says terminated, signal 15."""
+    import signal
+
+    fake = _fake_harness(tmp_path, "sleep 40")
+    results = tmp_path / "results" / "CASE1"
+    pidfile = results / "launcher.pid"
+
+    def stop_launcher():
+        end = time.monotonic() + 30
+        while time.monotonic() < end:
+            if pidfile.is_file() and pidfile.read_text().strip():
+                time.sleep(3)  # let the harness start
+                os.kill(int(pidfile.read_text()), signal.SIGTERM)
+                return
+            time.sleep(0.2)
+
+    import threading
+
+    t = threading.Thread(target=stop_launcher)
+    t.start()
+    r, meta, _ = _run_runner(tmp_path, fake, results)
+    t.join()
+    assert meta["signal"] == 15, r.stdout + r.stderr
+    assert meta["launcher_reason"].startswith("terminated")
+    assert meta["launcher_rc"] == 143
+    assert meta["final_results"] is False

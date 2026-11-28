@@ -609,21 +609,29 @@ import glob, json, os, sys
 data, res, floor = sys.argv[1], sys.argv[2], int(sys.argv[3])
 todo = {os.path.basename(p.rstrip("/")) for p in glob.glob(data + "/CASE*/")}
 done = {p.split("/")[-3] for p in glob.glob(res + "/CASE*/analysis/final_results.md")}
+aborted = set()
 for p in glob.glob(res + "/CASE*/meta.json"):
     try:
         m = json.load(open(p))
     except Exception:
         continue
+    case = p.split("/")[-2]
     # A declared outcome is the run's own conclusion, a proposal or not.
     declared = m.get("run_state") == "result_declared"
-    if m.get("final_results") or declared or (m.get("runtime_s") or 0) >= floor:
-        done.add(p.split("/")[-2])
-print("\\n".join(sorted(todo - done)))
+    if m.get("final_results") or declared:
+        done.add(case)
+    elif m.get("signal") or str(m.get("launcher_reason") or "").startswith(
+            ("terminated", "interrupted")):
+        aborted.add(case)  # stopped from outside (a watchdog abort): neither done nor exhausted
+    elif (m.get("runtime_s") or 0) >= floor:
+        done.add(case)
+print("\\n".join(sorted(todo - done - aborted)))
+print("\\n".join("ABORTED " + c for c in sorted((aborted & todo) - done)))
 """
 
 
-def pending_cases(results_dir: str) -> tuple[list[str], set[str]]:
-    """Return (runnable cases in natural order, skipped-as-contaminated).
+def pending_cases(results_dir: str) -> tuple[list[str], dict[str, str]]:
+    """Return (runnable cases in natural order, {skipped case: reason key}).
 
     Done means the run produced a `final_results.md`, OR a `meta.json`
     recording a declared outcome (a declined one leaves no final_results.md),
@@ -632,6 +640,12 @@ def pending_cases(results_dir: str) -> tuple[list[str], set[str]]:
     consuming a chunk slot on every pass; the runtime floor keeps
     instant-death runs (which also write meta.json) pending, since those
     deserve a retry.
+
+    A run stopped by a signal (the launcher reports it; a quota abort is the
+    usual cause) is neither: it is skipped as "aborted" and named in the log.
+    Its record in <case>/ailsa-runs makes the launcher's blind check refuse a
+    second run in the same folder, so such a case is re-run in a fresh results
+    folder, never retired as exhausted.
     """
     probe = base64.b64encode(_PENDING_PROBE.encode()).decode()
     out = ssh_run(
@@ -639,11 +653,20 @@ def pending_cases(results_dir: str) -> tuple[list[str], set[str]]:
         f"{shlex.quote(REMOTE_DATA)} {shlex.quote(results_dir)} "
         f"{EXHAUSTED_MIN_RUNTIME_S}"
     )
-    cases = [c.strip() for c in out.splitlines() if c.strip()]
+    lines = [c.strip() for c in out.splitlines() if c.strip()]
+    aborted = {c.split(None, 1)[1] for c in lines if c.startswith("ABORTED ")}
+    cases = [c for c in lines if not c.startswith("ABORTED ")]
     cases.sort(key=lambda c: (len(c), c))  # CASE104 before CASE1040
 
     tainted = contaminated_cases()
-    blocked = {c for c in cases if c in tainted or c in RETIRED}
+    blocked: dict[str, str] = {}
+    for c in cases:
+        if c in tainted:
+            blocked[c] = "leaky"
+        elif c in RETIRED:
+            blocked[c] = "retired"
+    for c in aborted:
+        blocked.setdefault(c, "aborted")
     return [c for c in cases if c not in blocked], blocked
 
 
@@ -686,18 +709,24 @@ def check_results_dir(results_dir: str, model: str, models: set[str]) -> str | N
     return None
 
 
-def describe_blocked(blocked: set[str]) -> str:
+_BLOCK_REASONS = {
+    "leaky": "own directory holds a previous run's final_results.md — a run there would "
+             "not be blind",
+    "retired": "retired: degenerate/mislabelled, never produces a result",
+    "aborted": "stopped by a signal before a result (a watchdog abort?); its record in "
+               "<case>/ailsa-runs makes the blind check refuse there, so re-run it in a "
+               "fresh results folder",
+}
+
+
+def describe_blocked(blocked: dict[str, str]) -> str:
     """Give each excluded case its own reason -- they are not the same."""
-    tainted = contaminated_cases()
     parts = []
-    leaky = sorted(c for c in blocked if c in tainted)
-    retired = sorted(c for c in blocked if c in RETIRED and c not in tainted)
-    if leaky:
-        parts.append(f"{', '.join(leaky)} (own directory holds a previous "
-                     f"run's final_results.md — a run there would not be blind)")
-    if retired:
-        parts.append(f"{', '.join(retired)} (retired: degenerate/mislabelled, "
-                     f"never produces a result)")
+    for key, text in _BLOCK_REASONS.items():
+        names = sorted((c for c, why in blocked.items() if why == key),
+                       key=lambda c: (len(c), c))
+        if names:
+            parts.append(f"{', '.join(names)} ({text})")
     return "; ".join(parts)
 
 
@@ -842,12 +871,14 @@ def main() -> int:
                     # outstanding *in this results dir*, so re-invoking the
                     # same command resumes rather than re-running finished
                     # cases. Order follows the request, not the scan.
-                    outstanding, _ = pending_cases(args.results_dir)
+                    outstanding, skipped = pending_cases(args.results_dir)
                     pending = [c for c in args.cases if c in set(outstanding)]
-                    blocked = set()
+                    blocked = {c: why for c, why in skipped.items() if c in args.cases}
                     if not pending:
+                        if blocked:
+                            log(f"SKIPPING {len(blocked)}: {describe_blocked(blocked)}")
                         log("every requested case already has a result in "
-                            f"{args.results_dir} — nothing to do")
+                            f"{args.results_dir} or is skipped — nothing to do")
                         return 0
                 else:
                     pending, blocked = pending_cases(args.results_dir)

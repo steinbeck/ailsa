@@ -117,6 +117,16 @@ print("" if v is None else v)' "$RESULTS_DIR/launch.json" "$1" 2>/dev/null
 }
 RUN_ID="$(jfield run_id)"; RUN_DIR="$(jfield run_dir)"; RUN_STATE="$(jfield state)"
 ATTEMPTS="$(jfield attempts)"; [ -n "$ATTEMPTS" ] || ATTEMPTS=0
+# Why the launcher stopped (a signal means the run was aborted, not exhausted), as JSON values.
+jjson () { # $1 key: JSON-encoded value from launch.json, null when missing or not JSON
+  python3 -c 'import json,sys
+try:
+    v = json.load(open(sys.argv[1])).get(sys.argv[2])
+except Exception:
+    v = None
+print(json.dumps(v))' "$RESULTS_DIR/launch.json" "$1" 2>/dev/null || echo null
+}
+LREASON="$(jjson reason)"; LSIGNAL="$(jjson signal)"; LEXIT="$(jjson exit_code)"
 
 # existing log readers keep their input
 [ -n "$RUN_DIR" ] && [ -f "$RUN_DIR/transcript/harness-output.log" ] \
@@ -155,8 +165,8 @@ STATUS=""
 if [ "$RC" -eq 2 ] || [ -z "$RUN_ID" ]; then
   STATUS=',"status":"error","reason":"launcher exit '"$RC"'"'
 fi
-printf '{"case":"%s",%s,"mf":"%s","mode":"%s","attempts":%d,"runtime_s":%d,"final_results":%s,"top_smiles":"%s","run_id":"%s","run_state":"%s","run_dir":"%s","outcome":"%s"%s}\n' \
+printf '{"case":"%s",%s,"mf":"%s","mode":"%s","attempts":%d,"runtime_s":%d,"final_results":%s,"top_smiles":"%s","run_id":"%s","run_state":"%s","run_dir":"%s","outcome":"%s","launcher_reason":%s,"signal":%s,"exit_code":%s,"launcher_rc":%d%s}\n' \
   "$CASE_NAME" "$PROV" "$MF" "$MODE" "$ATTEMPTS" "$RUNTIME" "$FR_EXISTS" "${TOPSMI//\"/}" \
-  "${RUN_ID//\"/}" "${RUN_STATE//\"/}" "${RUN_DIR//\"/}" "${OUTCOME//\"/}" "$STATUS" \
-  > "$RESULTS_DIR/meta.json"
+  "${RUN_ID//\"/}" "${RUN_STATE//\"/}" "${RUN_DIR//\"/}" "${OUTCOME//\"/}" \
+  "$LREASON" "$LSIGNAL" "$LEXIT" "$RC" "$STATUS" > "$RESULTS_DIR/meta.json"
 echo "[$CASE_NAME] attempts=$ATTEMPTS runtime=${RUNTIME}s final_results=$FR_EXISTS"
