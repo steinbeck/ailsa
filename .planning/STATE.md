@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v11.0
 milestone_name: AILSA Rename
-status: executing
+status: verifying
 last_updated: 2026-11-24T22:57:27.737Z
-last_activity: 2026-11-27 -- Phase 106.2 planned (12 plans), execution started
+last_activity: 2026-11-28 -- Phase 106.2 executed, reviewed and verified; awaiting acceptance
 progress:
   total_phases: 11
   completed_phases: 3
   total_plans: 36
   completed_plans: 36
   percent: 18
-stopped_at: Phase 106.2 planned (12 plans, 9 waves) — executing
+stopped_at: Phase 106.2 verified (human_needed) — awaiting owner verdicts on 106.2-HUMAN-UAT.md
 ---
 
 # lucy-ng State
@@ -21,15 +21,37 @@ stopped_at: Phase 106.2 planned (12 plans, 9 waves) — executing
 See: .planning/PROJECT.md (updated 2026-07-21)
 
 **Core value:** AI agent autonomously determines compound structures from NMR, with a multi-agent team that uses the intended solver pipeline — not a manual bypass
-**Current focus:** Phase 106 (freeze, rename and restructure the skill); Phase 106.2 (frontier skill writes the run record) depends on it
+**Current focus:** Phase 106.2 (frontier skill writes the run record) — executed and verified, awaiting the owner's acceptance
 
 ## Current Position
 
-Phase: 106.2 (frontier-skill-writes-the-run-record) — PLANNED 2026-11-27, executing
-Plan: 12 of 12 (9 waves; plan 11 = team proof run with owner checkpoint)
-Status: planned without a discussion round (owner choice 2026-11-27); research defaults OD-1..OD-11
-  are stated assumptions in the plans; plan check passed (3 warnings, no blockers)
-Last activity: 2026-11-27 -- Phase 106.2 research, pattern map, 12 plans, plan check
+Phase: 106.2 (frontier-skill-writes-the-run-record) — EXECUTED and VERIFIED 2026-11-28 (human_needed)
+Plan: 12 of 12
+Status: awaiting the owner's verdict on the 9 items of `106.2-HUMAN-UAT.md`; then close the phase
+  (ROADMAP [x], STATE, push decision = item 8). Not pushed: 72+ local commits (public repo — ask).
+Last activity: 2026-11-28 -- code review (1 critical, 10 warnings) fixed; Sheldon gate green
+  (0 failed / 2411 passed); benchmark-runner chain run on the public dataset passed; verification 3/3
+
+**Resume here (2026-11-28, Phase 106.2 awaiting acceptance):**
+
+0a. **Phase 106.2 executed, reviewed, verified.** All 12 plans done (`106.2-01..12-SUMMARY.md`);
+   both proof runs valid on Sheldon (headless `2026-11-27T2214Z_terpineol_190v`, team
+   `2026-11-27T2225Z_terpineol-team_6dwm`, runs under `/mnt/raid_drive/chris/ailsa-runs/`); owner
+   judged the team run at the checkpoint (valid; duplicate agent entries fixed in `f36a2ae`; tool
+   events without agent id + team without TeamCreate handed to Phase 107 as todo
+   `todos/pending/2026-11-28-team-run-recording-gap.md`). Code review `106.2-REVIEW.md` → all
+   15 in-scope findings fixed (`106.2-REVIEW-FIX.md`); post-fix gate and one benchmark-runner run
+   (`106.2-POSTFIX-CHECK.md`); `106.2-VERIFICATION.md` status human_needed (3/3 criteria).
+   **Next:** owner verdicts on `106.2-HUMAN-UAT.md` (9 items; item 3 recommends one slash-started
+   session, item 8 = push). Then: ROADMAP 106.2 [x], STATE, push if accepted, answer scan read first.
+   - Sheldon checkouts (`/mnt/raid_drive/chris/lucy-ng`, area `/mnt/raid_drive/chris/ailsa-106.1/repo`)
+     at `7d24938` (code identical to HEAD; later commits are docs only).
+   - Fixed on the way: `core.hooksPath` pointed at the laptop's path (`/Users/steinbeck/...`), so the
+     pre-commit hook never ran on vitus; unset 2026-11-28 (default `.git/hooks` works on both).
+   - Small open items: runner finds the formula file only as lower-case `molecular-formula.txt`;
+     `docs/AILSA-LITE.md` Status still says version 0.2 "is being measured" (measurement concluded,
+     owner to decide the wording); `CLAUDE_CONFIG_DIR` not honoured by transcript copy and
+     `ailsa skill install` (launcher refuses the frontier skill when it is set).
 
 **Resume here (2026-11-27, after Phase 106):**
 
