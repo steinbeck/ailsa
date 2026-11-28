@@ -224,7 +224,7 @@ prose: `docs/SKILLS.md`. Inserted as Phase 105.1. Background research:
 - [ ] **Phase 105.1: Lean skill for small open-weight models (INSERTED 2026-10-31)** — `ailsa-lite`, an Agent Skill of about 1 000 tokens on top of new `ailsa case` commands (scan, setup, check/edit, solve, rank, report) that do all bookkeeping; shipped as package data and installed with `ailsa skill install`; partner guide `docs/AILSA-LITE.md` (in progress: v0.1 built)
 - [x] **Phase 106: Freeze, rename and restructure the skill** — (completed 2026-11-27) the two measured skill states tagged; `/ailsa:*` commands and `ailsa-*` agents; every skill file restructured to Anthropic's best practices (core under 500 lines, references, TOCs, no dead references, no history, no benchmark compounds, no model IDs, one term per role); an automated skill-lint check
 - [x] **Phase 106.1: Run record core (INSERTED 2026-11-24)** — every run writes a structured record (manifest, event log, typed results, declared result) in a workspace folder outside the data; release R0a of the web-interface specification; package, hooks and the lean skill (split 2026-11-24, see 106.2) (completed 2026-11-24)
-- [ ] **Phase 106.2: Frontier skill writes the run record (INSERTED 2026-11-24)** — the renamed frontier skill writes the 106.1 record; team and headless runs proven; old web view removed; before Phases 109 and 110
+- [x] **Phase 106.2: Frontier skill writes the run record (INSERTED 2026-11-24)** — the renamed frontier skill writes the 106.1 record; team and headless runs proven; old web view removed; before Phases 109 and 110 (completed 2026-11-28)
 - [ ] **Phase 107: Evaluation bench and team-mode spike** — fixed ~25-dataset evaluation sample, per-run mechanics report, Mac/compute-host parity check, and a decided route for running the agent team unattended
 - [ ] **Phase 108: Foundation** — full reference DB on the compute host (figshare checked), silent `detect hhb` defect fixed, fragment DB decided, prerequisite checks cover every capability the skill relies on, devil's-advocate checks and sanitiser as scripts
 - [ ] **Phase 109: Rework the CASE workflow** — coordination along the route chosen in Phase 107, use of statistics/fragments per Phase 108, rules kept only with evidence
@@ -523,6 +523,7 @@ Plans:
 | 104. Package and CLI | 6/6 | Complete    | 2026-10-03 |
 | 105. Documentation and outside face | 10/10 | Complete   | 2026-10-14 |
 | 106. Freeze, rename and restructure the skill | 15/15 | Complete | 2026-11-27 |
+| 106.2. Frontier skill writes the run record | 12/12 | Complete | 2026-11-28 |
 | 107. Evaluation bench and team-mode spike | 0/? | Not started | - |
 | 108. Foundation | 0/? | Not started | - |
 | 109. Rework the CASE workflow | 0/? | Not started | - |

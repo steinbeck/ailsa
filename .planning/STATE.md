@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v11.0
 milestone_name: AILSA Rename
-status: verifying
+status: ready_to_plan
 last_updated: 2026-11-24T22:57:27.737Z
-last_activity: 2026-11-28 -- Phase 106.2 executed, reviewed and verified; awaiting acceptance
+last_activity: 2026-11-28 -- Phase 106.2 complete (accepted by the user)
 progress:
   total_phases: 11
   completed_phases: 3
   total_plans: 36
   completed_plans: 36
   percent: 18
-stopped_at: Phase 106.2 verified (human_needed) — awaiting owner verdicts on 106.2-HUMAN-UAT.md
+stopped_at: Phase 106.2 complete — next /gsd-discuss-phase 107
 ---
 
 # lucy-ng State
@@ -21,18 +21,18 @@ stopped_at: Phase 106.2 verified (human_needed) — awaiting owner verdicts on 1
 See: .planning/PROJECT.md (updated 2026-07-21)
 
 **Core value:** AI agent autonomously determines compound structures from NMR, with a multi-agent team that uses the intended solver pipeline — not a manual bypass
-**Current focus:** Phase 106.2 (frontier skill writes the run record) — executed and verified, awaiting the owner's acceptance
+**Current focus:** next Phase 107 (evaluation bench and team-mode spike); Phase 108 (foundation) can run in parallel
 
 ## Current Position
 
-Phase: 106.2 (frontier-skill-writes-the-run-record) — EXECUTED and VERIFIED 2026-11-28 (human_needed)
+Phase: 106.2 (frontier-skill-writes-the-run-record) — COMPLETE 2026-11-28 (all 9 acceptance items
+  accepted by the user; slash-started session passed)
 Plan: 12 of 12
-Status: awaiting the owner's verdict on the 9 items of `106.2-HUMAN-UAT.md`; then close the phase
-  (ROADMAP [x], STATE, push decision = item 8). Not pushed: 72+ local commits (public repo — ask).
+Status: next `/gsd-discuss-phase 107`; push approved by the user with the acceptance (item 8)
 Last activity: 2026-11-28 -- code review (1 critical, 10 warnings) fixed; Sheldon gate green
   (0 failed / 2411 passed); benchmark-runner chain run on the public dataset passed; verification 3/3
 
-**Resume here (2026-11-28, Phase 106.2 awaiting acceptance):**
+**Resume here (2026-11-28, after Phase 106.2):**
 
 0a. **Phase 106.2 executed, reviewed, verified.** All 12 plans done (`106.2-01..12-SUMMARY.md`);
    both proof runs valid on Sheldon (headless `2026-11-27T2214Z_terpineol_190v`, team
@@ -42,15 +42,17 @@ Last activity: 2026-11-28 -- code review (1 critical, 10 warnings) fixed; Sheldo
    `todos/pending/2026-11-28-team-run-recording-gap.md`). Code review `106.2-REVIEW.md` → all
    15 in-scope findings fixed (`106.2-REVIEW-FIX.md`); post-fix gate and one benchmark-runner run
    (`106.2-POSTFIX-CHECK.md`); `106.2-VERIFICATION.md` status human_needed (3/3 criteria).
-   **Next:** owner verdicts on `106.2-HUMAN-UAT.md` (9 items; item 3 recommends one slash-started
-   session, item 8 = push). Then: ROADMAP 106.2 [x], STATE, push if accepted, answer scan read first.
+   **Accepted 2026-11-28** (user followed all recommendations): all 9 items of `106.2-HUMAN-UAT.md`;
+   the recommended slash-started session passed (`106.2-SLASH-CHECK.md`: the skill created the record
+   itself, closed after finalize, verify clean). **Next:** `/gsd-discuss-phase 107` (the team-route
+   todo `todos/pending/2026-11-28-team-run-recording-gap.md` belongs there). Still open from before:
+   the June todo naming a benchmark answer (item 0 below) and the two laptop commands.
    - Sheldon checkouts (`/mnt/raid_drive/chris/lucy-ng`, area `/mnt/raid_drive/chris/ailsa-106.1/repo`)
      at `7d24938` (code identical to HEAD; later commits are docs only).
    - Fixed on the way: `core.hooksPath` pointed at the laptop's path (`/Users/steinbeck/...`), so the
      pre-commit hook never ran on vitus; unset 2026-11-28 (default `.git/hooks` works on both).
    - Small open items: runner finds the formula file only as lower-case `molecular-formula.txt`;
-     `docs/AILSA-LITE.md` Status still says version 0.2 "is being measured" (measurement concluded,
-     owner to decide the wording); `CLAUDE_CONFIG_DIR` not honoured by transcript copy and
+     `CLAUDE_CONFIG_DIR` not honoured by transcript copy and
      `ailsa skill install` (launcher refuses the frontier skill when it is set).
 
 **Resume here (2026-11-27, after Phase 106):**
