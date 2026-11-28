@@ -33,14 +33,15 @@ NMR + molecular formula alone. Any leak of the answer invalidates the result, so
 
 | Script | Role |
 |--------|------|
-| `blind_case_run.sh <CASE_DIR> <RESULTS_DIR> [full\|smoke]` | One blind run. Fresh headless `claude -p "/ailsa:case …"`, resume-on-stall backstop, relocates `analysis/` into the results dir, writes `meta.json`. `smoke` = 1-iteration pipeline check. |
+| `blind_case_run.sh <CASE_DIR> <RESULTS_DIR> [full\|smoke]` | One blind run through the launcher: `ailsa run start <CASE_DIR> --skill ailsa --headless --blind --harness-bin <CLAUDE_BIN> …` with the run record in `<RESULTS_DIR>/ailsa-runs/` (outside the dataset). The launcher resumes the same session until the run declares a result or closes it, within `CASE_RUN_MAX_ATTEMPTS` and `CASE_RUN_DEADLINE_S`, and always closes the record. The runner records the launcher's pid in `launcher.pid` (the watchdog's abort stops only that process), copies the rendered `final_results.md` and `CASE-PROGRESS.md` to `<RESULTS_DIR>/analysis/` when a candidate was proposed, and writes `meta.json`. `smoke` = the coordinator's smoke test, one attempt. |
 | `blind_case_batch.py [--all \| CASE… ] -k N --mode full` | Drives many datasets with concurrency `N`, resumable (skips done), optional answer-key lockout, writes `summary.tsv`. |
 | `grade_blind.py [--results DIR]` | Extracts each run's top structure, computes InChIKey (RDKit), compares to ground truth → `SOLVED_TOP1` / `CORRECT_RANK_n` / `WRONG` / `NO_RESULT`. Writes `scorecard.tsv`. |
 
 ## Requirements
 
-- `claude` CLI (headless `-p`, agent-teams). The batch sets
-  `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`.
+- `claude` CLI (headless `-p`, agent-teams) and the frontier skill installed for it
+  (`ailsa skill install ailsa --target claude`). The launcher sets
+  `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` for the frontier skill.
 - `ailsa` on `PATH` (or a `.venv/bin` in the repo root — auto-added).
 - `grade_blind.py` needs **RDKit**: `pip install rdkit`.
 
