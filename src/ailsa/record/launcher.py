@@ -152,6 +152,11 @@ def child_environment(
     env = {k: v for k, v in (os.environ if base is None else base).items() if k not in _DROPPED_ENV}
     exe_dir = str(Path(sys.executable).parent)
     env["PATH"] = exe_dir + os.pathsep + env.get("PATH", "")
+    workspace = env.get("AILSA_WORKSPACE")
+    if workspace:
+        # The harness starts in another folder: a relative workspace would point elsewhere
+        # there (an agent-side close would create a nested workspace inside the run).
+        env["AILSA_WORKSPACE"] = str(Path(workspace).expanduser().absolute())
     env["AILSA_RUN_DIR"] = str(run_dir)
     env["AILSA_REQUIRE_RUN"] = "1"
     env["AILSA_HOOKS_VIA_SETTINGS"] = "1"

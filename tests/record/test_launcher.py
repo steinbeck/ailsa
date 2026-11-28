@@ -688,6 +688,16 @@ def test_transcript_copy_failure_after_agent_close_is_reported(
     assert len(_of(_events(out["run_dir"]), "run.finished")) == 1
 
 
+def test_relative_workspace_reaches_the_harness_absolute(
+    claude: Path, dataset: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("AILSA_WORKSPACE", "ws")
+    res = _result(_start(dataset, "--model", "m"))
+    assert Path(res["run_dir"]).parent == tmp_path / "ws"
+    assert _shim(tmp_path)["env"]["AILSA_WORKSPACE"] == str(tmp_path / "ws")
+
+
 def test_deadline_bounds_attempts(
     claude: Path, dataset: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

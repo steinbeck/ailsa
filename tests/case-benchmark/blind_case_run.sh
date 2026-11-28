@@ -69,6 +69,8 @@ for f in molecular-formula.txt molecularformula.txt; do
   [ -f "$CASE_DIR/$f" ] && { MF_FILE="$CASE_DIR/$f"; break; }
 done
 mkdir -p "$RESULTS_DIR"
+# Absolute from here on: the harness inherits AILSA_WORKSPACE but starts in another folder.
+RESULTS_DIR="$(cd "$RESULTS_DIR" && pwd)"
 # The harness works in a folder under $RESULTS_DIR, and Claude Code loads the CLAUDE.md of
 # its working folder and of every parent. Inside a repository (this one names private files)
 # that is project memory in a blind run, so a results folder in a git work tree is refused.

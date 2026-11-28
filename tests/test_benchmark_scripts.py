@@ -444,7 +444,7 @@ def _fake_harness(tmp_path: Path, body: str) -> Path:
     return fake
 
 
-def _run_runner(tmp_path: Path, fake: Path, results: Path | None = None,
+def _run_runner(tmp_path: Path, fake: Path, results: Path | None = None, cwd: Path | None = None,
                 **extra: str) -> tuple[subprocess.CompletedProcess, dict, Path]:
     from tests.record.test_env import install_command_skill
 
@@ -475,7 +475,8 @@ def _run_runner(tmp_path: Path, fake: Path, results: Path | None = None,
         env.pop(key, None)
     r = subprocess.run(["bash", str(ROOT / "tests/case-benchmark/blind_case_run.sh"),
                         str(data), str(results)], env=env, capture_output=True, text=True,
-                       timeout=55)
+                       timeout=55, cwd=cwd)
+    results = (cwd or Path.cwd()) / results
     meta = json.loads((results / "meta.json").read_text())
     return r, meta, results
 
@@ -607,3 +608,12 @@ def test_default_results_root_is_outside_the_repository(tmp_path, monkeypatch):
     assert batch.RESULTS_DEFAULT == str(Path.home() / ".local" / "state" / "ailsa-bench")
     assert not batch.RESULTS_DEFAULT.startswith(str(ROOT))
     assert 'HERE / "results"' not in _read("tests/case-benchmark/grade_blind.py")
+
+
+@pytest.mark.skipif(shutil.which("bash") is None, reason="needs bash")
+def test_relative_results_path_gives_an_absolute_workspace(tmp_path):
+    env_file = tmp_path / "env.txt"
+    fake = _fake_harness(tmp_path, f'printf "%s" "$AILSA_WORKSPACE" > "{env_file}"')
+    r, meta, results = _run_runner(tmp_path, fake, Path("rel") / "CASE1", cwd=tmp_path)
+    assert env_file.read_text() == str(tmp_path / "rel" / "CASE1" / "ailsa-runs"), r.stderr
+    assert meta["run_dir"].startswith(str(tmp_path / "rel" / "CASE1" / "ailsa-runs") + "/")
