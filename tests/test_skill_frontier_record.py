@@ -262,6 +262,22 @@ def test_identity_check_targets_the_declared_candidate() -> None:
     assert "top SMILES" not in DEVILS_ADVOCATE_MD.read_text()
 
 
+def test_coverage_reopen_ranks_through_the_analyst() -> None:
+    """After a coverage reopen a new [RANKING-COMPLETE] is requested; the coordinator ranks nothing.
+
+    Otherwise the identity gate and the declaration draft would read the stale ranking message.
+    """
+    gate = _section(GATES_MD.read_text(), "## Coverage gate")
+    fail = gate.split("- **FAIL**", 1)[1]
+    assert "re-run the deduplicated union rank" not in fail
+    assert '--phase ranking' in fail and 'recipient="solution-analyst"' in fail
+    assert "[BEGIN] ranking" in fail
+    assert "Wait for the new `[RANKING-COMPLETE]`" in fail
+    for ref in ("advisory-templates.md", "loop-patterns.md"):
+        assert "re-run the deduped union rank" not in (REFERENCES_DIR / ref).read_text(), ref
+        assert "re-run the union rank" not in (REFERENCES_DIR / ref).read_text(), ref
+
+
 def test_agents_use_work_dir() -> None:
     """No agent writes or reads the dataset's analysis folder, a manifest or a timing file.
 

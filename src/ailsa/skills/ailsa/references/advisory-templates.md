@@ -340,8 +340,8 @@ Required action:
   constraints rebuilt from memory get dropped.
 - A family counts as searched once its LSD run produces an [ITERATION-COMPLETE] — even if you
   skip solutions.smi conversion for size (searched, not ranked). Do not drop a large family.
-- After the missing run(s) complete, the coordinator re-runs the deduped union rank and
-  re-enters the coverage gate.
+- After the missing run(s) complete, rebuild the deduplicated union_solutions.smi with them;
+  the coordinator then has the solution analyst rank the union and re-enters the coverage gate.
 
 This is a coverage requirement, independent of MAE/plausibility: a low-MAE leading model does
 not close a missing family. A devil's advocate [MULT-EVIDENCE-FOR] flag is closed only by an
@@ -355,8 +355,9 @@ defect). Optionally notify the devil's advocate (`devils-advocate`) to confirm e
 [MULT-EVIDENCE-FOR] model is now in the searched set.
 **After delivering advisory:** Return to monitor_progress. On the missing family/model's
 [ITERATION-COMPLETE], record the updated searched_families in a new `Multiplicity coverage:` note,
-re-run the union rank, and
-re-enter the coverage_gate. Do not proceed to identity_gate until coverage_gate passes.
+push the solution analyst the union ranking as the coverage gate describes, and on its new
+[RANKING-COMPLETE] re-enter the coverage_gate. Do not proceed to identity_gate until coverage_gate
+passes.
 
 </step>
 

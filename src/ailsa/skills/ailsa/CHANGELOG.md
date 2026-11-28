@@ -94,6 +94,11 @@ Applies to: ailsa (frontier skill) only; the lean skill writes the record since 
   structure), its `Identity:` line names that candidate's rank, and the coordinator's G-IDENT
   push carries that candidate's SMILES (the devil's advocate's "candidate SMILES"). The rendered
   `final_results.md` names the structure behind each identity verdict.
+- Review fix, control path only (not measured): after the coverage gate reopens the run, the
+  coordinator no longer re-ranks the union itself. It pushes the solution analyst a
+  `[BEGIN] ranking` over every searched family's `compound.lsd`, waits for the new
+  `[RANKING-COMPLETE]`, and runs the coverage gate, the identity gate and the declaration on that
+  message, never on the ranking from before the reopen.
 
 ## 0.1.0
 

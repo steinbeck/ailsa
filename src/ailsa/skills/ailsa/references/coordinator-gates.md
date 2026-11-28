@@ -49,10 +49,23 @@ conditions:
   push the LSD engineer to run the missing families or models, with the multiplicity-coverage
   reopen advisory (what, not how: name the missing family or model and say that it has to be
   searched in its own `iteration_NN_<family>/` directory). When their `[ITERATION-COMPLETE]`
-  messages arrive, re-run the deduplicated union rank (per the LSD engineer's union-ranking
-  contract), record the updated searched_families in a new `Multiplicity coverage:` note, and
-  re-enter coverage_gate. Do not advance to identity_gate until the gate passes. The declaration
-  then names the ranking id of the new union ranking, because a solver ran after the old one.
+  messages arrive, record the updated searched_families in a new `Multiplicity coverage:` note.
+  You do no ranking yourself: write the phase note `--phase ranking` and push the solution analyst
+  the union ranking (the union-ranking contract: one atom-by-atom call over every family):
+
+  ```
+  SendMessage(
+    type="message",
+    recipient="solution-analyst",
+    content="[BEGIN] ranking — rank the union of the multiplicity families now, after the coverage reopen. LSD inputs: the compound.lsd of every searched family, {work_dir}/iteration_NN_<family>/compound.lsd, one --assigned each in a single call (this decides) ; union solutions: {work_dir}/union_solutions.smi (nearest-line cross-check) ; experimental 13C: {shift_list}. Assess plausibility, then send [RANKING-COMPLETE] with the Ranking id of the atom-by-atom ranking and a Declaration draft; write no report file.",
+    summary="Rank the union after the coverage reopen"
+  )
+  ```
+
+  Wait for the new `[RANKING-COMPLETE]`, record its ranking note, and re-enter coverage_gate on
+  it. Do not advance to identity_gate until the gate passes; identity_gate and the declaration
+  then use this new message and its ranking id, never the earlier `[RANKING-COMPLETE]`, because
+  a solver ran after the old ranking.
 
 This gate triggers on coverage, never on MAE. A converged, plausible-looking, low-MAE run is still
 rejected if a viable family or a DA-mandated model was never searched. The reopen follows the

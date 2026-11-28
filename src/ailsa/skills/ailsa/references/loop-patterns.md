@@ -123,7 +123,8 @@ it from coverage just because it produced no ranked `solutions.smi`. Do not key 
 **Action — reopen:** push the LSD engineer (via the multiplicity-coverage reopen advisory, which
 names what to search, not how) to run the missing family(ies)/model(s), each in its own
 `iteration_NN_<family>/` dir with its own full MULT constraints. When their `[ITERATION-COMPLETE]`s
-arrive, re-run the deduped union rank, update searched_families, and re-enter the coverage gate.
+arrive, update searched_families, have the solution analyst rank the deduplicated union (a new
+`[RANKING-COMPLETE]`), and re-enter the coverage gate on that message.
 Do not accept until `viable_families ⊆ searched_families` AND every DA-mandated model is searched.
 
 **Why this is different from the other patterns:** the first four are LSD-level symptoms; Quality
