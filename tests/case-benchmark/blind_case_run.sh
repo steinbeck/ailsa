@@ -176,9 +176,10 @@ if [ "$PROPOSED" = true ] && [ -f "$RUN_DIR/renderings/final_results.md" ]; then
   [ -f "$RUN_DIR/renderings/CASE-PROGRESS.md" ] \
     && cp -n "$RUN_DIR/renderings/CASE-PROGRESS.md" "$RESULTS_DIR/analysis/CASE-PROGRESS.md"
   FR_EXISTS=true
-  TOPSMI="$(grep -aoiE 'SMILES[^A-Za-z0-9]+[^ `|)]+' "$FRR" | head -1 | sed -E 's/.*SMILES[^A-Za-z0-9]+//I')"
-  case "$TOPSMI" in *' '*|"") TOPSMI="";; esac
-  echo "$TOPSMI" | grep -qE '[=#()1-9]|[cC][cC]' || TOPSMI=""
+  # The chosen candidate's whole SMILES (the backtick-quoted token of the rendering's
+  # "- SMILES:" line); a pattern stopping at ")" would cut a branched SMILES short.
+  TOPSMI="$(sed -nE 's/^- SMILES: `([^`]+)`.*$/\1/p' "$FRR" | head -1)"
+  case "$TOPSMI" in *' '*|*'"'*) TOPSMI="";; esac
 fi
 
 STATUS=""
@@ -186,7 +187,7 @@ if [ "$RC" -eq 2 ] || [ -z "$RUN_ID" ]; then
   STATUS=',"status":"error","reason":"launcher exit '"$RC"'"'
 fi
 printf '{"case":"%s",%s,"mf":"%s","mode":"%s","attempts":%d,"runtime_s":%d,"final_results":%s,"top_smiles":"%s","run_id":"%s","run_state":"%s","run_dir":"%s","outcome":"%s","launcher_reason":%s,"signal":%s,"exit_code":%s,"launcher_rc":%d%s}\n' \
-  "$CASE_NAME" "$PROV" "$MF" "$MODE" "$ATTEMPTS" "$RUNTIME" "$FR_EXISTS" "${TOPSMI//\"/}" \
+  "$CASE_NAME" "$PROV" "$MF" "$MODE" "$ATTEMPTS" "$RUNTIME" "$FR_EXISTS" "${TOPSMI//\\/\\\\}" \
   "${RUN_ID//\"/}" "${RUN_STATE//\"/}" "${RUN_DIR//\"/}" "${OUTCOME//\"/}" \
   "$LREASON" "$LSIGNAL" "$LEXIT" "$RC" "$STATUS" > "$RESULTS_DIR/meta.json"
 echo "[$CASE_NAME] attempts=$ATTEMPTS runtime=${RUNTIME}s final_results=$FR_EXISTS"

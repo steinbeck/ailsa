@@ -639,3 +639,15 @@ def test_runner_refuses_an_unknown_claude_bin(tmp_path):
     r, meta, _ = _run_runner(tmp_path, tmp_path / "missing" / "claude")
     assert r.returncode == 2
     assert meta["reason"] == "claude_bin_not_found"
+
+
+@pytest.mark.skipif(shutil.which("bash") is None, reason="needs bash")
+def test_runner_top_smiles_is_not_truncated(tmp_path):
+    """The runner's own top_smiles line on a rendering with a branched SMILES at rank 1."""
+    text = _read("tests/case-benchmark/blind_case_run.sh")
+    line = next(ln.strip() for ln in text.splitlines() if ln.strip().startswith('TOPSMI="$(sed'))
+    frr = tmp_path / "final_results.md"
+    frr.write_text(_rendered("result_declared"), encoding="utf-8")
+    out = subprocess.run(["bash", "-c", f'FRR="$1"; {line}; printf "%s" "$TOPSMI"', "_",
+                          str(frr)], capture_output=True, text=True, timeout=20)
+    assert out.stdout == TERPINEOL
