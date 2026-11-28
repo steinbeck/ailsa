@@ -69,6 +69,14 @@ for f in molecular-formula.txt molecularformula.txt; do
   [ -f "$CASE_DIR/$f" ] && { MF_FILE="$CASE_DIR/$f"; break; }
 done
 mkdir -p "$RESULTS_DIR"
+# The harness works in a folder under $RESULTS_DIR, and Claude Code loads the CLAUDE.md of
+# its working folder and of every parent. Inside a repository (this one names private files)
+# that is project memory in a blind run, so a results folder in a git work tree is refused.
+if [ "$(git -C "$RESULTS_DIR" rev-parse --is-inside-work-tree 2>/dev/null)" = true ]; then
+  echo "results folder $RESULTS_DIR lies inside a git work tree; a blind run would load" \
+    "its CLAUDE.md. Use a results folder outside any repository." >&2
+  echo '{"case":"'"$CASE_NAME"'",'"$PROV"',"status":"error","reason":"results_inside_git_worktree"}' > "$RESULTS_DIR/meta.json"; exit 2
+fi
 if [ -z "$MF_FILE" ]; then
   echo '{"case":"'"$CASE_NAME"'",'"$PROV"',"status":"error","reason":"no_MF_file"}' > "$RESULTS_DIR/meta.json"; exit 2
 fi

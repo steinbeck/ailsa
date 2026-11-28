@@ -18,8 +18,11 @@ NMR + molecular formula alone. Any leak of the answer invalidates the result, so
   context) whose prompt contains **only** the dataset path + the molecular
   formula (read from the dataset's own `molecular-formula.txt` /
   `molecularformula.txt`).
-- The process runs in a **neutral scratch cwd** (no project memory) and a
-  system-prompt fence forbids reading any ground-truth / answer-key location.
+- The process works in its run's own folder under the results root, which lies
+  **outside any repository** (the runner refuses a results folder inside a git
+  work tree, because Claude Code would load that repository's `CLAUDE.md` as
+  project memory; auto-memory is off under the launcher), and a system-prompt
+  fence forbids reading any ground-truth / answer-key location.
 - Optional **hard lockout**: the batch driver can physically move the
   ground-truth files out of reach for the whole run (`CASE_ANSWERKEY_PATHS`),
   restoring them afterward — belt-and-suspenders on top of the fence.
@@ -46,7 +49,7 @@ NMR + molecular formula alone. Any leak of the answer invalidates the result, so
 | Var | Used by | Meaning |
 |-----|---------|---------|
 | `CASE_DATA_DIR` | batch | **required** — dir holding the `CASE<name>/` dataset folders |
-| `CASE_RESULTS_DIR` | all | results root (default: `./results`, gitignored) |
+| `CASE_RESULTS_DIR` | all | results root (default: `$XDG_STATE_HOME/ailsa-bench`, else `~/.local/state/ailsa-bench`). Never inside a repository: the runner refuses a git work tree. |
 | `CLAUDE_BIN` | run | claude binary (default: `claude` on PATH); an installed Claude Code >= 2.1.280 (Opus 5.5). Pin it for comparability within a series. |
 | `CASE_PROJECT_DIR` | run | ailsa repo root for `.venv/bin` (default: this repo) |
 | `CLAUDE_MODEL` | batch, run | **required** — model id, e.g. `claude-opus-5-5` (verified on the compute host). No default: an unattributable benchmark is worthless, and the old `claude-opus-4-8` default silently outlived its session default. Every `meta.json` records it with `claude_bin` and `claude_version`; the batch refuses a results root that already holds runs of another model, or of none (every folder from before model recording). |
@@ -82,15 +85,16 @@ python tests/case-benchmark/blind_case_batch.py --all -k 3 --mode full
 python tests/case-benchmark/grade_blind.py         # after the batch restores truth
 ```
 
-Each case's run record lives in `results/<CASE>/ailsa-runs/<run>/` (manifest, event log,
-renderings, transcripts). `results/<CASE>/analysis/final_results.md` is a copy of the rendered
+Each case's run record lives in `<results>/<CASE>/ailsa-runs/<run>/` (manifest, event log,
+renderings, transcripts). `<results>/<CASE>/analysis/final_results.md` is a copy of the rendered
 result, made only when the run declared a result; a run that stopped without one leaves no copy.
 
 `meta.json` also records why the launcher stopped (`launcher_reason`, `signal`, `exit_code`,
 `launcher_rc`). A case stopped by a signal (a watchdog quota abort, for example) is neither done
 nor exhausted: the watchdog skips it and names it as aborted. It cannot simply be run again in the
-same results folder: its record in `results/<CASE>/ailsa-runs/` makes the launcher's blind check
+same results folder: its record in `<results>/<CASE>/ailsa-runs/` makes the launcher's blind check
 refuse a second run of the same data there. Re-run aborted cases in a fresh results folder.
 
-`results/` is gitignored — run outputs, the record folders, `CASE-PROGRESS.md`,
-`scorecard.tsv` (blind-sensitive) stay local and are never committed.
+Results stay outside the repository — run outputs, the record folders, `CASE-PROGRESS.md`,
+`scorecard.tsv` (blind-sensitive) are never committed. The old in-repo default
+`tests/case-benchmark/results/` stays gitignored for folders from earlier series.

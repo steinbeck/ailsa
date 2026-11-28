@@ -18,7 +18,8 @@ Env:
   CASE_DATA_DIR        (required) dir containing the CASE<name> dataset folders
   CLAUDE_MODEL         (required) model id; recorded in every meta.json. A results root that
                        already holds runs of another model (or of none) is refused.
-  CASE_RESULTS_DIR     results root (default: ./results next to this script)
+  CASE_RESULTS_DIR     results root (default: $XDG_STATE_HOME/ailsa-bench, else
+                       ~/.local/state/ailsa-bench; never inside a repository)
   CASE_ANSWERKEY_PATHS optional ':'-separated paths to stash during the batch
   CASE_STASH_DIR       where to stash them (default: a temp dir)
 """
@@ -34,7 +35,11 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 RUN_SH = HERE / "blind_case_run.sh"
 DATA_DIR = Path(os.environ.get("CASE_DATA_DIR", ""))
-RESULTS_DEFAULT = os.environ.get("CASE_RESULTS_DIR", str(HERE / "results"))
+# Outside the repository: the blind agent works in a folder under the results root, and
+# Claude Code loads the CLAUDE.md of every parent folder (blind_case_run.sh refuses a git
+# work tree).
+RESULTS_DEFAULT = os.environ.get("CASE_RESULTS_DIR") or str(
+    Path(os.environ.get("XDG_STATE_HOME") or Path.home() / ".local" / "state") / "ailsa-bench")
 STASH = Path(os.environ.get("CASE_STASH_DIR",
              os.path.join(os.path.expanduser("~"), ".case-uat-stash")))
 ANSWERKEY_PATHS = [p for p in os.environ.get("CASE_ANSWERKEY_PATHS", "").split(":") if p]

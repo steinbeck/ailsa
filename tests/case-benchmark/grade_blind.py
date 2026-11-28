@@ -136,7 +136,10 @@ def grade_one(case_dir, truth):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--results", default=os.environ.get("CASE_RESULTS_DIR", str(HERE / "results")))
+    default = os.environ.get("CASE_RESULTS_DIR") or str(
+        Path(os.environ.get("XDG_STATE_HOME") or Path.home() / ".local" / "state")
+        / "ailsa-bench")
+    ap.add_argument("--results", default=default)
     args = ap.parse_args()
     results = Path(args.results)
     truth = load_truth()

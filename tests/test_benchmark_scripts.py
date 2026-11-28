@@ -580,3 +580,30 @@ def test_fence_allows_close_and_the_runs_own_folder(tmp_path):
     assert "until the run has declared its result" not in text
     assert "Your own run folder (the parent of your working folder) is not such a location" in text
     assert f"Every other folder under {os.path.realpath(tmp_path / 'results')} is one." in text
+
+
+@pytest.mark.skipif(shutil.which("git") is None, reason="needs git")
+def test_runner_refuses_results_inside_a_repository(tmp_path):
+    """A blind work folder inside a git work tree would load that repository's CLAUDE.md."""
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    subprocess.run(["git", "init", "-q", str(repo)], check=True, timeout=20)
+    argv_file = tmp_path / "argv.txt"
+    fake = _fake_harness(tmp_path, f'printf "%s\\n" "$@" > "{argv_file}"')
+    r, meta, _ = _run_runner(tmp_path, fake, repo / "results" / "CASE1")
+    assert r.returncode == 2
+    assert meta["reason"] == "results_inside_git_worktree"
+    assert "inside a git work tree" in r.stderr
+    assert not argv_file.exists()
+
+
+def test_default_results_root_is_outside_the_repository(tmp_path, monkeypatch):
+    monkeypatch.delenv("CASE_RESULTS_DIR", raising=False)
+    monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
+    batch = _load("blind_case_batch_t", "tests/case-benchmark/blind_case_batch.py")
+    assert batch.RESULTS_DEFAULT == str(tmp_path / "state" / "ailsa-bench")
+    monkeypatch.delenv("XDG_STATE_HOME")
+    batch = _load("blind_case_batch_t2", "tests/case-benchmark/blind_case_batch.py")
+    assert batch.RESULTS_DEFAULT == str(Path.home() / ".local" / "state" / "ailsa-bench")
+    assert not batch.RESULTS_DEFAULT.startswith(str(ROOT))
+    assert 'HERE / "results"' not in _read("tests/case-benchmark/grade_blind.py")
