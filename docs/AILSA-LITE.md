@@ -136,5 +136,7 @@ Regenerate the two reports with `ailsa run render`; never edit them by hand.
 Version 0.3 writes the run record instead of files in the dataset; otherwise it is version 0.2.
 Version 0.2: the same tools and rules as the full AILSA skill, the model does the work itself.
 Version 0.1 had moved that work into scripts; on 40 blind benchmark datasets the model then could
-add nothing to what the scripts found (see [SKILLS.md](SKILLS.md)). Version 0.2 is being measured
-on the same datasets. NUS and JCAMP-DX data must be converted first (`ailsa nus`, `ailsa jcamp`).
+add nothing to what the scripts found (see [SKILLS.md](SKILLS.md)). Version 0.2 was tested with
+the partner lab's open-weight model on three small datasets and found none of the structures; the
+measurement was not extended, and the paper reports the result. NUS and JCAMP-DX data must be
+converted first (`ailsa nus`, `ailsa jcamp`).
