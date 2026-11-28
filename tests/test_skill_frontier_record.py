@@ -187,6 +187,14 @@ def test_terminate_closes_after_finalize() -> None:
     assert "Close the record right after a successful `finalize`" in declaring
 
 
+def test_escalation_declares_before_it_stops() -> None:
+    """An interactive session that stops first leaves the record undeclared until the user acts."""
+    text = (REFERENCES_DIR / "intervention.md").read_text()
+    after = text.split("**After presenting the escalation report:**", 1)[1].split("\n\n", 1)[0]
+    assert after.index("terminate_team") < after.index("stop")
+    assert "handed_to_human" in after
+
+
 def test_explicit_ranking_id() -> None:
     """The declaration names its ranking, because 'latest' is the analyst's cross-check ranking."""
     for path in (CASE_MD, RUN_RECORD_MD):

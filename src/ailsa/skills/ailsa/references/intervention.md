@@ -151,6 +151,6 @@ report.
 Manual review required. See the generated progress log (<CASE-PROGRESS.md path printed by `ailsa run render`>) for full iteration history.
 ```
 
-**After presenting the escalation report:** stop. The user has to investigate. terminate_team then
-declares the run `handed_to_human`, with the pattern and the 10 failed cycles as the termination
-reason, before the team shuts down.
+**After presenting the escalation report:** go to terminate_team, which declares the run
+`handed_to_human` with the pattern and the 10 failed cycles as the termination reason, closes and
+renders the record and shuts the team down. Then stop: the user has to investigate.

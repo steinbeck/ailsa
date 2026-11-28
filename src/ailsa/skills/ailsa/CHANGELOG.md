@@ -105,6 +105,9 @@ Applies to: ailsa (frontier skill) only; the lean skill writes the record since 
   session, a second `/ailsa:case` on the same data wrote into it, and a tool step during the
   shutdown could mark the declaration stale. The state stays "result declared"; the launcher
   accepts a run its agent has closed.
+- Review fix, wording only: after the escalation report the coordinator goes to terminate_team
+  (declare `handed_to_human`, close, render) and stops only then; "stop" no longer comes first,
+  which in an interactive session left the record undeclared until the user acted.
 
 ## 0.1.0
 
