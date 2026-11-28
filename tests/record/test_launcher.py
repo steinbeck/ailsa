@@ -671,6 +671,23 @@ def test_agent_closed_run_stops_loop(
     assert len(_calls(tmp_path)) == 1
 
 
+def test_transcript_copy_failure_after_agent_close_is_reported(
+    claude: Path, dataset: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The agent closed the run, then the transcript copy fails: still a result, no crash."""
+
+    def broken(run_dir: Path, session_id: str | None) -> None:
+        raise OSError("transcript unreadable")
+
+    monkeypatch.setenv("FAKE_CLAUDE_MODE", "close_first")
+    monkeypatch.setattr(launcher, "_copy_transcripts", broken)
+    res = _start(dataset, "--model", "m")
+    out = _result(res)
+    assert out["run_id"] and out["state"] == "stopped_before_result"
+    assert "transcript copy failed after the run was closed" in res.stderr
+    assert len(_of(_events(out["run_dir"]), "run.finished")) == 1
+
+
 def test_deadline_bounds_attempts(
     claude: Path, dataset: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

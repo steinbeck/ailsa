@@ -683,15 +683,22 @@ def _launch(
             try:
                 _copy_transcripts(run_dir, prepared["session_id"])
             except Exception as exc:  # noqa: BLE001 - a transcript problem never blocks closing
-                append_event(
-                    run_dir,
-                    "warning.raised",
-                    {
-                        "code": "transcript_copy_failed",
-                        "message": f"{type(exc).__name__}: {exc}",
-                    },
-                    actor=_ACTOR,
-                )
+                try:
+                    append_event(
+                        run_dir,
+                        "warning.raised",
+                        {
+                            "code": "transcript_copy_failed",
+                            "message": f"{type(exc).__name__}: {exc}",
+                        },
+                        actor=_ACTOR,
+                    )
+                except RecordWriteRefused:
+                    # The agent closed the run itself: report instead of crashing the launch.
+                    sys.stderr.write(
+                        f"ailsa: transcript copy failed after the run was closed: "
+                        f"{type(exc).__name__}: {exc}\n"
+                    )
     finally:
         # Always ends the run, whatever happened above (REC-23).
         _settle_views(prepared.get("views_pid"), VIEWS_WAIT_S)
